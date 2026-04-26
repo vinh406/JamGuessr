@@ -8,6 +8,13 @@
       "when": 1774608969774,
       "tag": "0000_rapid_the_watchers",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1777207758136,
+      "tag": "0001_narrow_peter_parker",
+      "breakpoints": true
     }
   ]
 }

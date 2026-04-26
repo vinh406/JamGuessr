@@ -2,17 +2,50 @@ import { getSpotifyClientForUser } from "./client";
 import type { Playlist, Song } from "../../../shared/types";
 import spotifyUrlInfo from "spotify-url-info";
 
-export function parseSpotifyPlaylistLink(link: string): string | null {
-  const patterns = [
-    /spotify\.com\/playlist\/([a-zA-Z0-9]+)/,
-    /spotify:playlist:([a-zA-Z0-9]+)/,
-    /^([a-zA-Z0-9]{22})$/,
+// ── Spotify URL parsing ──────────────────────────────────────────────────────
+
+export type SpotifyLinkType = "track" | "playlist" | "album";
+
+export interface ParsedSpotifyLink {
+  type: SpotifyLinkType;
+  id: string;
+}
+
+/**
+ * Parse any Spotify URL and auto-detect whether it's a track, playlist, or album.
+ * Supports:
+ *  - https://open.spotify.com/track/{id}...
+ *  - spotify:track:{id}
+ *  - spotify:playlist:{id}
+ *  - spotify:album:{id}
+ * Returns null if the link cannot be parsed.
+ */
+export function parseSpotifyLink(link: string): ParsedSpotifyLink | null {
+  // URL format: https://open.spotify.com/{type}/{id}
+  const urlPatterns: [SpotifyLinkType, RegExp][] = [
+    ["track", /open\.spotify\.com\/track\/([a-zA-Z0-9]+)/],
+    ["playlist", /open\.spotify\.com\/playlist\/([a-zA-Z0-9]+)/],
+    ["album", /open\.spotify\.com\/album\/([a-zA-Z0-9]+)/],
   ];
 
-  for (const pattern of patterns) {
+  for (const [type, pattern] of urlPatterns) {
     const match = link.match(pattern);
-    if (match && match[1]) {
-      return match[1];
+    if (match?.[1]) {
+      return { type, id: match[1] };
+    }
+  }
+
+  // URI format: spotify:{type}:{id}
+  const uriPatterns: [SpotifyLinkType, RegExp][] = [
+    ["track", /spotify:track:([a-zA-Z0-9]+)/],
+    ["playlist", /spotify:playlist:([a-zA-Z0-9]+)/],
+    ["album", /spotify:album:([a-zA-Z0-9]+)/],
+  ];
+
+  for (const [type, pattern] of uriPatterns) {
+    const match = link.match(pattern);
+    if (match?.[1]) {
+      return { type, id: match[1] };
     }
   }
 
@@ -87,6 +120,104 @@ export async function getPlaylistTracks(playlistId: string): Promise<Song[]> {
     }));
   } catch (error) {
     console.error(`Failed to fetch tracks for playlist ${playlistId}:`, error);
+    return [];
+  }
+}
+
+// ── Track fetchers ────────────────────────────────────────────────────────────
+
+export interface TrackMetadata {
+  id: string;
+  name: string;
+  artist: string;
+  albumName: string;
+  albumId: string | null;
+  imageUrl: string | undefined;
+  previewUrl: string | undefined;
+  durationMs: number;
+}
+
+/** Fetch metadata for a single track by its Spotify ID */
+export async function getTrackMetadata(trackId: string): Promise<TrackMetadata | null> {
+  try {
+    const spotifyUrlInfoModule = spotifyUrlInfo(fetch);
+    const getDetails = spotifyUrlInfoModule.getDetails;
+
+    const spotifyUrl = `https://open.spotify.com/track/${trackId}`;
+    const details = await getDetails(spotifyUrl);
+
+    // For a track URL, details.tracks[0] may have duration info
+    const firstTrack = details.tracks[0];
+
+    return {
+      id: trackId,
+      name: details.preview.title,
+      artist: details.preview.artist,
+      albumName: "",
+      albumId: null,
+      imageUrl: details.preview.image ?? undefined,
+      previewUrl: details.preview.audio ?? undefined,
+      durationMs: firstTrack?.duration ?? 0,
+    };
+  } catch (error) {
+    console.error(`Failed to fetch track metadata for ${trackId}:`, error);
+    return null;
+  }
+}
+
+// ── Album fetchers ────────────────────────────────────────────────────────────
+
+export interface AlbumMetadata {
+  id: string;
+  name: string;
+  artistName: string;
+  releaseDate: string | null;
+  imageUrl: string | undefined;
+  totalTracks: number;
+}
+
+/** Fetch metadata for an album by its Spotify ID */
+export async function getAlbumMetadata(albumId: string): Promise<AlbumMetadata | null> {
+  try {
+    const spotifyUrlInfoModule = spotifyUrlInfo(fetch);
+    const getDetails = spotifyUrlInfoModule.getDetails;
+
+    const spotifyUrl = `https://open.spotify.com/album/${albumId}`;
+    const details = await getDetails(spotifyUrl);
+
+    return {
+      id: albumId,
+      name: details.preview.title,
+      artistName: details.preview.artist,
+      releaseDate: details.preview.date ?? null,
+      imageUrl: details.preview.image ?? undefined,
+      totalTracks: details.tracks.length,
+    };
+  } catch (error) {
+    console.error(`Failed to fetch album metadata for ${albumId}:`, error);
+    return null;
+  }
+}
+
+/** Fetch all tracks from an album by its Spotify ID */
+export async function getAlbumTracks(albumId: string): Promise<Song[]> {
+  try {
+    const spotifyUrlInfoModule = spotifyUrlInfo(fetch);
+    const getTracksFromUrl = spotifyUrlInfoModule.getTracks;
+
+    const spotifyUrl = `https://open.spotify.com/album/${albumId}`;
+    const tracks = await getTracksFromUrl(spotifyUrl);
+    return tracks.map((track) => ({
+      id: track.uri.replace("spotify:track:", ""),
+      title: track.name,
+      artist: track.artist,
+      album: "",
+      albumImageUrl: undefined,
+      previewUrl: track.previewUrl,
+      duration: track.duration ?? 0,
+    }));
+  } catch (error) {
+    console.error(`Failed to fetch tracks for album ${albumId}:`, error);
     return [];
   }
 }

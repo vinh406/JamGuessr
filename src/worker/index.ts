@@ -2,10 +2,11 @@ import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
 import { Scalar } from "@scalar/hono-api-reference";
 import { cors } from "hono/cors";
 import { auth } from "./lib/better-auth";
+import { libraryHandlers } from "./lib/library/libraryHandlers";
 import {
   getCurrentUserPlaylists,
   getPlaylistMetadata,
-  parseSpotifyPlaylistLink,
+  parseSpotifyLink,
 } from "./lib/spotify/playlists";
 export { WebSocketHibernationServer } from "./websocketDurableObject";
 
@@ -136,6 +137,9 @@ const healthRoute = createRoute({
 });
 app.openapi(healthRoute, (c) => c.json({ status: "ok" }));
 
+// Library API endpoints
+app.route("/api/library", libraryHandlers);
+
 // Better Auth handler
 app.on(["GET", "POST"], "/api/auth/*", (c) => {
   return auth(c.env).handler(c.req.raw);
@@ -198,13 +202,13 @@ const importPlaylistRoute = createRoute({
 app.openapi(importPlaylistRoute, async (c) => {
   const { link } = c.req.valid("json");
 
-  const playlistId = parseSpotifyPlaylistLink(link);
+  const parsed = parseSpotifyLink(link);
 
-  if (!playlistId) {
+  if (!parsed || parsed.type !== "playlist") {
     return c.json({ error: "Invalid Spotify playlist link" }, 400);
   }
 
-  const playlist = await getPlaylistMetadata(playlistId);
+  const playlist = await getPlaylistMetadata(parsed.id);
 
   if (!playlist) {
     return c.json({ error: "Playlist not found or access denied" }, 404);
@@ -225,6 +229,8 @@ app.doc("/api/doc", {
   tags: [
     { name: "Health", description: "Health check endpoints" },
     { name: "Playlists", description: "Spotify playlist operations" },
+    { name: "Library", description: "User library management" },
+    { name: "Room", description: "Room-based features" },
   ],
 });
 
