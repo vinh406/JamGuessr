@@ -1,6 +1,4 @@
 import { useState, useEffect, useCallback } from "react";
-import { useNavigate } from "react-router";
-import { useAuth } from "../hooks/useAuth";
 import Header from "../components/Header";
 import { Button, Input } from "../components/ui";
 import { Modal } from "../components/common/Modal";
@@ -71,9 +69,6 @@ function parseSpotifyLinkType(link: string): "track" | "playlist" | "album" | nu
 }
 
 export default function LibraryPage() {
-  const { user } = useAuth();
-  const navigate = useNavigate();
-
   const [data, setData] = useState<LibraryData | null>(null);
   const [loading, setLoading] = useState(true);
   const [link, setLink] = useState("");
@@ -198,18 +193,7 @@ export default function LibraryPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
-      <Header>
-        <div className="flex items-center gap-3">
-          {user?.image && (
-            <img src={user.image} alt={user.name} className="w-8 h-8 rounded-full" />
-          )}
-          <Button variant="ghost" onClick={() => navigate("/")}>
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-            </svg>
-          </Button>
-        </div>
-      </Header>
+      <Header />
 
       <main className="max-w-4xl mx-auto px-6 py-8">
         <div className="flex items-center gap-3 mb-8">
