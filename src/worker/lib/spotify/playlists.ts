@@ -2,6 +2,211 @@ import { getSpotifyClientForUser } from "./client";
 import type { Playlist, Song } from "../../../shared/types";
 import spotifyUrlInfo from "spotify-url-info";
 
+// ── Embed page helpers (scrapes Spotify for full playlist data) ────────────────
+
+interface SpotifyEmbedTrack {
+  uri: string;
+  title: string;
+  artists?: { name: string }[];
+  subtitle?: string;
+  duration?: number;
+  isPlayable?: boolean;
+  audioPreview?: { url: string };
+}
+
+interface SpotifyEmbedEntity {
+  type: string;
+  name: string;
+  uri: string;
+  id: string;
+  title: string;
+  subtitle?: string;
+  description?: string;
+  trackList: SpotifyEmbedTrack[];
+  coverArt?: { sources: { url: string; width: number; height: number }[] };
+}
+
+interface SpotifyEmbedSession {
+  accessToken: string;
+  accessTokenExpirationTimestampMs: number;
+  isAnonymous: boolean;
+}
+
+interface SpotifyEmbedState {
+  data: { entity: SpotifyEmbedEntity };
+  settings: { session: SpotifyEmbedSession };
+}
+
+function getArtistString(artists?: { name: string }[]): string {
+  if (!artists || !Array.isArray(artists)) return "";
+  return artists
+    .filter((a) => a?.name)
+    .map((a) => a.name)
+    .join(", ");
+}
+
+function embedTrackToSong(track: SpotifyEmbedTrack): Song {
+  return {
+    id: track.uri?.replace("spotify:track:", "") || "",
+    title: track.title || "",
+    artist: getArtistString(track.artists) || track.subtitle || "",
+    album: "",
+    albumImageUrl: undefined,
+    previewUrl: track.isPlayable ? track.audioPreview?.url : undefined,
+    duration: track.duration ?? 0,
+  };
+}
+
+const PARTNER_QUERY_HASH = "a65e12194ed5fc443a1cdebed5fabe33ca5b07b987185d63c72483867ad13cb4";
+
+interface PartnerTrack {
+  itemV2: {
+    data: {
+      __typename: string;
+      uri: string;
+      name: string;
+      artists: { items: { profile: { name: string }; uri: string }[] };
+      albumOfTrack: {
+        name: string;
+        coverArt: { sources: { url: string; height: number; width: number }[] };
+      };
+      trackDuration: { totalMilliseconds: number };
+      playability: { playable: boolean; reason: string };
+    };
+  };
+}
+
+interface PartnerPlaylistResponse {
+  data: {
+    playlistV2: {
+      content: {
+        items: PartnerTrack[];
+        totalCount: number;
+        pagingInfo: { limit: number; offset: number };
+      };
+    };
+  };
+}
+
+function partnerTrackToSong(track: PartnerTrack): Song {
+  const data = track.itemV2.data;
+  return {
+    id: data.uri.replace("spotify:track:", ""),
+    title: data.name,
+    artist: data.artists.items.map((a) => a.profile.name).join(", "),
+    album: data.albumOfTrack.name,
+    albumImageUrl: data.albumOfTrack.coverArt.sources.sort((a, b) => b.width - a.width)[0]?.url ?? undefined,
+    previewUrl: undefined,
+    duration: data.trackDuration.totalMilliseconds,
+  };
+}
+
+
+
+async function parseSpotifyEmbedPage(
+  playlistId: string,
+  fetchFn: typeof fetch = fetch,
+): Promise<{
+  entity: SpotifyEmbedEntity;
+  accessToken: string;
+} | null> {
+  const url = `https://open.spotify.com/embed/playlist/${playlistId}`;
+
+  const response = await fetchFn(url, {
+    headers: {
+      "User-Agent":
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+      Accept: "text/html,application/xhtml+xml",
+    },
+  });
+
+  if (!response.ok) return null;
+
+  const html = await response.text();
+  const match = html.match(
+    /<script id="__NEXT_DATA__"[^>]*>(.*?)<\/script>/,
+  );
+
+  if (!match?.[1]) return null;
+
+  const parsed: { props: { pageProps: { state: SpotifyEmbedState } } } =
+    JSON.parse(match[1]);
+  const state = parsed.props?.pageProps?.state;
+  if (!state) return null;
+
+  const entity = state.data?.entity;
+  const accessToken = state.settings?.session?.accessToken;
+  if (!entity || !accessToken) return null;
+
+  return { entity, accessToken };
+}
+
+async function fetchPartnerPlaylistTracks(
+  playlistId: string,
+  accessToken: string,
+  startOffset: number,
+  total: number,
+  fetchFn: typeof fetch = fetch,
+): Promise<Song[]> {
+  const BATCH_SIZE = 50;
+  const CONCURRENCY = 10;
+
+  const offsets: number[] = [];
+  for (let o = startOffset; o < total; o += BATCH_SIZE) {
+    offsets.push(o);
+  }
+
+  async function fetchPage(offset: number): Promise<Song[]> {
+    const response = await fetchFn(
+      "https://api-partner.spotify.com/pathfinder/v2/query",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json;charset=UTF-8",
+          Authorization: `Bearer ${accessToken}`,
+          "app-platform": "WebPlayer",
+          "User-Agent": "Mozilla/5.0",
+        },
+        body: JSON.stringify({
+          variables: {
+            uri: `spotify:playlist:${playlistId}`,
+            offset,
+            limit: BATCH_SIZE,
+            includeEpisodeContentRatingsV2: false,
+          },
+          operationName: "fetchPlaylistContents",
+          extensions: {
+            persistedQuery: {
+              version: 1,
+              sha256Hash: PARTNER_QUERY_HASH,
+            },
+          },
+        }),
+      },
+    );
+
+    if (!response.ok) return [];
+
+    const data: PartnerPlaylistResponse = await response.json();
+    const items = data.data?.playlistV2?.content?.items ?? [];
+
+    return items
+      .filter((item) => item.itemV2?.data?.__typename === "Track")
+      .map(partnerTrackToSong);
+  }
+
+  const allTracks: Song[] = [];
+  for (let i = 0; i < offsets.length; i += CONCURRENCY) {
+    const batch = offsets.slice(i, i + CONCURRENCY);
+    const results = await Promise.all(batch.map(fetchPage));
+    for (const page of results) {
+      allTracks.push(...page);
+    }
+  }
+
+  return allTracks;
+}
+
 // ── Spotify URL parsing ──────────────────────────────────────────────────────
 
 export type SpotifyLinkType = "track" | "playlist" | "album";
@@ -53,6 +258,66 @@ export function parseSpotifyLink(link: string): ParsedSpotifyLink | null {
 }
 
 export async function getPlaylistMetadata(playlistId: string): Promise<Playlist | null> {
+  // 1. Try embed page for metadata + accurate track count via partner API
+  try {
+    const embed = await parseSpotifyEmbedPage(playlistId);
+    if (embed) {
+      const { entity, accessToken } = embed;
+      let trackCount = entity.trackList.length;
+
+      // Get real total from partner API
+      try {
+        const countResponse = await fetch(
+          "https://api-partner.spotify.com/pathfinder/v2/query",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json;charset=UTF-8",
+              Authorization: `Bearer ${accessToken}`,
+              "app-platform": "WebPlayer",
+              "User-Agent": "Mozilla/5.0",
+            },
+            body: JSON.stringify({
+              variables: {
+                uri: `spotify:playlist:${playlistId}`,
+                offset: 0,
+                limit: 1,
+                includeEpisodeContentRatingsV2: false,
+              },
+              operationName: "fetchPlaylistContents",
+              extensions: {
+                persistedQuery: { version: 1, sha256Hash: PARTNER_QUERY_HASH },
+              },
+            }),
+          },
+        );
+
+        if (countResponse.ok) {
+          const countData = await countResponse.json() as PartnerPlaylistResponse;
+          const total = countData.data?.playlistV2?.content?.totalCount;
+          if (typeof total === "number") trackCount = total;
+        }
+      } catch {
+        // Non-critical - use embed track count as fallback
+      }
+
+      const image = entity.coverArt?.sources?.reduce?.((a, b) =>
+        a.width > b.width ? a : b,
+      );
+
+      return {
+        id: playlistId,
+        name: entity.title || entity.name,
+        description: entity.description ?? undefined,
+        trackCount,
+        imageUrl: image?.url ?? undefined,
+      };
+    }
+  } catch (error) {
+    console.error(`Embed page metadata failed for ${playlistId}:`, error);
+  }
+
+  // 2. Fallback to spotify-url-info
   try {
     const spotifyUrlInfoModule = spotifyUrlInfo(fetch);
     const getDetails = spotifyUrlInfoModule.getDetails;
@@ -103,6 +368,65 @@ export async function getCurrentUserPlaylists(userId: string, env: Env): Promise
 }
 
 export async function getPlaylistTracks(playlistId: string): Promise<Song[]> {
+  // 1. Try embed page + partner API pagination (gets full track list)
+  try {
+    const embed = await parseSpotifyEmbedPage(playlistId);
+    if (embed) {
+      const { entity, accessToken } = embed;
+      const tracks = entity.trackList.map(embedTrackToSong);
+
+      // Get real total and more tracks from partner API
+      try {
+        const countResponse = await fetch(
+          "https://api-partner.spotify.com/pathfinder/v2/query",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json;charset=UTF-8",
+              Authorization: `Bearer ${accessToken}`,
+              "app-platform": "WebPlayer",
+              "User-Agent": "Mozilla/5.0",
+            },
+            body: JSON.stringify({
+              variables: {
+                uri: `spotify:playlist:${playlistId}`,
+                offset: 0,
+                limit: 1,
+                includeEpisodeContentRatingsV2: false,
+              },
+              operationName: "fetchPlaylistContents",
+              extensions: {
+                persistedQuery: { version: 1, sha256Hash: PARTNER_QUERY_HASH },
+              },
+            }),
+          },
+        );
+
+        if (countResponse.ok) {
+          const countData = await countResponse.json() as PartnerPlaylistResponse;
+          const total = countData.data?.playlistV2?.content?.totalCount;
+
+          if (typeof total === "number" && total > tracks.length) {
+            const moreTracks = await fetchPartnerPlaylistTracks(
+              playlistId,
+              accessToken,
+              tracks.length,
+              total,
+            );
+            return [...tracks, ...moreTracks];
+          }
+        }
+      } catch {
+        // Non-critical - return embed tracks only
+      }
+
+      return tracks;
+    }
+  } catch (error) {
+    console.error(`Embed tracks failed for ${playlistId}:`, error);
+  }
+
+  // 2. Fallback to spotify-url-info (50-100 tracks)
   try {
     const spotifyUrlInfoModule = spotifyUrlInfo(fetch);
     const getTracksFromUrl = spotifyUrlInfoModule.getTracks;
@@ -135,6 +459,20 @@ export interface TrackMetadata {
   imageUrl: string | undefined;
   previewUrl: string | undefined;
   durationMs: number;
+}
+
+/** Fetch just the preview URL for a single track (lighter than getTrackMetadata) */
+export async function getTrackPreviewUrl(trackId: string): Promise<string | undefined> {
+  try {
+    const spotifyUrlInfoModule = spotifyUrlInfo(fetch);
+    const getPreview = spotifyUrlInfoModule.getPreview;
+
+    const spotifyUrl = `https://open.spotify.com/track/${trackId}`;
+    const preview = await getPreview(spotifyUrl);
+    return preview.audio ?? undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 /** Fetch metadata for a single track by its Spotify ID */

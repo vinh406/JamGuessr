@@ -331,8 +331,6 @@ export function createLibraryHandlers() {
       return c.json({ error: "Invalid request — must provide a 'link' field" }, 400);
     }
 
-    const lib = createLibraryService(c.env.DATABASE_URL);
-
     return sseStream(async (emit, signal) => {
       const parsedLink = parseSpotifyLink(parsed.data.link);
       if (!parsedLink) {
@@ -349,6 +347,8 @@ export function createLibraryHandlers() {
       }
 
       if (signal.aborted) return;
+
+      const lib = createLibraryService(c.env.DATABASE_URL);
 
       const result = await lib.addFromSpotifyLink(user.id, parsed.data.link, (current, total) => {
         emit("progress", {

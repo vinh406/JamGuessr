@@ -2,7 +2,43 @@ import { RoomManager } from "../lib/websocket";
 import { MessageBuilders, broadcastToRoom, sendToSocket } from "../lib/websocket";
 import type { AnswerMessage, VotePlayAgainMessage, Song, UserSession } from "../../shared/types";
 import { SCORING } from "../../shared/constants";
-import { getPlaylistTracks } from "../lib/spotify/playlists";
+import { getPlaylistTracks, getTrackPreviewUrl } from "../lib/spotify/playlists";
+import { shuffleArray } from "../lib/websocket/game/GameUtils";
+
+const PREVIEW_CONCURRENCY = 5;
+
+async function ensurePreviewsForGame(
+  songs: Song[],
+  needed: number,
+): Promise<Song[]> {
+  const shuffled = shuffleArray(songs);
+  const pool = shuffled.slice(0, Math.min(shuffled.length, needed * 5));
+
+  const needPreview: { song: Song; index: number }[] = [];
+  for (let i = 0; i < pool.length; i++) {
+    if (!pool[i]!.previewUrl) {
+      needPreview.push({ song: pool[i]!, index: i });
+    }
+  }
+
+  for (let i = 0; i < needPreview.length; i += PREVIEW_CONCURRENCY) {
+    const batch = needPreview.slice(i, i + PREVIEW_CONCURRENCY);
+    await Promise.all(
+      batch.map(async ({ song, index }) => {
+        const url = await getTrackPreviewUrl(song.id);
+        pool[index] = { ...song, previewUrl: url };
+      }),
+    );
+  }
+
+  const valid: Song[] = [];
+  for (const song of pool) {
+    if (valid.length >= needed) break;
+    if (song.previewUrl) valid.push(song);
+  }
+
+  return valid;
+}
 
 export class GameHandler {
   private voteTimer: ReturnType<typeof setTimeout> | null = null;
@@ -38,6 +74,9 @@ export class GameHandler {
     if (roomPlaylist?.id) {
       songs = await getPlaylistTracks(roomPlaylist.id);
     }
+
+    // Filter to only songs with audio previews — ensures all game rounds play audio
+    songs = await ensurePreviewsForGame(songs, settings.rounds);
 
     if (songs.length < settings.rounds) {
       this.roomManager.cancelStartGame();
