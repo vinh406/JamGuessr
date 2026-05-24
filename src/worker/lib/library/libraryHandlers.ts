@@ -1,6 +1,8 @@
 import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
 import { auth } from "../better-auth";
 import { createLibraryService } from "./LibraryService";
+import { sseStream } from "../sse";
+import { parseSpotifyLink } from "../spotify/playlists";
 
 // OpenAPI Schema Definitions
 
@@ -123,24 +125,6 @@ const AddFromLinkRequestSchema = z
     }),
   })
   .openapi("AddFromLinkRequest");
-
-// Add from Spotify link response schema
-const AddFromLinkResponseSchema = z
-  .object({
-    success: z.boolean().openapi({ description: "Whether the operation succeeded", example: true }),
-    type: z
-      .enum(["track", "playlist", "album"])
-      .openapi({ description: "Type of content that was added", example: "track" }),
-    id: z.string().openapi({
-      description: "ID of the added item",
-      example: "123e4567-e89b-12d3-a456-426614174000",
-    }),
-    trackCount: z.number().optional().openapi({
-      description: "Number of tracks (for playlists/albums)",
-      example: 42,
-    }),
-  })
-  .openapi("AddFromLinkResponse");
 
 // Get track response schema
 const GetTrackResponseSchema = z
@@ -304,9 +288,8 @@ export function createLibraryHandlers() {
       },
     },
     responses: {
-      201: {
-        content: { "application/json": { schema: AddFromLinkResponseSchema } },
-        description: "Content added successfully",
+      200: {
+        description: "SSE stream with progress and result events",
       },
       400: {
         content: { "application/json": { schema: ErrorResponseSchema } },
@@ -330,27 +313,49 @@ export function createLibraryHandlers() {
 
     const body = await c.req.json().catch(() => ({}));
     const parsed = AddFromLinkRequestSchema.safeParse(body);
-
     if (!parsed.success) {
       return c.json({ error: "Invalid request — must provide a 'link' field" }, 400);
     }
 
     const lib = createLibraryService(c.env.DATABASE_URL);
-    const result = await lib.addFromSpotifyLink(user.id, parsed.data.link);
 
-    if (!result.success) {
-      return c.json({ error: result.error }, 400);
-    }
+    return sseStream(async (emit, signal) => {
+      const parsedLink = parseSpotifyLink(parsed.data.link);
+      if (!parsedLink) {
+        emit("error", { message: "Could not parse Spotify link" });
+        return;
+      }
 
-    return c.json(
-      {
+      if (parsedLink.type === "track") {
+        emit("phase", { phase: "fetching", label: "Fetching track metadata..." });
+      } else if (parsedLink.type === "playlist") {
+        emit("phase", { phase: "fetching", label: "Fetching playlist tracks from Spotify..." });
+      } else {
+        emit("phase", { phase: "fetching", label: "Fetching album tracks from Spotify..." });
+      }
+
+      if (signal.aborted) return;
+
+      const result = await lib.addFromSpotifyLink(user.id, parsed.data.link, (current, total) => {
+        emit("progress", {
+          current,
+          total,
+          phase: "saving",
+          label: `Saving track ${current} of ${total}...`,
+        });
+      });
+
+      if (!result.success) {
+        throw new Error(result.error);
+      }
+
+      return {
         success: true,
         type: result.type,
         id: result.id,
-        ...(result.trackCount != null ? { trackCount: result.trackCount } : {}),
-      },
-      201,
-    );
+        trackCount: result.trackCount,
+      };
+    });
   });
 
   // DELETE /track/:trackId - Remove track from library
