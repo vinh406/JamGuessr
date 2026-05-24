@@ -6,6 +6,7 @@ import LoginPage from "./pages/LoginPage";
 import RoomPage from "./pages/RoomPage";
 import LibraryPage from "./pages/LibraryPage";
 import LoadingSpinner from "./components/common/LoadingSpinner";
+import { Toaster } from "sonner";
 
 function AppContent() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -45,6 +46,16 @@ function App() {
     <BrowserRouter>
       <AuthProvider>
         <AppContent />
+        <Toaster
+          position="bottom-right"
+          toastOptions={{
+            style: {
+              background: "#1f2937",
+              border: "1px solid rgba(55,65,81,0.5)",
+              color: "#f3f4f6",
+            },
+          }}
+        />
       </AuthProvider>
     </BrowserRouter>
   );

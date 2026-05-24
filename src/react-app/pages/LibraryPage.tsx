@@ -1,11 +1,11 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import Header from "../components/Header";
 import { Button, Input } from "../components/ui";
 import { Modal } from "../components/common/Modal";
 import ConfirmDialog from "../components/common/ConfirmDialog";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import { useSSE, type SSEState } from "../hooks/useSSE";
-import ImportProgress from "../components/library/ImportProgress";
+import { toast } from "sonner";
 
 interface TrackSource {
   type: "direct" | "playlist" | "album";
@@ -75,11 +75,9 @@ export default function LibraryPage() {
   const [loading, setLoading] = useState(true);
   const [link, setLink] = useState("");
   const [importState, setImportState] = useState<SSEState>("idle");
-  const [importLabel, setImportLabel] = useState("");
-  const [importCurrent, setImportCurrent] = useState<number | undefined>(undefined);
-  const [importTotal, setImportTotal] = useState<number | undefined>(undefined);
   const [removeState, setRemoveState] = useState<SSEState>("idle");
-  const [removeLabel, setRemoveLabel] = useState("");
+  const importToastId = useRef<string | number | null>(null);
+  const removeToastId = useRef<string | number | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{
     type: "track" | "playlist" | "album";
     id: string;
@@ -112,30 +110,34 @@ export default function LibraryPage() {
     onEvent: (event) => {
       if (event.event === "phase") {
         const d = event.data as { phase: string; label: string };
-        setImportLabel(d.label);
+        if (importToastId.current) {
+          toast.loading(d.label, { id: importToastId.current });
+        }
       } else if (event.event === "progress") {
         const d = event.data as { current: number; total: number; label: string };
-        setImportCurrent(d.current);
-        setImportTotal(d.total);
-        setImportLabel(d.label);
-        setImportState("importing");
+        if (importToastId.current) {
+          toast.loading(`${d.label} (${d.current}/${d.total})`, { id: importToastId.current });
+        }
       }
     },
     onComplete: () => {
       setImportState("complete");
-      setImportLabel("Import complete!");
+      if (importToastId.current) {
+        toast.success("Import complete!", { id: importToastId.current });
+        importToastId.current = null;
+      }
       setLink("");
       fetchLibrary();
       setTimeout(() => {
         setImportState("idle");
-        setImportLabel("");
-        setImportCurrent(undefined);
-        setImportTotal(undefined);
       }, 3000);
     },
     onError: (msg) => {
       setImportState("error");
-      setImportLabel(msg);
+      if (importToastId.current) {
+        toast.error(msg, { id: importToastId.current });
+        importToastId.current = null;
+      }
     },
   });
 
@@ -143,13 +145,17 @@ export default function LibraryPage() {
     onEvent: (event) => {
       if (event.event === "phase") {
         const d = event.data as { label: string };
-        setRemoveLabel(d.label);
-        setRemoveState("streaming");
+        if (removeToastId.current) {
+          toast.loading(d.label, { id: removeToastId.current });
+        }
       }
     },
     onComplete: () => {
       setRemoveState("complete");
-      setRemoveLabel("Removed!");
+      if (removeToastId.current) {
+        toast.success("Removed!", { id: removeToastId.current });
+        removeToastId.current = null;
+      }
       fetchLibrary();
       setTimeout(() => {
         setRemoveState("idle");
@@ -158,7 +164,10 @@ export default function LibraryPage() {
     },
     onError: (msg) => {
       setRemoveState("error");
-      setRemoveLabel(msg);
+      if (removeToastId.current) {
+        toast.error(msg, { id: removeToastId.current });
+        removeToastId.current = null;
+      }
     },
   });
 
@@ -169,11 +178,9 @@ export default function LibraryPage() {
   const detectedType = link.trim() ? parseSpotifyLinkType(link) : null;
 
   const handleImport = async () => {
-    if (!link.trim() || importState === "connecting" || importState === "importing") return;
+    if (!link.trim() || importState === "connecting" || importState === "streaming") return;
     setImportState("connecting");
-    setImportLabel("");
-    setImportCurrent(undefined);
-    setImportTotal(undefined);
+    importToastId.current = toast.loading("Connecting...");
     importSSE.start("/api/library/add", { link: link.trim() });
   };
 
@@ -193,7 +200,7 @@ export default function LibraryPage() {
       }
     } else {
       setRemoveState("connecting");
-      setRemoveLabel("");
+      removeToastId.current = toast.loading("Removing...");
       removeSSE.start("/api/library/remove", { type, id });
     }
   };
@@ -278,9 +285,6 @@ export default function LibraryPage() {
                     onChange={(e) => {
                       setLink(e.target.value);
                       setImportState("idle");
-                      setImportLabel("");
-                      setImportCurrent(undefined);
-                      setImportTotal(undefined);
                     }}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && detectedType) handleImport();
@@ -290,13 +294,13 @@ export default function LibraryPage() {
                 <Button
                   variant="primary"
                   onClick={handleImport}
-                  disabled={!detectedType || importState === "connecting" || importState === "importing"}
+                  disabled={!detectedType || importState === "connecting" || importState === "streaming"}
                 >
                   {importState === "idle"
                     ? detectedType === "track" ? "Add Track" : detectedType === "playlist" ? "Import Playlist" : detectedType === "album" ? "Import Album" : "Import"
                     : importState === "connecting"
                       ? <span className="flex items-center gap-2"><LoadingSpinner size="sm" />Connecting</span>
-                      : importState === "importing"
+                      : importState === "streaming"
                         ? <span className="flex items-center gap-2"><LoadingSpinner size="sm" />Importing</span>
                         : importState === "complete" ? "Done" : "Failed"}
                 </Button>
@@ -311,18 +315,6 @@ export default function LibraryPage() {
                 </div>
               )}
 
-              <ImportProgress
-                state={importState}
-                current={importCurrent}
-                total={importTotal}
-                label={importLabel}
-                onDismiss={() => {
-                  setImportState("idle");
-                  setImportLabel("");
-                  setImportCurrent(undefined);
-                  setImportTotal(undefined);
-                }}
-              />
             </div>
 
             {directTracks.length > 0 && (
@@ -552,20 +544,7 @@ export default function LibraryPage() {
         />
       )}
 
-      {deleteTarget && removeState !== "idle" && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-gray-800 rounded-2xl border border-gray-700/50 p-6 w-80">
-            <ImportProgress
-              state={removeState}
-              label={removeLabel}
-              onDismiss={() => {
-                setRemoveState("idle");
-                setDeleteTarget(null);
-              }}
-            />
-          </div>
-        </div>
-      )}
+
     </div>
   );
 }
