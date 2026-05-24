@@ -126,6 +126,20 @@ const AddFromLinkRequestSchema = z
   })
   .openapi("AddFromLinkRequest");
 
+// Remove request schema
+const RemoveRequestSchema = z
+  .object({
+    type: z.enum(["playlist", "album"]).openapi({
+      description: "Type of content to remove",
+      example: "playlist",
+    }),
+    id: z.string().uuid().openapi({
+      description: "ID of the playlist or album to remove",
+      example: "123e4567-e89b-12d3-a456-426614174001",
+    }),
+  })
+  .openapi("RemoveRequest");
+
 // Get track response schema
 const GetTrackResponseSchema = z
   .object({
@@ -461,6 +475,92 @@ export function createLibraryHandlers() {
       },
       200,
     );
+  });
+
+  // POST /remove - Remove playlist or album with SSE progress
+  const removeRoute = createRoute({
+    method: "post",
+    path: "/remove",
+    request: {
+      body: {
+        content: { "application/json": { schema: RemoveRequestSchema } },
+      },
+    },
+    responses: {
+      200: {
+        description: "SSE stream with progress and result events",
+      },
+      400: {
+        content: { "application/json": { schema: ErrorResponseSchema } },
+        description: "Invalid request body",
+      },
+      401: {
+        content: { "application/json": { schema: ErrorResponseSchema } },
+        description: "Unauthorized - authentication required",
+      },
+      404: {
+        content: { "application/json": { schema: ErrorResponseSchema } },
+        description: "Playlist or album not found",
+      },
+    },
+    tags: ["Library"],
+    summary: "Remove playlist or album",
+    description:
+      "Remove a playlist or album and all its tracks from the user's library with progress feedback",
+  });
+  app.openapi(removeRoute, async (c) => {
+    const user = await getAuthenticatedUser(c);
+    if (!user) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    const body = await c.req.json().catch(() => ({}));
+    const parsed = RemoveRequestSchema.safeParse(body);
+    if (!parsed.success) {
+      return c.json({ error: "Invalid request" }, 400);
+    }
+
+    const lib = createLibraryService(c.env.DATABASE_URL);
+
+    // Verify ownership before starting SSE
+    if (parsed.data.type === "playlist") {
+      const playlist = await lib.getPlaylistById(parsed.data.id);
+      if (!playlist || playlist.userId !== user.id) {
+        return c.json({ error: "Playlist not found" }, 404);
+      }
+    } else {
+      const album = await lib.getAlbumById(parsed.data.id);
+      if (!album || album.userId !== user.id) {
+        return c.json({ error: "Album not found" }, 404);
+      }
+    }
+
+    return sseStream(async (emit, signal) => {
+      emit("phase", { phase: "removing", label: "Removing from your library..." });
+
+      if (signal.aborted) return;
+
+      if (parsed.data.type === "playlist") {
+        await lib.removePlaylist(user.id, parsed.data.id, (phase) => {
+          if (phase === "cleaning_up") {
+            emit("phase", { phase: "cleaning_up", label: "Cleaning up orphaned tracks..." });
+          }
+        });
+      } else {
+        await lib.removeAlbum(user.id, parsed.data.id, (phase) => {
+          if (phase === "cleaning_up") {
+            emit("phase", { phase: "cleaning_up", label: "Cleaning up orphaned tracks..." });
+          }
+        });
+      }
+
+      if (signal.aborted) return;
+
+      emit("phase", { phase: "updating_stats", label: "Finalizing..." });
+      await lib.updateUserLibraryStats(user.id);
+
+      return { success: true, type: parsed.data.type, id: parsed.data.id };
+    });
   });
 
   // DELETE /playlist/:playlistId - Remove playlist and all its tracks
