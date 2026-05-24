@@ -11,6 +11,7 @@ import { RoundEndView } from "../components/game/RoundEndView";
 import { useAuth } from "../hooks/useAuth";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import { Button } from "../components/ui";
+import Header from "../components/Header";
 
 export default function RoomPage() {
   const { isLoading: authLoading } = useAuth();
@@ -97,52 +98,34 @@ export default function RoomPage() {
 
   return (
     <div className="h-screen flex flex-col bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
-      {/* Compact Header */}
-      <header className="shrink-0 border-b border-gray-700/50 bg-gray-900/80 backdrop-blur-sm">
-        <div className="px-3 sm:px-4 py-2 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center">
-              <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
-              </svg>
-            </div>
-            <span className="text-lg font-bold text-white hidden sm:inline">Spotiguess</span>
-            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-gray-800/50 rounded-lg border border-gray-700/50 ml-2">
-              <span className="text-gray-400 text-xs">Room:</span>
-              <span className="text-green-400 font-semibold text-sm">{effectiveRoomName}</span>
-            </div>
-          </div>
+      <Header>
+        <Button
+          size="sm"
+          onClick={() => setChatOpen(!chatOpen)}
+          className={`relative ${
+            chatOpen
+              ? "bg-green-500/20 border-green-500/30 text-green-400"
+              : "bg-gray-800/50 border-gray-700/50 text-gray-400 hover:text-white hover:bg-gray-700/50"
+          }`}
+          aria-label={chatOpen ? "Close chat" : "Open chat"}
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+            />
+          </svg>
+          {!chatOpen && (
+            <span className="absolute -top-1 -right-1 w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+          )}
+        </Button>
 
-          <div className="flex items-center gap-2">
-            <Button
-              size="sm"
-              onClick={() => setChatOpen(!chatOpen)}
-              className={`relative ${
-                chatOpen
-                  ? "bg-green-500/20 border-green-500/30 text-green-400"
-                  : "bg-gray-800/50 border-gray-700/50 text-gray-400 hover:text-white hover:bg-gray-700/50"
-              }`}
-              aria-label={chatOpen ? "Close chat" : "Open chat"}
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
-                />
-              </svg>
-              {!chatOpen && (
-                <span className="absolute -top-1 -right-1 w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-              )}
-            </Button>
-
-            <Button variant="secondary" size="sm" onClick={handleLeaveRoom}>
-              Leave
-            </Button>
-          </div>
-        </div>
-      </header>
+        <Button variant="secondary" size="sm" onClick={handleLeaveRoom}>
+          Leave
+        </Button>
+      </Header>
 
       {/* Main Content */}
       <div className="flex-1 min-h-0 flex overflow-hidden relative">
