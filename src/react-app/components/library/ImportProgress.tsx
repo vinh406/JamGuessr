@@ -1,7 +1,8 @@
 import LoadingSpinner from "../common/LoadingSpinner";
+import type { SSEState } from "../../hooks/useSSE";
 
 interface ImportProgressProps {
-  state: "idle" | "connecting" | "importing" | "complete" | "error";
+  state: SSEState | "importing";
   current?: number;
   total?: number;
   label?: string;
@@ -19,7 +20,8 @@ export default function ImportProgress({
 }: ImportProgressProps) {
   if (state === "idle") return null;
 
-  const isIndeterminate = state === "connecting" || (state === "importing" && (!total || total === 0));
+  const isWorking = state === "connecting" || state === "importing" || state === "streaming";
+  const isIndeterminate = state === "connecting" || (isWorking && (!total || total === 0));
   const percent = total && total > 0 && current != null
     ? Math.min(100, Math.round((current / total) * 100))
     : 0;
@@ -39,7 +41,7 @@ export default function ImportProgress({
     >
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
-          {state === "connecting" || state === "importing" ? (
+          {isWorking ? (
             <LoadingSpinner size="sm" className="text-amber-400" />
           ) : state === "complete" ? (
             <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -144,7 +144,7 @@ export default function LibraryPage() {
       if (event.event === "phase") {
         const d = event.data as { label: string };
         setRemoveLabel(d.label);
-        setRemoveState("importing");
+        setRemoveState("streaming");
       }
     },
     onComplete: () => {
@@ -312,7 +312,7 @@ export default function LibraryPage() {
               )}
 
               <ImportProgress
-                state={importState === "connecting" ? "connecting" : importState === "importing" ? "importing" : importState}
+                state={importState}
                 current={importCurrent}
                 total={importTotal}
                 label={importLabel}
@@ -556,9 +556,8 @@ export default function LibraryPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="bg-gray-800 rounded-2xl border border-gray-700/50 p-6 w-80">
             <ImportProgress
-              state={removeState === "connecting" ? "connecting" : removeState === "complete" || removeState === "error" ? removeState : "importing"}
+              state={removeState}
               label={removeLabel}
-              error={removeLabel}
               onDismiss={() => {
                 setRemoveState("idle");
                 setDeleteTarget(null);

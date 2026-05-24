@@ -180,8 +180,8 @@ export function createLibraryService(connectionString: string) {
       for (const trackData of chunk) {
         const existing = existingBySpotifyId.get(trackData.spotifyId);
         const track = existing ?? insertedBySpotifyId.get(trackData.spotifyId);
-        if (!track) continue;
-        const source = sourceByTrackId.get(track.id) ?? { trackId: track.id } as LibraryTrackSource;
+        const source = track ? sourceByTrackId.get(track.id) : undefined;
+        if (!track || !source) continue;
         results.push({ track, source });
       }
 
