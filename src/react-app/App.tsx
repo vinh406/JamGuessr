@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router";
 import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
 import RoomPage from "./pages/RoomPage";
+import LibraryPage from "./pages/LibraryPage";
 import LoadingSpinner from "./components/common/LoadingSpinner";
 
 function AppContent() {
@@ -33,6 +34,7 @@ function AppContent() {
         element={isAuthenticated ? <Navigate to="/" replace /> : <LoginPage />}
       />
       <Route path="/room/:roomName" element={<RoomPage />} />
+      <Route path="/library" element={isAuthenticated ? <LibraryPage /> : <Navigate to="/login" replace />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

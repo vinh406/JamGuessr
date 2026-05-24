@@ -12,6 +12,15 @@ const ArtistSchema = z
   })
   .openapi("Artist");
 
+// Track source entry schema
+const TrackSourceSchema = z
+  .object({
+    type: z.enum(["direct", "playlist", "album"]).openapi({ description: "Source type" }),
+    playlistId: z.string().optional().openapi({ description: "Playlist ID if source is a playlist" }),
+    albumId: z.string().optional().openapi({ description: "Album ID if source is an album" }),
+  })
+  .openapi("TrackSource");
+
 // Track response schema
 const TrackSchema = z
   .object({
@@ -31,6 +40,7 @@ const TrackSchema = z
       description: "ISO timestamp when track was added",
       example: "2024-01-15T10:30:00Z",
     }),
+    sources: z.array(TrackSourceSchema).openapi({ description: "Sources that contributed this track" }),
   })
   .openapi("Track");
 
@@ -244,6 +254,11 @@ export function createLibraryHandlers() {
         albumId: track.albumId ?? undefined,
         durationMs: track.durationMs ?? undefined,
         addedAt: track.addedAt instanceof Date ? track.addedAt.toISOString() : track.addedAt,
+        sources: tws.sources.map((s) => ({
+          type: s.sourceType as "playlist" | "album" | "direct",
+          playlistId: s.playlistId ?? undefined,
+          albumId: s.albumId ?? undefined,
+        })),
       };
     });
 
@@ -436,6 +451,7 @@ export function createLibraryHandlers() {
           ...track,
           albumId: track.albumId ?? undefined,
           addedAt: track.addedAt.toISOString(),
+          sources: [],
         },
       },
       200,
