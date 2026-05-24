@@ -99,6 +99,7 @@ const MIN_TOTAL_TRACKS = 20;
  */
 export function createLibraryService(connectionString: string) {
   const db: DbInstance = getDb(connectionString);
+  const BATCH_SIZE = 25;
 
   // ── Internal query helpers (not exported) ──────────────────────────────
 
@@ -274,6 +275,7 @@ export function createLibraryService(connectionString: string) {
     async addFromSpotifyLink(
       userId: string,
       link: string,
+      onProgress?: (current: number, total: number) => void,
     ): Promise<
       | { success: true; type: SpotifyLinkType; id: string; trackCount?: number }
       | { success: false; error: string }
@@ -340,7 +342,7 @@ export function createLibraryService(connectionString: string) {
             durationMs: t.duration || undefined,
           }));
 
-          await this.addTracksFromPlaylist(userId, playlist.id, trackData);
+          await this.addTracksFromPlaylist(userId, playlist.id, trackData, onProgress);
           await this.updateUserLibraryStats(userId);
 
           return {
@@ -389,7 +391,7 @@ export function createLibraryService(connectionString: string) {
             durationMs: t.duration || undefined,
           }));
 
-          await this.addTracksFromAlbum(userId, album.id, trackData);
+          await this.addTracksFromAlbum(userId, album.id, trackData, onProgress);
           await this.updateUserLibraryStats(userId);
 
           return { success: true, type: "album", id: album.id, trackCount: metadata.totalTracks };
@@ -470,7 +472,13 @@ export function createLibraryService(connectionString: string) {
     },
 
     /** Remove a playlist and cascade-delete orphaned tracks */
-    async removePlaylist(userId: string, playlistId: string): Promise<void> {
+    async removePlaylist(
+      userId: string,
+      playlistId: string,
+      onProgress?: (phase: string) => void,
+    ): Promise<void> {
+      onProgress?.("removing_sources");
+
       const sourceEntries = await db.query.libraryTrackSources.findMany({
         where: and(
           eq(libraryTrackSources.userId, userId),
@@ -492,6 +500,8 @@ export function createLibraryService(connectionString: string) {
         );
 
       if (trackIds.length > 0) {
+        onProgress?.("cleaning_up");
+
         const orphanedTracks = await db
           .select({ id: libraryTracks.id })
           .from(libraryTracks)
@@ -559,7 +569,13 @@ export function createLibraryService(connectionString: string) {
     },
 
     /** Remove an album and cascade-delete orphaned tracks */
-    async removeAlbum(userId: string, albumId: string): Promise<void> {
+    async removeAlbum(
+      userId: string,
+      albumId: string,
+      onProgress?: (phase: string) => void,
+    ): Promise<void> {
+      onProgress?.("removing_sources");
+
       const sourceEntries = await db.query.libraryTrackSources.findMany({
         where: and(
           eq(libraryTrackSources.userId, userId),
@@ -581,6 +597,8 @@ export function createLibraryService(connectionString: string) {
         );
 
       if (trackIds.length > 0) {
+        onProgress?.("cleaning_up");
+
         const orphanedTracks = await db
           .select({ id: libraryTracks.id })
           .from(libraryTracks)
@@ -701,44 +719,72 @@ export function createLibraryService(connectionString: string) {
       userId: string,
       playlistId: string,
       tracks: TrackData[],
+      onProgress?: (current: number, total: number) => void,
     ): Promise<{ track: LibraryTrack; source: LibraryTrackSource }[]> {
+      if (tracks.length === 0) return [];
+
+      const allSpotifyIds = tracks.map((t) => t.spotifyId);
+
+      const existingTracks = await db
+        .select()
+        .from(libraryTracks)
+        .where(
+          and(eq(libraryTracks.userId, userId), inArray(libraryTracks.spotifyId, allSpotifyIds)),
+        );
+
+      const existingBySpotifyId = new Map(existingTracks.map((t) => [t.spotifyId, t]));
       const results: { track: LibraryTrack; source: LibraryTrackSource }[] = [];
 
-      for (const trackData of tracks) {
-        const existing = await trackExistsBySpotifyId(userId, trackData.spotifyId);
-        let track: LibraryTrack;
+      for (let i = 0; i < tracks.length; i += BATCH_SIZE) {
+        const chunk = tracks.slice(i, i + BATCH_SIZE);
 
-        if (existing) {
-          track = existing;
-        } else {
-          const [newTrack] = await db
-            .insert(libraryTracks)
-            .values({
-              id: trackData.id,
-              userId,
-              spotifyId: trackData.spotifyId,
-              name: trackData.name,
-              artists: trackData.artists,
-              albumName: trackData.albumName || "",
-              albumId: trackData.albumId,
-              durationMs: trackData.durationMs || 0,
-            })
-            .returning();
-          track = newTrack!;
+        const newTracksData = chunk
+          .filter((t) => !existingBySpotifyId.has(t.spotifyId))
+          .map((t) => ({
+            id: t.id,
+            userId,
+            spotifyId: t.spotifyId,
+            name: t.name,
+            artists: t.artists,
+            albumName: t.albumName || "",
+            albumId: t.albumId,
+            durationMs: t.durationMs || 0,
+          }));
+
+        const insertedTracks: LibraryTrack[] = [];
+        if (newTracksData.length > 0) {
+          insertedTracks.push(...(await db.insert(libraryTracks).values(newTracksData).returning()));
         }
 
-        const [source] = await db
-          .insert(libraryTrackSources)
-          .values({
+        const sourceValues = chunk.map((trackData) => {
+          const existing = existingBySpotifyId.get(trackData.spotifyId);
+          return {
             id: crypto.randomUUID(),
-            trackId: track.id,
+            trackId: existing ? existing.id : trackData.id,
             userId,
-            sourceType: "playlist",
+            sourceType: "playlist" as const,
             playlistId,
-          })
-          .returning();
+          };
+        });
 
-        results.push({ track, source: source! });
+        const insertedSources: LibraryTrackSource[] = [];
+        if (sourceValues.length > 0) {
+          insertedSources.push(
+            ...(await db.insert(libraryTrackSources).values(sourceValues).returning()),
+          );
+        }
+
+        const sourceByTrackId = new Map(insertedSources.map((s) => [s.trackId, s]));
+        const insertedBySpotifyId = new Map(insertedTracks.map((t) => [t.spotifyId, t]));
+
+        for (const trackData of chunk) {
+          const existing = existingBySpotifyId.get(trackData.spotifyId);
+          const track: LibraryTrack = existing ?? insertedBySpotifyId.get(trackData.spotifyId)!;
+          const source = sourceByTrackId.get(track.id)!;
+          results.push({ track, source });
+        }
+
+        onProgress?.(i + chunk.length, tracks.length);
       }
 
       return results;
@@ -749,44 +795,72 @@ export function createLibraryService(connectionString: string) {
       userId: string,
       albumId: string,
       tracks: TrackData[],
+      onProgress?: (current: number, total: number) => void,
     ): Promise<{ track: LibraryTrack; source: LibraryTrackSource }[]> {
+      if (tracks.length === 0) return [];
+
+      const allSpotifyIds = tracks.map((t) => t.spotifyId);
+
+      const existingTracks = await db
+        .select()
+        .from(libraryTracks)
+        .where(
+          and(eq(libraryTracks.userId, userId), inArray(libraryTracks.spotifyId, allSpotifyIds)),
+        );
+
+      const existingBySpotifyId = new Map(existingTracks.map((t) => [t.spotifyId, t]));
       const results: { track: LibraryTrack; source: LibraryTrackSource }[] = [];
 
-      for (const trackData of tracks) {
-        const existing = await trackExistsBySpotifyId(userId, trackData.spotifyId);
-        let track: LibraryTrack;
+      for (let i = 0; i < tracks.length; i += BATCH_SIZE) {
+        const chunk = tracks.slice(i, i + BATCH_SIZE);
 
-        if (existing) {
-          track = existing;
-        } else {
-          const [newTrack] = await db
-            .insert(libraryTracks)
-            .values({
-              id: trackData.id,
-              userId,
-              spotifyId: trackData.spotifyId,
-              name: trackData.name,
-              artists: trackData.artists,
-              albumName: trackData.albumName || "",
-              albumId: trackData.albumId,
-              durationMs: trackData.durationMs || 0,
-            })
-            .returning();
-          track = newTrack!;
+        const newTracksData = chunk
+          .filter((t) => !existingBySpotifyId.has(t.spotifyId))
+          .map((t) => ({
+            id: t.id,
+            userId,
+            spotifyId: t.spotifyId,
+            name: t.name,
+            artists: t.artists,
+            albumName: t.albumName || "",
+            albumId: t.albumId,
+            durationMs: t.durationMs || 0,
+          }));
+
+        const insertedTracks: LibraryTrack[] = [];
+        if (newTracksData.length > 0) {
+          insertedTracks.push(...(await db.insert(libraryTracks).values(newTracksData).returning()));
         }
 
-        const [source] = await db
-          .insert(libraryTrackSources)
-          .values({
+        const sourceValues = chunk.map((trackData) => {
+          const existing = existingBySpotifyId.get(trackData.spotifyId);
+          return {
             id: crypto.randomUUID(),
-            trackId: track.id,
+            trackId: existing ? existing.id : trackData.id,
             userId,
-            sourceType: "album",
+            sourceType: "album" as const,
             albumId,
-          })
-          .returning();
+          };
+        });
 
-        results.push({ track, source: source! });
+        const insertedSources: LibraryTrackSource[] = [];
+        if (sourceValues.length > 0) {
+          insertedSources.push(
+            ...(await db.insert(libraryTrackSources).values(sourceValues).returning()),
+          );
+        }
+
+        const sourceByTrackId = new Map(insertedSources.map((s) => [s.trackId, s]));
+        const insertedBySpotifyId = new Map(insertedTracks.map((t) => [t.spotifyId, t]));
+
+        for (const trackData of chunk) {
+          const existing = existingBySpotifyId.get(trackData.spotifyId);
+          const track: LibraryTrack = existing ?? insertedBySpotifyId.get(trackData.spotifyId)!;
+          const source = sourceByTrackId.get(track.id)!;
+          results.push({ track, source });
+        }
+
+        onProgress?.(i + chunk.length, tracks.length);
       }
 
       return results;
