@@ -4,6 +4,8 @@ import { Button, Input } from "../components/ui";
 import { Modal } from "../components/common/Modal";
 import ConfirmDialog from "../components/common/ConfirmDialog";
 import LoadingSpinner from "../components/common/LoadingSpinner";
+import { useSSE, type SSEState } from "../hooks/useSSE";
+import ImportProgress from "../components/library/ImportProgress";
 
 interface TrackSource {
   type: "direct" | "playlist" | "album";
@@ -72,9 +74,12 @@ export default function LibraryPage() {
   const [data, setData] = useState<LibraryData | null>(null);
   const [loading, setLoading] = useState(true);
   const [link, setLink] = useState("");
-  const [importing, setImporting] = useState(false);
-  const [importError, setImportError] = useState("");
-  const [importSuccess, setImportSuccess] = useState("");
+  const [importState, setImportState] = useState<SSEState>("idle");
+  const [importLabel, setImportLabel] = useState("");
+  const [importCurrent, setImportCurrent] = useState<number | undefined>(undefined);
+  const [importTotal, setImportTotal] = useState<number | undefined>(undefined);
+  const [removeState, setRemoveState] = useState<SSEState>("idle");
+  const [removeLabel, setRemoveLabel] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<{
     type: "track" | "playlist" | "album";
     id: string;
@@ -103,6 +108,60 @@ export default function LibraryPage() {
     }
   }, []);
 
+  const importSSE = useSSE({
+    onEvent: (event) => {
+      if (event.event === "phase") {
+        const d = event.data as { phase: string; label: string };
+        setImportLabel(d.label);
+      } else if (event.event === "progress") {
+        const d = event.data as { current: number; total: number; label: string };
+        setImportCurrent(d.current);
+        setImportTotal(d.total);
+        setImportLabel(d.label);
+        setImportState("importing");
+      }
+    },
+    onComplete: () => {
+      setImportState("complete");
+      setImportLabel("Import complete!");
+      setLink("");
+      fetchLibrary();
+      setTimeout(() => {
+        setImportState("idle");
+        setImportLabel("");
+        setImportCurrent(undefined);
+        setImportTotal(undefined);
+      }, 3000);
+    },
+    onError: (msg) => {
+      setImportState("error");
+      setImportLabel(msg);
+    },
+  });
+
+  const removeSSE = useSSE({
+    onEvent: (event) => {
+      if (event.event === "phase") {
+        const d = event.data as { label: string };
+        setRemoveLabel(d.label);
+        setRemoveState("importing");
+      }
+    },
+    onComplete: () => {
+      setRemoveState("complete");
+      setRemoveLabel("Removed!");
+      fetchLibrary();
+      setTimeout(() => {
+        setRemoveState("idle");
+        setDeleteTarget(null);
+      }, 2000);
+    },
+    onError: (msg) => {
+      setRemoveState("error");
+      setRemoveLabel(msg);
+    },
+  });
+
   useEffect(() => {
     fetchLibrary();
   }, [fetchLibrary]);
@@ -110,51 +169,32 @@ export default function LibraryPage() {
   const detectedType = link.trim() ? parseSpotifyLinkType(link) : null;
 
   const handleImport = async () => {
-    if (!link.trim() || importing) return;
-    setImporting(true);
-    setImportError("");
-    setImportSuccess("");
-    try {
-      const res = await fetch("/api/library/add", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ link: link.trim() }),
-      });
-      const json = await res.json();
-      if (res.ok && json.success) {
-        const label = json.type === "track" ? "Track added" : `${json.type === "playlist" ? "Playlist" : "Album"} imported (${json.trackCount ?? "?"} tracks)`;
-        setImportSuccess(label);
-        setLink("");
-        fetchLibrary();
-        setTimeout(() => setImportSuccess(""), 4000);
-      } else {
-        setImportError(json.error || "Failed to import");
-        setTimeout(() => setImportError(""), 5000);
-      }
-    } catch {
-      setImportError("Network error — try again");
-      setTimeout(() => setImportError(""), 5000);
-    } finally {
-      setImporting(false);
-    }
+    if (!link.trim() || importState === "connecting" || importState === "importing") return;
+    setImportState("connecting");
+    setImportLabel("");
+    setImportCurrent(undefined);
+    setImportTotal(undefined);
+    importSSE.start("/api/library/add", { link: link.trim() });
   };
 
   const handleDelete = async () => {
     if (!deleteTarget) return;
     const { type, id } = deleteTarget;
-    try {
-      const endpoint = type === "track"
-        ? `/api/library/track/${id}`
-        : type === "playlist"
-          ? `/api/library/playlist/${id}`
-          : `/api/library/album/${id}`;
-      const res = await fetch(endpoint, { method: "DELETE" });
-      if (res.ok) {
-        setDeleteTarget(null);
-        fetchLibrary();
+
+    if (type === "track") {
+      try {
+        const res = await fetch(`/api/library/track/${id}`, { method: "DELETE" });
+        if (res.ok) {
+          setDeleteTarget(null);
+          fetchLibrary();
+        }
+      } catch {
+        // ignore
       }
-    } catch {
-      // ignore
+    } else {
+      setRemoveState("connecting");
+      setRemoveLabel("");
+      removeSSE.start("/api/library/remove", { type, id });
     }
   };
 
@@ -237,8 +277,10 @@ export default function LibraryPage() {
                     value={link}
                     onChange={(e) => {
                       setLink(e.target.value);
-                      setImportError("");
-                      setImportSuccess("");
+                      setImportState("idle");
+                      setImportLabel("");
+                      setImportCurrent(undefined);
+                      setImportTotal(undefined);
                     }}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && detectedType) handleImport();
@@ -248,14 +290,15 @@ export default function LibraryPage() {
                 <Button
                   variant="primary"
                   onClick={handleImport}
-                  disabled={!detectedType || importing}
+                  disabled={!detectedType || importState === "connecting" || importState === "importing"}
                 >
-                  {importing ? (
-                    <span className="flex items-center gap-2">
-                      <LoadingSpinner size="sm" />
-                      Importing
-                    </span>
-                  ) : detectedType === "track" ? "Add Track" : detectedType === "playlist" ? "Import Playlist" : detectedType === "album" ? "Import Album" : "Import"}
+                  {importState === "idle"
+                    ? detectedType === "track" ? "Add Track" : detectedType === "playlist" ? "Import Playlist" : detectedType === "album" ? "Import Album" : "Import"
+                    : importState === "connecting"
+                      ? <span className="flex items-center gap-2"><LoadingSpinner size="sm" />Connecting</span>
+                      : importState === "importing"
+                        ? <span className="flex items-center gap-2"><LoadingSpinner size="sm" />Importing</span>
+                        : importState === "complete" ? "Done" : "Failed"}
                 </Button>
               </div>
 
@@ -268,23 +311,18 @@ export default function LibraryPage() {
                 </div>
               )}
 
-              {importError && (
-                <div className="mt-3 flex items-center gap-2 text-sm text-red-400">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  {importError}
-                </div>
-              )}
-
-              {importSuccess && (
-                <div className="mt-3 flex items-center gap-2 text-sm text-green-400">
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  {importSuccess}
-                </div>
-              )}
+              <ImportProgress
+                state={importState === "connecting" ? "connecting" : importState === "importing" ? "importing" : importState}
+                current={importCurrent}
+                total={importTotal}
+                label={importLabel}
+                onDismiss={() => {
+                  setImportState("idle");
+                  setImportLabel("");
+                  setImportCurrent(undefined);
+                  setImportTotal(undefined);
+                }}
+              />
             </div>
 
             {directTracks.length > 0 && (
@@ -498,7 +536,7 @@ export default function LibraryPage() {
         </Modal>
       )}
 
-      {deleteTarget && (
+      {deleteTarget && removeState === "idle" && (
         <ConfirmDialog
           title={deleteTarget.type === "track" ? "Remove Track" : deleteTarget.type === "playlist" ? "Remove Playlist" : "Remove Album"}
           message={
@@ -512,6 +550,22 @@ export default function LibraryPage() {
           onConfirm={handleDelete}
           onCancel={() => setDeleteTarget(null)}
         />
+      )}
+
+      {deleteTarget && removeState !== "idle" && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-gray-800 rounded-2xl border border-gray-700/50 p-6 w-80">
+            <ImportProgress
+              state={removeState === "connecting" ? "connecting" : removeState === "complete" || removeState === "error" ? removeState : "importing"}
+              label={removeLabel}
+              error={removeLabel}
+              onDismiss={() => {
+                setRemoveState("idle");
+                setDeleteTarget(null);
+              }}
+            />
+          </div>
+        </div>
       )}
     </div>
   );
