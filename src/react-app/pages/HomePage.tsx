@@ -13,7 +13,7 @@ interface LibraryStats {
 }
 
 export default function HomePage() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [roomCode, setRoomCode] = useState("");
   const [stats, setStats] = useState<LibraryStats | null>(null);
@@ -40,38 +40,11 @@ export default function HomePage() {
     }
   };
 
-  const handleLogout = async () => {
-    try {
-      await logout();
-    } catch (error) {
-      console.error("Failed to logout:", error);
-    }
-  };
-
   const hasStats = stats && (stats.totalSongs > 0 || stats.totalPlaylists > 0 || stats.totalAlbums > 0);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
-      <Header>
-        {user && (
-          <div className="flex items-center gap-3">
-            {user.image && (
-              <img src={user.image} alt={user.name} className="w-8 h-8 rounded-full" />
-            )}
-            <span className="text-gray-300 font-medium hidden md:block">{user.name}</span>
-            <Button variant="ghost" onClick={handleLogout}>
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-                />
-              </svg>
-            </Button>
-          </div>
-        )}
-      </Header>
+      <Header />
 
       <main className="max-w-4xl mx-auto px-6 py-12">
         <div className="text-center mb-12">
