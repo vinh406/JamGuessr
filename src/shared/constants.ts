@@ -34,7 +34,7 @@ export const AUDIO_TIME_OPTIONS = [1, 3, 5, 10, 15] as const;
 // Room Code Generation
 // ============================================================================
 
-const ROOM_CODE_LENGTH = 8;
+export const ROOM_CODE_LENGTH = 8;
 const ROOM_CODE_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
 /**

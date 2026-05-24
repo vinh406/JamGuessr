@@ -1,16 +1,31 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { useAuth } from "../hooks/useAuth";
 import Header from "../components/Header";
-import ActionCard from "../components/common/ActionCard";
-import { Input, Button } from "../components/ui";
-import { generateRoomCode } from "../../shared/constants";
+
+import { Button, Input } from "../components/ui";
+import { generateRoomCode, ROOM_CODE_LENGTH } from "../../shared/constants";
+
+interface LibraryStats {
+  totalSongs: number;
+  totalPlaylists: number;
+  totalAlbums: number;
+}
 
 export default function HomePage() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [roomCode, setRoomCode] = useState("");
-  const [isJoining, setIsJoining] = useState(false);
+  const [stats, setStats] = useState<LibraryStats | null>(null);
+  const [statsLoading, setStatsLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/library/stats")
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => setStats(data))
+      .catch(() => {})
+      .finally(() => setStatsLoading(false));
+  }, []);
 
   const handleCreateRoom = () => {
     const code = generateRoomCode();
@@ -18,19 +33,10 @@ export default function HomePage() {
     navigate(`/room/${code}`);
   };
 
-  const handleJoinRoom = async () => {
-    if (!roomCode.trim()) return;
-
-    setIsJoining(true);
-    try {
-      // Store username in session storage
+  const handleJoinRoom = () => {
+    if (roomCode.trim()) {
       sessionStorage.setItem("chat-username", user?.name || "Player");
-      // Navigate to the room
-      navigate(`/room/${roomCode}`);
-    } catch (error) {
-      console.error("Failed to join room:", error);
-    } finally {
-      setIsJoining(false);
+      navigate(`/room/${roomCode.trim()}`);
     }
   };
 
@@ -42,18 +48,13 @@ export default function HomePage() {
     }
   };
 
+  const hasStats = stats && (stats.totalSongs > 0 || stats.totalPlaylists > 0 || stats.totalAlbums > 0);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
-      {/* Header */}
       <Header>
         {user && (
           <div className="flex items-center gap-3">
-            <Button variant="ghost" size="sm" onClick={() => navigate("/library")}>
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-              </svg>
-              <span className="hidden md:block">My Library</span>
-            </Button>
             {user.image && (
               <img src={user.image} alt={user.name} className="w-8 h-8 rounded-full" />
             )}
@@ -72,77 +73,87 @@ export default function HomePage() {
         )}
       </Header>
 
-      {/* Main Content */}
       <main className="max-w-4xl mx-auto px-6 py-12">
-        <div className="text-center mb-16">
-          <h1 className="text-5xl md:text-6xl font-bold text-white mb-6">
-            Welcome back,{" "}
+        <div className="text-center mb-12">
+          <h1 className="text-5xl md:text-6xl font-bold text-white mb-4">
+            Hey,{" "}
             <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-emerald-500">
               {user?.name?.split(" ")[0] || "Player"}
             </span>
           </h1>
+          <p className="text-gray-400 text-lg">Your music. Your game. Let's go.</p>
+          {statsLoading ? (
+            <p className="text-gray-600 text-sm mt-2">
+              <span className="inline-block w-8 h-3 bg-gray-700/50 rounded animate-pulse" />
+              {" tracks · "}
+              <span className="inline-block w-8 h-3 bg-gray-700/50 rounded animate-pulse" />
+              {" playlists · "}
+              <span className="inline-block w-8 h-3 bg-gray-700/50 rounded animate-pulse" />
+              {" albums in your library"}
+            </p>
+          ) : hasStats && (
+            <p className="text-gray-500 text-sm mt-2">
+              {stats!.totalSongs} track{stats!.totalSongs !== 1 ? "s" : ""}
+              {stats!.totalPlaylists > 0 && ` · ${stats!.totalPlaylists} playlist${stats!.totalPlaylists !== 1 ? "s" : ""}`}
+              {stats!.totalAlbums > 0 && ` · ${stats!.totalAlbums} album${stats!.totalAlbums !== 1 ? "s" : ""}`}
+              {" in your library"}
+            </p>
+          )}
         </div>
 
-        {/* Action Cards */}
-        <div className="grid md:grid-cols-2 gap-8">
-          {/* Create Room Card */}
-          <ActionCard
-            icon={
-              <svg
-                className="w-8 h-8 text-white"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M12 4v16m8-8H4"
-                />
-              </svg>
-            }
-            title="Create a Room"
-            description="Start a new game and invite your friends with a room code. You'll be the host!"
-            buttonText="Create Room"
-            onClick={handleCreateRoom}
-          />
+        <div className="flex flex-col gap-3 max-w-sm mx-auto">
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              onClick={handleCreateRoom}
+              className="bg-gradient-to-br from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500 rounded-2xl p-6 text-left transition-all hover:shadow-lg hover:shadow-green-500/20 group"
+            >
+              <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+              </div>
+              <div className="text-white font-semibold">Create Room</div>
+              <div className="text-white/70 text-sm">Start a new game</div>
+            </button>
 
-          {/* Join Room Card */}
-          <ActionCard
-            variant="blue"
-            icon={
-              <svg
-                className="w-8 h-8 text-white"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-                />
-              </svg>
-            }
-            title="Join a Room"
-            description="Have a room code? Enter it below to join your friend's game!"
-            buttonText="Join Room"
-            onClick={handleJoinRoom}
-            isLoading={isJoining}
-            disabled={!roomCode.trim()}
-          >
+            <button
+              onClick={() => navigate("/library")}
+              className="bg-gray-800/60 hover:bg-gray-800/80 rounded-2xl p-6 text-left border border-gray-700/30 hover:border-gray-600/50 transition-all group"
+            >
+              <div className="w-10 h-10 bg-amber-500/20 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
+                <svg className="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+              </div>
+              <div className="text-white font-semibold">Library</div>
+              <div className="text-gray-400 text-sm">Manage your music</div>
+            </button>
+          </div>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-700/30" />
+            </div>
+            <div className="relative flex justify-center">
+              <span className="bg-gray-900 px-3 text-xs text-gray-500">or join a room</span>
+            </div>
+          </div>
+
+          <div className="flex gap-2">
             <Input
               variant="blue"
               type="text"
               placeholder="Enter room code"
               value={roomCode}
               onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
-              maxLength={8}
-              className="mb-4"
+              maxLength={ROOM_CODE_LENGTH}
+              className="flex-1"
+              onKeyDown={(e) => e.key === "Enter" && handleJoinRoom()}
             />
-          </ActionCard>
+            <Button variant="blue" size="md" onClick={handleJoinRoom} disabled={!roomCode.trim()}>
+              Join
+            </Button>
+          </div>
         </div>
       </main>
     </div>
