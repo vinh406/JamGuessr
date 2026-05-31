@@ -375,7 +375,7 @@ export async function getPlaylistTracks(playlistId: string): Promise<Song[]> {
       const { entity, accessToken } = embed;
       const tracks = entity.trackList.map(embedTrackToSong);
 
-      // Get real total and more tracks from partner API
+      // Fetch ALL tracks from partner API for album art enrichment
       try {
         const countResponse = await fetch(
           "https://api-partner.spotify.com/pathfinder/v2/query",
@@ -406,14 +406,38 @@ export async function getPlaylistTracks(playlistId: string): Promise<Song[]> {
           const countData = await countResponse.json() as PartnerPlaylistResponse;
           const total = countData.data?.playlistV2?.content?.totalCount;
 
-          if (typeof total === "number" && total > tracks.length) {
-            const moreTracks = await fetchPartnerPlaylistTracks(
+          if (typeof total === "number" && total > 0) {
+            const partnerTracks = await fetchPartnerPlaylistTracks(
               playlistId,
               accessToken,
-              tracks.length,
+              0,
               total,
             );
-            return [...tracks, ...moreTracks];
+            // Build a map of partner tracks by Spotify ID for album art merge
+            const partnerMap = new Map<string, Song>();
+            for (const pt of partnerTracks) {
+              partnerMap.set(pt.id, pt);
+            }
+            // Merge album art (and album name) from partner API into embed tracks
+            const merged = tracks.map((t) => {
+              const partner = partnerMap.get(t.id);
+              if (partner && partner.albumImageUrl) {
+                return {
+                  ...t,
+                  album: partner.album || t.album,
+                  albumImageUrl: partner.albumImageUrl,
+                };
+              }
+              return t;
+            });
+            // Add any partner tracks that weren't in the embed list
+            const embedIds = new Set(tracks.map((t) => t.id));
+            for (const pt of partnerTracks) {
+              if (!embedIds.has(pt.id)) {
+                merged.push(pt);
+              }
+            }
+            return merged;
           }
         }
       } catch {
