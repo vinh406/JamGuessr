@@ -47,53 +47,7 @@ const TrackSchema = z
   })
   .openapi("Track");
 
-// Playlist response schema
-const PlaylistSchema = z
-  .object({
-    id: z.string().openapi({
-      description: "Library playlist ID",
-      example: "123e4567-e89b-12d3-a456-426614174001",
-    }),
-    spotifyId: z
-      .string()
-      .openapi({ description: "Spotify playlist ID", example: "37i9dQZF1DXcBWIGoYBM5M" }),
-    name: z.string().openapi({ description: "Playlist name", example: "My Favorites" }),
-    description: z.string().optional().openapi({ description: "Playlist description" }),
-    imageUrl: z.string().optional().openapi({ description: "Playlist cover image URL" }),
-    trackCount: z.number().openapi({ description: "Number of tracks in playlist", example: 50 }),
-    spotifyUrl: z.string().optional().openapi({ description: "Spotify URL" }),
-    addedAt: z.string().openapi({
-      description: "ISO timestamp when playlist was added",
-      example: "2024-01-15T10:30:00Z",
-    }),
-  })
-  .openapi("Playlist");
 
-// Album response schema
-const AlbumSchema = z
-  .object({
-    id: z.string().openapi({
-      description: "Library album ID",
-      example: "123e4567-e89b-12d3-a456-426614174002",
-    }),
-    spotifyId: z
-      .string()
-      .openapi({ description: "Spotify album ID", example: "4wsqlZ0IqKcJ1EOHhKHSgD" }),
-    name: z.string().openapi({ description: "Album name", example: "Midnights" }),
-    artists: z.array(ArtistSchema).openapi({ description: "List of artists" }),
-    imageUrl: z.string().optional().openapi({ description: "Album cover image URL" }),
-    releaseDate: z
-      .string()
-      .optional()
-      .openapi({ description: "Album release date", example: "2022-10-21" }),
-    trackCount: z.number().openapi({ description: "Number of tracks in album", example: 13 }),
-    spotifyUrl: z.string().optional().openapi({ description: "Spotify URL" }),
-    addedAt: z.string().openapi({
-      description: "ISO timestamp when album was added",
-      example: "2024-01-15T10:30:00Z",
-    }),
-  })
-  .openapi("Album");
 
 // Library stats schema
 const LibraryStatsSchema = z
@@ -108,14 +62,44 @@ const LibraryStatsSchema = z
   })
   .openapi("LibraryStats");
 
-// User library response schema
-const UserLibraryResponseSchema = z
+// Library item response schema
+const LibraryItemSchema = z
   .object({
-    tracks: z.array(TrackSchema).openapi({ description: "User's saved tracks" }),
-    playlists: z.array(PlaylistSchema).openapi({ description: "User's imported playlists" }),
-    albums: z.array(AlbumSchema).openapi({ description: "User's imported albums" }),
+    type: z.enum(["playlist", "album", "tracks"]).openapi({ description: "Item type" }),
+    id: z.string().openapi({ description: "Item ID" }),
+    spotifyId: z.string().optional().openapi({ description: "Spotify ID" }),
+    name: z.string().openapi({ description: "Item name" }),
+    artists: z.array(ArtistSchema).optional().openapi({ description: "Artists (album only)" }),
+    imageUrl: z.string().optional().openapi({ description: "Cover image URL" }),
+    trackCount: z.number().openapi({ description: "Number of tracks" }),
+    addedAt: z.string().openapi({ description: "ISO timestamp" }),
   })
-  .openapi("UserLibraryResponse");
+  .openapi("LibraryItem");
+
+const LibraryItemsResponseSchema = z
+  .object({
+    items: z.array(LibraryItemSchema).openapi({ description: "Paginated library items" }),
+    nextCursor: z.string().nullable().openapi({ description: "Cursor for next page" }),
+  })
+  .openapi("LibraryItemsResponse");
+
+const LibraryTracksResponseSchema = z
+  .object({
+    tracks: z.array(TrackSchema.omit({ sources: true })).openapi({ description: "Paginated tracks" }),
+    nextCursor: z.string().nullable().openapi({ description: "Cursor for next page" }),
+  })
+  .openapi("LibraryTracksResponse");
+
+const QueryCursorSchema = z.object({
+  cursor: z.string().optional().openapi({
+    param: { name: "cursor", in: "query" },
+    description: "Cursor for pagination",
+  }),
+  limit: z.coerce.number().optional().default(20).openapi({
+    param: { name: "limit", in: "query" },
+    description: "Items per page",
+  }),
+});
 
 // Add from Spotify link request schema
 const AddFromLinkRequestSchema = z
@@ -209,85 +193,131 @@ export function createLibraryHandlers() {
     return session?.user;
   };
 
-  // GET /user - Get current user's library (mounted under /api/library)
-  const getUserLibraryRoute = createRoute({
+  // GET /items - Get paginated top-level library items
+  const getItemsRoute = createRoute({
     method: "get",
-    path: "/user",
+    path: "/items",
+    request: { query: QueryCursorSchema },
     responses: {
       200: {
-        content: { "application/json": { schema: UserLibraryResponseSchema } },
-        description: "User library data with tracks, playlists, and albums",
+        content: { "application/json": { schema: LibraryItemsResponseSchema } },
+        description: "Paginated library items (playlists, albums, and tracks container)",
       },
       401: {
         content: { "application/json": { schema: ErrorResponseSchema } },
-        description: "Unauthorized - authentication required",
+        description: "Unauthorized",
       },
     },
     tags: ["Library"],
-    summary: "Get user library",
-    description: "Retrieve all tracks, playlists, and albums in the authenticated user's library",
+    summary: "Get library items",
+    description: "Paginated feed of top-level library items sorted by added date",
   });
-  app.openapi(getUserLibraryRoute, async (c) => {
+  app.openapi(getItemsRoute, async (c) => {
     const user = await getAuthenticatedUser(c);
-    if (!user) {
-      return c.json({ error: "Unauthorized" }, 401);
-    }
+    if (!user) return c.json({ error: "Unauthorized" }, 401);
 
+    const { cursor, limit } = c.req.valid("query");
     const lib = createLibraryService(c.env.DATABASE_URL);
+    const result = await lib.getItems(user.id, cursor, limit);
+    return c.json(result, 200);
+  });
 
-    const [tracksWithSources, playlists, albums] = await Promise.all([
-      lib.getUserLibrary(user.id),
-      lib.getUserPlaylists(user.id),
-      lib.getUserAlbums(user.id),
-    ]);
+  // GET /items/tracks - Get paginated direct tracks
+  const getDirectTracksRoute = createRoute({
+    method: "get",
+    path: "/items/tracks",
+    request: {
+      query: QueryCursorSchema.extend({
+        limit: z.coerce.number().optional().default(50),
+      }),
+    },
+    responses: {
+      200: {
+        content: { "application/json": { schema: LibraryTracksResponseSchema } },
+        description: "Paginated directly-added tracks",
+      },
+      401: { content: { "application/json": { schema: ErrorResponseSchema } }, description: "Unauthorized" },
+    },
+    tags: ["Library"],
+    summary: "Get direct tracks",
+    description: "Paginated list of tracks added directly (not from a playlist or album)",
+  });
+  app.openapi(getDirectTracksRoute, async (c) => {
+    const user = await getAuthenticatedUser(c);
+    if (!user) return c.json({ error: "Unauthorized" }, 401);
 
-    // Transform tracks to API shape
-    const tracks = tracksWithSources.map((tws) => {
-      const track = tws.track;
-      return {
-        id: track.id,
-        spotifyId: track.spotifyId,
-        name: track.name,
-        artists: track.artists,
-        albumName: track.albumName ?? undefined,
-        albumId: track.albumId ?? undefined,
-        albumImageUrl: track.albumImageUrl ?? undefined,
-        durationMs: track.durationMs ?? undefined,
-        addedAt: track.addedAt instanceof Date ? track.addedAt.toISOString() : track.addedAt,
-        sources: tws.sources.map((s) => ({
-          type: s.sourceType as "playlist" | "album" | "direct",
-          playlistId: s.playlistId ?? undefined,
-          albumId: s.albumId ?? undefined,
-        })),
-      };
-    });
+    const { cursor, limit } = c.req.valid("query");
+    const lib = createLibraryService(c.env.DATABASE_URL);
+    const result = await lib.getDirectTracks(user.id, cursor, limit);
+    return c.json(result, 200);
+  });
 
-    // Transform playlists to API shape
-    const playlistsApi = playlists.map((p) => ({
-      id: p.id,
-      spotifyId: p.spotifyId,
-      name: p.name,
-      description: undefined,
-      imageUrl: p.imageUrl ?? undefined,
-      trackCount: p.trackCount,
-      spotifyUrl: undefined,
-      addedAt: p.addedAt instanceof Date ? p.addedAt.toISOString() : p.addedAt,
-    }));
+  // GET /items/playlist/:spotifyId/tracks - Get paginated playlist tracks
+  const getPlaylistTracksRoute = createRoute({
+    method: "get",
+    path: "/items/playlist/{spotifyId}/tracks",
+    request: {
+      params: z.object({
+        spotifyId: z.string().openapi({ param: { name: "spotifyId", in: "path" }, description: "Spotify playlist ID" }),
+      }),
+      query: QueryCursorSchema.extend({
+        limit: z.coerce.number().optional().default(50),
+      }),
+    },
+    responses: {
+      200: {
+        content: { "application/json": { schema: LibraryTracksResponseSchema } },
+        description: "Paginated playlist tracks",
+      },
+      401: { content: { "application/json": { schema: ErrorResponseSchema } }, description: "Unauthorized" },
+    },
+    tags: ["Library"],
+    summary: "Get playlist tracks",
+    description: "Paginated list of tracks for a specific playlist",
+  });
+  app.openapi(getPlaylistTracksRoute, async (c) => {
+    const user = await getAuthenticatedUser(c);
+    if (!user) return c.json({ error: "Unauthorized" }, 401);
 
-    // Transform albums to API shape
-    const albumsApi = albums.map((a) => ({
-      id: a.id,
-      spotifyId: a.spotifyId,
-      name: a.name,
-      artists: [{ name: a.artistName }],
-      imageUrl: a.imageUrl ?? undefined,
-      releaseDate: a.releaseDate ?? undefined,
-      trackCount: a.totalTracks,
-      spotifyUrl: undefined,
-      addedAt: a.addedAt instanceof Date ? a.addedAt.toISOString() : a.addedAt,
-    }));
+    const { spotifyId } = c.req.valid("param");
+    const { cursor, limit } = c.req.valid("query");
+    const lib = createLibraryService(c.env.DATABASE_URL);
+    const result = await lib.getPlaylistTracksPaginated(user.id, spotifyId, cursor, limit);
+    return c.json(result, 200);
+  });
 
-    return c.json({ tracks, playlists: playlistsApi, albums: albumsApi }, 200);
+  // GET /items/album/:spotifyId/tracks - Get paginated album tracks
+  const getAlbumTracksRoute = createRoute({
+    method: "get",
+    path: "/items/album/{spotifyId}/tracks",
+    request: {
+      params: z.object({
+        spotifyId: z.string().openapi({ param: { name: "spotifyId", in: "path" }, description: "Spotify album ID" }),
+      }),
+      query: QueryCursorSchema.extend({
+        limit: z.coerce.number().optional().default(50),
+      }),
+    },
+    responses: {
+      200: {
+        content: { "application/json": { schema: LibraryTracksResponseSchema } },
+        description: "Paginated album tracks",
+      },
+      401: { content: { "application/json": { schema: ErrorResponseSchema } }, description: "Unauthorized" },
+    },
+    tags: ["Library"],
+    summary: "Get album tracks",
+    description: "Paginated list of tracks for a specific album",
+  });
+  app.openapi(getAlbumTracksRoute, async (c) => {
+    const user = await getAuthenticatedUser(c);
+    if (!user) return c.json({ error: "Unauthorized" }, 401);
+
+    const { spotifyId } = c.req.valid("param");
+    const { cursor, limit } = c.req.valid("query");
+    const lib = createLibraryService(c.env.DATABASE_URL);
+    const result = await lib.getAlbumTracksPaginated(user.id, spotifyId, cursor, limit);
+    return c.json(result, 200);
   });
 
   app.get("/playlist/:spotifyId", async (c) => {

@@ -1,4 +1,4 @@
-import { ReactNode, useState } from "react";
+import { ReactNode, useState, type RefObject } from "react";
 import { Dialog } from "@base-ui/react/dialog";
 
 interface ModalProps {
@@ -8,6 +8,8 @@ interface ModalProps {
   footer?: ReactNode;
   maxWidth?: "sm" | "md" | "lg";
   scrollable?: boolean;
+  scrollContainerRef?: RefObject<HTMLDivElement | null>;
+  onScroll?: (e: React.UIEvent<HTMLDivElement>) => void;
 }
 
 const maxWidthClasses = {
@@ -23,6 +25,8 @@ export function Modal({
   footer,
   maxWidth = "md",
   scrollable = false,
+  scrollContainerRef,
+  onScroll,
 }: ModalProps) {
   const [open, setOpen] = useState(true);
 
@@ -52,7 +56,7 @@ export function Modal({
             </Dialog.Close>
           </div>
 
-          <div className={scrollable ? "flex-1 overflow-y-auto p-6" : "p-6"}>{children}</div>
+          <div ref={scrollContainerRef} onScroll={onScroll} className={scrollable ? "flex-1 overflow-y-auto p-6" : "p-6"}>{children}</div>
 
           {footer && <div className="p-6 border-t border-gray-700/50">{footer}</div>}
         </Dialog.Popup>

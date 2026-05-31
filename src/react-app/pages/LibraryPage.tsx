@@ -7,13 +7,18 @@ import LoadingSpinner from "../components/common/LoadingSpinner";
 import { useSSE, type SSEState } from "../hooks/useSSE";
 import { toast } from "sonner";
 
-interface TrackSource {
-  type: "direct" | "playlist" | "album";
-  playlistId?: string;
-  albumId?: string;
+interface LibraryItem {
+  type: "playlist" | "album" | "tracks";
+  id: string;
+  spotifyId?: string;
+  name: string;
+  artists?: { name: string }[];
+  imageUrl?: string;
+  trackCount: number;
+  addedAt: string;
 }
 
-interface Track {
+interface DrawerTrack {
   id: string;
   spotifyId: string;
   name: string;
@@ -23,34 +28,21 @@ interface Track {
   albumImageUrl?: string;
   durationMs?: number;
   addedAt: string;
-  sources: TrackSource[];
 }
 
-interface Playlist {
+interface DrawerState {
+  type: "playlist" | "album" | "tracks";
+  spotifyId?: string;
   id: string;
-  spotifyId: string;
   name: string;
-  description?: string;
-  imageUrl?: string;
   trackCount: number;
-  addedAt: string;
 }
 
-interface Album {
-  id: string;
-  spotifyId: string;
-  name: string;
-  artists: { name: string }[];
-  imageUrl?: string;
-  releaseDate?: string;
-  trackCount: number;
-  addedAt: string;
-}
-
-interface LibraryData {
-  tracks: Track[];
-  playlists: Playlist[];
-  albums: Album[];
+interface LibraryStats {
+  totalSongs: number;
+  totalPlaylists: number;
+  totalAlbums: number;
+  lastUpdated: string;
 }
 
 function formatDuration(ms: number): string {
@@ -72,8 +64,17 @@ function parseSpotifyLinkType(link: string): "track" | "playlist" | "album" | nu
 }
 
 export default function LibraryPage() {
-  const [data, setData] = useState<LibraryData | null>(null);
+  const [items, setItems] = useState<LibraryItem[]>([]);
+  const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [stats, setStats] = useState<LibraryStats | null>(null);
+
+  const [drawer, setDrawer] = useState<DrawerState | null>(null);
+  const [drawerTracks, setDrawerTracks] = useState<DrawerTrack[]>([]);
+  const [drawerCursor, setDrawerCursor] = useState<string | null>(null);
+  const [drawerLoading, setDrawerLoading] = useState(false);
+
   const [link, setLink] = useState("");
   const [importState, setImportState] = useState<SSEState>("idle");
   const [removeState, setRemoveState] = useState<SSEState>("idle");
@@ -85,27 +86,113 @@ export default function LibraryPage() {
     name: string;
     cascadeCount?: number;
   } | null>(null);
-  const [trackListModal, setTrackListModal] = useState<{
-    type: "playlist" | "album";
-    data: Playlist | Album;
-    tracks: Track[];
-  } | null>(null);
   const [removingTrackId, setRemovingTrackId] = useState<string | null>(null);
 
-  const fetchLibrary = useCallback(async () => {
-    setLoading(true);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const drawerSentinelRef = useRef<HTMLDivElement>(null);
+  const drawerScrollRef = useRef<HTMLDivElement | null>(null);
+  const drawerCacheRef = useRef<Map<string, { tracks: DrawerTrack[]; cursor: string | null }>>(new Map());
+
+  const fetchItems = useCallback(async (cursor?: string): Promise<{ items: LibraryItem[]; nextCursor: string | null } | null> => {
+    const params = new URLSearchParams({ limit: "20" });
+    if (cursor) params.set("cursor", cursor);
     try {
-      const res = await fetch("/api/library/user");
-      if (res.ok) {
-        const json = await res.json();
-        setData(json);
-      }
+      const res = await fetch(`/api/library/items?${params}`);
+      if (!res.ok) return null;
+      return res.json();
     } catch {
-      // handled by empty state
-    } finally {
-      setLoading(false);
+      return null;
     }
   }, []);
+
+  const fetchStats = useCallback(async () => {
+    try {
+      const res = await fetch("/api/library/stats");
+      if (res.ok) setStats(await res.json());
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  const loadMoreRef = useRef(async () => {});
+  loadMoreRef.current = async () => {
+    if (loadingMore || !nextCursor) return;
+    setLoadingMore(true);
+    const data = await fetchItems(nextCursor);
+    if (data) {
+      setItems((prev) => [...prev, ...data.items]);
+      setNextCursor(data.nextCursor);
+    }
+    setLoadingMore(false);
+  };
+
+  const loadDrawerMoreRef = useRef(async () => {});
+  loadDrawerMoreRef.current = async () => {
+    if (drawerLoading || !drawerCursor || !drawer) return;
+    setDrawerLoading(true);
+    try {
+      let url: string;
+      if (drawer.type === "tracks") {
+        url = `/api/library/items/tracks?cursor=${encodeURIComponent(drawerCursor)}&limit=50`;
+      } else {
+        url = `/api/library/items/${drawer.type}/${drawer.spotifyId}/tracks?cursor=${encodeURIComponent(drawerCursor)}&limit=50`;
+      }
+      const res = await fetch(url);
+      if (!res.ok) return;
+      const data = await res.json();
+      setDrawerTracks((prev) => {
+        const updated = [...prev, ...data.tracks];
+        if (drawer) drawerCacheRef.current.set(`${drawer.type}-${drawer.id}`, { tracks: updated, cursor: data.nextCursor });
+        return updated;
+      });
+      setDrawerCursor(data.nextCursor);
+    } catch {
+      // ignore
+    } finally {
+      setDrawerLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!sentinelRef.current) return;
+    const el = sentinelRef.current;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) loadMoreRef.current();
+      },
+      { threshold: 0.1 },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  const handleDrawerScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 200) {
+      loadDrawerMoreRef.current();
+    }
+  }, []);
+
+  useEffect(() => {
+    (async () => {
+      setLoading(true);
+      const [data] = await Promise.all([fetchItems(), fetchStats()]);
+      if (data) {
+        setItems(data.items);
+        setNextCursor(data.nextCursor);
+      }
+      setLoading(false);
+    })();
+  }, [fetchItems, fetchStats]);
+
+  const refetchItems = useCallback(async () => {
+    const data = await fetchItems();
+    if (data) {
+      setItems(data.items);
+      setNextCursor(data.nextCursor);
+    }
+    fetchStats();
+  }, [fetchItems, fetchStats]);
 
   const importSSE = useSSE({
     onEvent: (event) => {
@@ -128,7 +215,7 @@ export default function LibraryPage() {
         importToastId.current = null;
       }
       setLink("");
-      fetchLibrary();
+      refetchItems();
       setTimeout(() => {
         setImportState("idle");
       }, 3000);
@@ -157,7 +244,8 @@ export default function LibraryPage() {
         toast.success("Removed!", { id: removeToastId.current });
         removeToastId.current = null;
       }
-      fetchLibrary();
+      setDrawer(null);
+      refetchItems();
       setTimeout(() => {
         setRemoveState("idle");
         setDeleteTarget(null);
@@ -172,13 +260,9 @@ export default function LibraryPage() {
     },
   });
 
-  useEffect(() => {
-    fetchLibrary();
-  }, [fetchLibrary]);
-
   const detectedType = link.trim() ? parseSpotifyLinkType(link) : null;
 
-  const handleImport = async () => {
+  const handleImport = () => {
     if (!link.trim() || importState === "connecting" || importState === "streaming") return;
     setImportState("connecting");
     importToastId.current = toast.loading("Connecting...");
@@ -194,7 +278,14 @@ export default function LibraryPage() {
         const res = await fetch(`/api/library/track/${id}`, { method: "DELETE" });
         if (res.ok) {
           setDeleteTarget(null);
-          fetchLibrary();
+          if (drawer) {
+            setDrawerTracks((prev) => {
+              const updated = prev.filter((t) => t.id !== id);
+              drawerCacheRef.current.set(`${drawer.type}-${drawer.id}`, { tracks: updated, cursor: drawerCursor });
+              return updated;
+            });
+          }
+          refetchItems();
         }
       } catch {
         // ignore
@@ -206,38 +297,109 @@ export default function LibraryPage() {
     }
   };
 
-  const handleTrackFromSourceRemove = async (trackId: string) => {
+  const handleTrackRemove = async (trackId: string) => {
     setRemovingTrackId(trackId);
     try {
       const res = await fetch(`/api/library/track/${trackId}`, { method: "DELETE" });
       if (res.ok) {
-        fetchLibrary();
+        setDrawerTracks((prev) => {
+          const updated = prev.filter((t) => t.id !== trackId);
+          if (drawer) drawerCacheRef.current.set(`${drawer.type}-${drawer.id}`, { tracks: updated, cursor: drawerCursor });
+          return updated;
+        });
+        refetchItems();
       }
+    } catch {
+      // ignore
     } finally {
       setRemovingTrackId(null);
     }
   };
 
-  const getPlaylistTracks = (playlistId: string): Track[] => {
-    if (!data) return [];
-    return data.tracks.filter((t) =>
-      t.sources.some((s) => s.type === "playlist" && s.playlistId === playlistId),
-    );
+  const openDrawer = async (item: LibraryItem) => {
+    const itemKey = `${item.type}-${item.id}`;
+    const cached = drawerCacheRef.current.get(itemKey);
+    if (cached) {
+      setDrawer({
+        type: item.type,
+        spotifyId: item.spotifyId,
+        id: item.id,
+        name: item.name,
+        trackCount: item.trackCount,
+      });
+      setDrawerTracks(cached.tracks);
+      setDrawerCursor(cached.cursor);
+      setDrawerLoading(false);
+      return;
+    }
+    setDrawer({
+      type: item.type,
+      spotifyId: item.spotifyId,
+      id: item.id,
+      name: item.name,
+      trackCount: item.trackCount,
+    });
+    setDrawerTracks([]);
+    setDrawerCursor(null);
+    setDrawerLoading(true);
+
+    try {
+      let url: string;
+      if (item.type === "tracks") {
+        url = "/api/library/items/tracks?limit=50";
+      } else {
+        url = `/api/library/items/${item.type}/${item.spotifyId}/tracks?limit=50`;
+      }
+      const res = await fetch(url);
+      if (!res.ok) return;
+      const data = await res.json();
+      const tracks = data.tracks;
+      const cursor = data.nextCursor;
+      drawerCacheRef.current.set(itemKey, { tracks, cursor });
+      setDrawerTracks(tracks);
+      setDrawerCursor(cursor);
+    } catch {
+      // ignore
+    } finally {
+      setDrawerLoading(false);
+    }
   };
 
-  const getAlbumTracks = (albumId: string): Track[] => {
-    if (!data) return [];
-    return data.tracks.filter((t) =>
-      t.sources.some((s) => s.type === "album" && s.albumId === albumId),
-    );
+  const closeDrawer = () => {
+    setDrawer(null);
   };
 
-  const directTracks = data
-    ? data.tracks.filter((t) =>
-        t.sources.every((s) => s.type !== "playlist" && s.type !== "album") ||
-        t.sources.length === 0,
-      )
-    : [];
+  const hasItems = items.length > 0;
+  const itemIcon = (type: string) => {
+    switch (type) {
+      case "playlist":
+        return (
+          <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+          </svg>
+        );
+      case "album":
+        return (
+          <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+          </svg>
+        );
+      default:
+        return (
+          <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+          </svg>
+        );
+    }
+  };
+
+  const gradientForType = (type: string) => {
+    switch (type) {
+      case "playlist": return "from-emerald-500 to-emerald-700";
+      case "album": return "from-amber-500 to-orange-600";
+      default: return "from-purple-500 to-pink-600";
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
@@ -259,19 +421,19 @@ export default function LibraryPage() {
           </div>
         )}
 
-        {!loading && data && (
+        {!loading && (
           <>
             <div className="grid grid-cols-3 gap-4 mb-8">
               <div className="bg-gray-800/30 rounded-2xl p-5 text-center border border-gray-700/30">
-                <div className="text-3xl font-bold text-white mb-1">{data.tracks.length}</div>
+                <div className="text-3xl font-bold text-white mb-1">{stats?.totalSongs ?? 0}</div>
                 <div className="text-gray-400 text-sm">Tracks</div>
               </div>
               <div className="bg-gray-800/30 rounded-2xl p-5 text-center border border-gray-700/30">
-                <div className="text-3xl font-bold text-white mb-1">{data.playlists.length}</div>
+                <div className="text-3xl font-bold text-white mb-1">{stats?.totalPlaylists ?? 0}</div>
                 <div className="text-gray-400 text-sm">Playlists</div>
               </div>
               <div className="bg-gray-800/30 rounded-2xl p-5 text-center border border-gray-700/30">
-                <div className="text-3xl font-bold text-white mb-1">{data.albums.length}</div>
+                <div className="text-3xl font-bold text-white mb-1">{stats?.totalAlbums ?? 0}</div>
                 <div className="text-gray-400 text-sm">Albums</div>
               </div>
             </div>
@@ -315,147 +477,49 @@ export default function LibraryPage() {
                   Detected as <span className="font-medium text-amber-400 capitalize">{detectedType}</span>
                 </div>
               )}
-
             </div>
 
-            {directTracks.length > 0 && (
-              <section className="mb-8">
-                <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                  <svg className="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
-                  </svg>
-                  Tracks
-                  <span className="text-gray-500 font-normal text-sm">({directTracks.length})</span>
-                </h2>
-                <div className="space-y-2">
-                  {directTracks.map((track) => (
-                    <div key={track.id} className="bg-gray-800/40 rounded-xl px-4 py-3 border border-gray-700/30 flex items-center gap-4 group hover:border-gray-600/50 transition-colors">
-                      <div className="w-10 h-10 rounded-lg flex-shrink-0 overflow-hidden">
-                        {track.albumImageUrl ? (
-                          <img src={track.albumImageUrl} alt="" className="w-full h-full object-cover" />
-                        ) : (
-                          <div className="w-full h-full bg-gray-700/50 flex items-center justify-center">
-                            <svg className="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
-                              <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
-                            </svg>
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-white font-medium truncate">{track.name}</div>
-                        <div className="text-gray-400 text-sm truncate">
-                          {track.artists.map((a) => a.name).join(", ")}
-                          {track.albumName ? ` · ${track.albumName}` : ""}
-                        </div>
-                      </div>
-                      {track.durationMs ? (
-                        <div className="text-gray-500 text-sm tabular-nums flex-shrink-0">{formatDuration(track.durationMs)}</div>
-                      ) : null}
-                      <button
-                        onClick={() => setDeleteTarget({ type: "track", id: track.id, name: track.name })}
-                        className="text-gray-600 hover:text-red-400 transition-colors p-1 opacity-0 group-hover:opacity-100"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
+            {hasItems ? (
+              <div className="space-y-3">
+                {items.map((item) => (
+                  <button
+                    key={`${item.type}-${item.id}`}
+                    onClick={() => openDrawer(item)}
+                    className="w-full bg-gray-800/40 rounded-2xl p-4 border border-gray-700/30 flex items-center gap-4 hover:border-gray-600/50 transition-colors text-left group"
+                  >
+                    <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${gradientForType(item.type)} flex items-center justify-center flex-shrink-0 overflow-hidden`}>
+                      {item.imageUrl ? (
+                        <img src={item.imageUrl} alt={item.name} className="w-full h-full object-cover" />
+                      ) : (
+                        itemIcon(item.type)
+                      )}
                     </div>
-                  ))}
-                </div>
-              </section>
-            )}
+                    <div className="flex-1 min-w-0 text-left">
+                      <div className="text-white font-semibold truncate">{item.name}</div>
+                      <div className="text-gray-400 text-sm">
+                        {item.type === "album" && item.artists
+                          ? `${item.artists.map((a) => a.name).join(", ")} · `
+                          : ""}
+                        {item.trackCount} track{item.trackCount !== 1 ? "s" : ""}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <span className="text-gray-500 text-sm">View tracks</span>
+                      <svg className="w-5 h-5 text-gray-500 group-hover:text-gray-300 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </div>
+                  </button>
+                ))}
 
-            {data.playlists.length > 0 && (
-              <section className="mb-8">
-                <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                  <svg className="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-                  </svg>
-                  Playlists
-                  <span className="text-gray-500 font-normal text-sm">({data.playlists.length})</span>
-                </h2>
-                <div className="space-y-3">
-                  {data.playlists.map((playlist) => {
-                    const tracks = getPlaylistTracks(playlist.id);
-                    return (
-                      <button
-                        key={playlist.id}
-                        onClick={() => setTrackListModal({ type: "playlist", data: playlist, tracks })}
-                        className="w-full bg-gray-800/40 rounded-2xl p-4 border border-gray-700/30 flex items-center gap-4 hover:border-gray-600/50 transition-colors text-left group"
-                      >
-                        <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-700 flex items-center justify-center flex-shrink-0 overflow-hidden">
-                          {playlist.imageUrl ? (
-                            <img src={playlist.imageUrl} alt={playlist.name} className="w-full h-full object-cover" />
-                          ) : (
-                            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-                            </svg>
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0 text-left">
-                          <div className="text-white font-semibold truncate">{playlist.name}</div>
-                          <div className="text-gray-400 text-sm">{playlist.trackCount} tracks · {tracks.length} in library</div>
-                        </div>
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                          <span className="text-gray-500 text-sm">View tracks</span>
-                          <svg className="w-5 h-5 text-gray-500 group-hover:text-gray-300 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                          </svg>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </section>
-            )}
-
-            {data.albums.length > 0 && (
-              <section className="mb-8">
-                <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                  <svg className="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
-                  </svg>
-                  Albums
-                  <span className="text-gray-500 font-normal text-sm">({data.albums.length})</span>
-                </h2>
-                <div className="space-y-3">
-                  {data.albums.map((album) => {
-                    const tracks = getAlbumTracks(album.id);
-                    return (
-                      <button
-                        key={album.id}
-                        onClick={() => setTrackListModal({ type: "album", data: album, tracks })}
-                        className="w-full bg-gray-800/40 rounded-2xl p-4 border border-gray-700/30 flex items-center gap-4 hover:border-gray-600/50 transition-colors text-left group"
-                      >
-                        <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center flex-shrink-0 overflow-hidden">
-                          {album.imageUrl ? (
-                            <img src={album.imageUrl} alt={album.name} className="w-full h-full object-cover" />
-                          ) : (
-                            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
-                            </svg>
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0 text-left">
-                          <div className="text-white font-semibold truncate">{album.name}</div>
-                          <div className="text-gray-400 text-sm">
-                            {album.artists.map((a) => a.name).join(", ")} · {album.trackCount} tracks · {tracks.length} in library
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                          <span className="text-gray-500 text-sm">View tracks</span>
-                          <svg className="w-5 h-5 text-gray-500 group-hover:text-gray-300 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                          </svg>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </section>
-            )}
-
-            {data.tracks.length === 0 && data.playlists.length === 0 && data.albums.length === 0 && (
+                <div ref={sentinelRef} className="h-4" />
+                {loadingMore && (
+                  <div className="flex justify-center py-4">
+                    <LoadingSpinner size="md" className="text-amber-500" />
+                  </div>
+                )}
+              </div>
+            ) : (
               <div className="text-center py-16">
                 <div className="w-20 h-20 bg-gray-800/50 rounded-full flex items-center justify-center mx-auto mb-6">
                   <svg className="w-10 h-10 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -470,36 +534,41 @@ export default function LibraryPage() {
         )}
       </main>
 
-      {trackListModal && (
+      {drawer && (
         <Modal
-          title={trackListModal.data.name}
-          onClose={() => setTrackListModal(null)}
+          title={drawer.name}
+          onClose={closeDrawer}
           maxWidth="lg"
           scrollable
+          scrollContainerRef={drawerScrollRef}
+          onScroll={handleDrawerScroll}
           footer={
             <div className="flex justify-between items-center">
-              <span className="text-gray-400 text-sm">{trackListModal.tracks.length} tracks in library</span>
+              <span className="text-gray-400 text-sm">{drawerTracks.length} tracks loaded</span>
               <Button variant="secondary" size="sm" onClick={() => {
-                const target = trackListModal.data;
-                const name = "name" in target ? target.name : "";
-                setTrackListModal(null);
+                const name = drawer.name;
+                closeDrawer();
                 setDeleteTarget({
-                  type: trackListModal.type,
-                  id: target.id,
+                  type: drawer.type === "tracks" ? "track" : drawer.type,
+                  id: drawer.id,
                   name,
-                  cascadeCount: trackListModal.tracks.length,
+                  cascadeCount: drawerTracks.length,
                 });
               }}>
-                Remove {trackListModal.type === "playlist" ? "Playlist" : "Album"}
+                Remove
               </Button>
             </div>
           }
         >
-          {trackListModal.tracks.length === 0 ? (
-            <p className="text-gray-400 text-center py-8">No tracks from this source in your library.</p>
+          {drawerLoading && drawerTracks.length === 0 ? (
+            <div className="flex justify-center py-8">
+              <LoadingSpinner size="md" className="text-amber-500" />
+            </div>
+          ) : drawerTracks.length === 0 ? (
+            <p className="text-gray-400 text-center py-8">No tracks found.</p>
           ) : (
             <div className="space-y-2">
-              {trackListModal.tracks.map((track) => (
+              {drawerTracks.map((track) => (
                 <div key={track.id} className="flex items-center gap-3 py-2 border-b border-gray-700/30 last:border-0 group">
                   <div className="w-8 h-8 rounded flex-shrink-0 overflow-hidden">
                     {track.albumImageUrl ? (
@@ -516,13 +585,14 @@ export default function LibraryPage() {
                     <div className="text-white text-sm font-medium truncate">{track.name}</div>
                     <div className="text-gray-400 text-xs truncate">
                       {track.artists.map((a) => a.name).join(", ")}
+                      {track.albumName ? ` · ${track.albumName}` : ""}
                     </div>
                   </div>
                   {track.durationMs ? (
                     <div className="text-gray-500 text-xs tabular-nums flex-shrink-0">{formatDuration(track.durationMs)}</div>
                   ) : null}
                   <button
-                    onClick={() => handleTrackFromSourceRemove(track.id)}
+                    onClick={() => handleTrackRemove(track.id)}
                     disabled={removingTrackId === track.id}
                     className="text-gray-600 hover:text-red-400 transition-colors p-1 opacity-0 group-hover:opacity-100 disabled:opacity-50"
                   >
@@ -536,8 +606,14 @@ export default function LibraryPage() {
                   </button>
                 </div>
               ))}
+              {drawerLoading && (
+                <div className="flex justify-center py-2">
+                  <LoadingSpinner size="sm" className="text-amber-500" />
+                </div>
+              )}
             </div>
           )}
+          <div ref={drawerSentinelRef} className="h-4" />
         </Modal>
       )}
 
@@ -556,8 +632,6 @@ export default function LibraryPage() {
           onCancel={() => setDeleteTarget(null)}
         />
       )}
-
-
     </div>
   );
 }

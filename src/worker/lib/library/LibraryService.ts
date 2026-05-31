@@ -1,4 +1,4 @@
-import { eq, and, inArray, count, notExists } from "drizzle-orm";
+import { eq, and, inArray, count, notExists, lt, desc } from "drizzle-orm";
 import { getDb, type DbInstance } from "../../db";
 import type { Song } from "../../../shared/types";
 import {
@@ -81,6 +81,39 @@ export interface UserLibraryResponse {
     addedAt: Date;
   }[];
   stats: LibraryStats;
+}
+
+export interface LibraryItem {
+  type: "playlist" | "album" | "tracks";
+  id: string;
+  spotifyId?: string;
+  name: string;
+  artists?: { name: string }[];
+  imageUrl?: string;
+  trackCount: number;
+  addedAt: string;
+}
+
+export interface TrackItem {
+  id: string;
+  spotifyId: string;
+  name: string;
+  artists: { name: string; id?: string }[];
+  albumName?: string;
+  albumId?: string;
+  albumImageUrl?: string;
+  durationMs?: number;
+  addedAt: string;
+}
+
+export interface PaginatedItems {
+  items: LibraryItem[];
+  nextCursor: string | null;
+}
+
+export interface PaginatedTracks {
+  tracks: TrackItem[];
+  nextCursor: string | null;
 }
 
 export interface BlendResult {
@@ -834,6 +867,243 @@ export function createLibraryService(connectionString: string) {
               lastUpdated: stats.lastUpdated,
             }
           : { totalSongs: 0, totalPlaylists: 0, totalAlbums: 0, lastUpdated: new Date() },
+      };
+    },
+
+    // ── Paginated reads ─────────────────────────────────────────────
+
+    async getItems(
+      userId: string,
+      cursor?: string,
+      limit: number = 20,
+    ): Promise<PaginatedItems> {
+      const cursorDate = cursor ? new Date(cursor) : undefined;
+      const take = limit + 1;
+
+      const playlistWhere = cursorDate
+        ? and(eq(libraryPlaylists.userId, userId), lt(libraryPlaylists.addedAt, cursorDate))
+        : eq(libraryPlaylists.userId, userId);
+
+      const albumWhere = cursorDate
+        ? and(eq(libraryAlbums.userId, userId), lt(libraryAlbums.addedAt, cursorDate))
+        : eq(libraryAlbums.userId, userId);
+
+      const [playlists, albums] = await Promise.all([
+        db().query.libraryPlaylists.findMany({
+          where: playlistWhere,
+          orderBy: (t, { desc }) => [desc(t.addedAt)],
+          limit: take,
+        }),
+        db().query.libraryAlbums.findMany({
+          where: albumWhere,
+          orderBy: (t, { desc }) => [desc(t.addedAt)],
+          limit: take,
+        }),
+      ]);
+
+      const items: LibraryItem[] = [];
+
+      const formatDate = (d: Date | string) =>
+        d instanceof Date ? d.toISOString() : String(d);
+
+      for (const p of playlists) {
+        items.push({
+          type: "playlist",
+          id: p.id,
+          spotifyId: p.spotifyId,
+          name: p.name,
+          imageUrl: p.imageUrl ?? undefined,
+          trackCount: p.trackCount,
+          addedAt: formatDate(p.addedAt),
+        });
+      }
+
+      for (const a of albums) {
+        items.push({
+          type: "album",
+          id: a.id,
+          spotifyId: a.spotifyId,
+          name: a.name,
+          imageUrl: a.imageUrl ?? undefined,
+          trackCount: a.totalTracks,
+          addedAt: formatDate(a.addedAt),
+          artists: [{ name: a.artistName }],
+        });
+      }
+
+      items.sort((a, b) => b.addedAt.localeCompare(a.addedAt));
+
+      if (!cursor) {
+        const directCount = await this.getDirectTrackCount(userId);
+        if (directCount > 0) {
+          items.unshift({
+            type: "tracks",
+            id: "direct",
+            name: "Tracks",
+            trackCount: directCount,
+            addedAt: new Date().toISOString(),
+          });
+        }
+      }
+
+      const hasMore = items.length > limit;
+      const pageItems = items.slice(0, limit);
+      const nextCursor = hasMore ? items[limit]!.addedAt : null;
+
+      return { items: pageItems, nextCursor };
+    },
+
+    async getDirectTrackCount(userId: string): Promise<number> {
+      const [result] = await db()
+        .select({ count: count() })
+        .from(libraryTracks)
+        .where(
+          and(
+            eq(libraryTracks.userId, userId),
+            notExists(
+              db()
+                .select({ id: libraryTrackSources.id })
+                .from(libraryTrackSources)
+                .where(
+                  and(
+                    eq(libraryTrackSources.trackId, libraryTracks.id),
+                    inArray(libraryTrackSources.sourceType, ["playlist", "album"]),
+                  ),
+                ),
+            ),
+          ),
+        );
+      return Number(result?.count ?? 0);
+    },
+
+    async getDirectTracks(
+      userId: string,
+      cursor?: string,
+      limit: number = 50,
+    ): Promise<PaginatedTracks> {
+      const cursorDate = cursor ? new Date(cursor) : undefined;
+
+      const baseWhere = and(
+        eq(libraryTracks.userId, userId),
+        notExists(
+          db()
+            .select({ id: libraryTrackSources.id })
+            .from(libraryTrackSources)
+            .where(
+              and(
+                eq(libraryTrackSources.trackId, libraryTracks.id),
+                inArray(libraryTrackSources.sourceType, ["playlist", "album"]),
+              ),
+            ),
+        ),
+      );
+
+      const where = cursorDate
+        ? and(baseWhere, lt(libraryTracks.addedAt, cursorDate))
+        : baseWhere;
+
+      const tracks = await db().query.libraryTracks.findMany({
+        where,
+        orderBy: (t, { desc }) => [desc(t.addedAt)],
+        limit: limit + 1,
+      });
+
+      return this.formatTrackPage(tracks, limit);
+    },
+
+    async getPlaylistTracksPaginated(
+      userId: string,
+      spotifyId: string,
+      cursor?: string,
+      limit: number = 50,
+    ): Promise<PaginatedTracks> {
+      const playlist = await db().query.libraryPlaylists.findFirst({
+        where: and(
+          eq(libraryPlaylists.userId, userId),
+          eq(libraryPlaylists.spotifyId, spotifyId),
+        ),
+      });
+      if (!playlist) return { tracks: [], nextCursor: null };
+
+      const cursorDate = cursor ? new Date(cursor) : undefined;
+
+      const result = await db()
+        .select()
+        .from(libraryTrackSources)
+        .innerJoin(libraryTracks, eq(libraryTrackSources.trackId, libraryTracks.id))
+        .where(
+          and(
+            eq(libraryTrackSources.userId, userId),
+            eq(libraryTrackSources.sourceType, "playlist"),
+            eq(libraryTrackSources.playlistId, playlist.id),
+            cursorDate ? lt(libraryTracks.addedAt, cursorDate) : undefined,
+          ),
+        )
+        .orderBy(desc(libraryTracks.addedAt))
+        .limit(limit + 1);
+
+      const tracks = result.map((r) => r.library_tracks);
+      return this.formatTrackPage(tracks, limit);
+    },
+
+    async getAlbumTracksPaginated(
+      userId: string,
+      spotifyId: string,
+      cursor?: string,
+      limit: number = 50,
+    ): Promise<PaginatedTracks> {
+      const album = await db().query.libraryAlbums.findFirst({
+        where: and(
+          eq(libraryAlbums.userId, userId),
+          eq(libraryAlbums.spotifyId, spotifyId),
+        ),
+      });
+      if (!album) return { tracks: [], nextCursor: null };
+
+      const cursorDate = cursor ? new Date(cursor) : undefined;
+
+      const result = await db()
+        .select()
+        .from(libraryTrackSources)
+        .innerJoin(libraryTracks, eq(libraryTrackSources.trackId, libraryTracks.id))
+        .where(
+          and(
+            eq(libraryTrackSources.userId, userId),
+            eq(libraryTrackSources.sourceType, "album"),
+            eq(libraryTrackSources.albumId, album.id),
+            cursorDate ? lt(libraryTracks.addedAt, cursorDate) : undefined,
+          ),
+        )
+        .orderBy(desc(libraryTracks.addedAt))
+        .limit(limit + 1);
+
+      const tracks = result.map((r) => r.library_tracks);
+      return this.formatTrackPage(tracks, limit);
+    },
+
+    formatTrackPage(
+      tracks: LibraryTrack[],
+      limit: number,
+    ): PaginatedTracks {
+      const hasMore = tracks.length > limit;
+      const page = hasMore ? tracks.slice(0, limit) : tracks;
+
+      const formatDate = (d: Date | string) =>
+        d instanceof Date ? d.toISOString() : String(d);
+
+      return {
+        tracks: page.map((t) => ({
+          id: t.id,
+          spotifyId: t.spotifyId,
+          name: t.name,
+          artists: t.artists as { name: string; id?: string }[],
+          albumName: t.albumName ?? undefined,
+          albumId: t.albumId ?? undefined,
+          albumImageUrl: t.albumImageUrl ?? undefined,
+          durationMs: t.durationMs ?? undefined,
+          addedAt: formatDate(t.addedAt),
+        })),
+        nextCursor: hasMore ? formatDate(page[page.length - 1]!.addedAt) : null,
       };
     },
 
