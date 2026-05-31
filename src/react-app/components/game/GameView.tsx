@@ -140,27 +140,6 @@ export function GameView({
 
       {/* Main Content - Centered and Responsive */}
       <div className="flex-1 min-h-0 flex flex-col items-center justify-center px-3 sm:px-4 py-3 sm:py-4 gap-3 sm:gap-4">
-        {/* Album Art */}
-        <div className="relative shrink-0">
-          {song.albumImageUrl ? (
-            <img
-              src={song.albumImageUrl}
-              alt="Album cover"
-              className="w-20 h-20 sm:w-28 sm:h-28 md:w-32 md:h-32 lg:w-36 lg:h-36 object-cover rounded-xl shadow-2xl"
-            />
-          ) : (
-            <div className="w-20 h-20 sm:w-28 sm:h-28 md:w-32 md:h-32 lg:w-36 lg:h-36 bg-gradient-to-br from-gray-700 to-gray-800 rounded-xl flex items-center justify-center">
-              <svg
-                className="w-8 h-8 sm:w-12 sm:h-12 text-gray-500"
-                fill="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
-              </svg>
-            </div>
-          )}
-        </div>
-
         {/* Volume Slider */}
         <div className="flex items-center gap-3 w-full max-w-xs">
           <svg className="w-5 h-5 text-gray-400 shrink-0" fill="currentColor" viewBox="0 0 24 24">
