@@ -26,6 +26,8 @@ export function useSSE(options: UseSSEOptions = {}): UseSSEReturn {
   const [lastEvent, setLastEvent] = useState<SSEEvent | null>(null);
   const [error, setError] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const optionsRef = useRef(options);
+  optionsRef.current = options;
 
   const start = useCallback(async (url: string, body: unknown) => {
     abortRef.current?.abort();
@@ -78,15 +80,15 @@ export function useSSE(options: UseSSEOptions = {}): UseSSEReturn {
               if (currentEvent === "complete") {
                 setLastEvent(eventObj);
                 setState("complete");
-                options.onComplete?.(data);
+                optionsRef.current.onComplete?.(data);
               } else if (currentEvent === "error") {
                 const msg = (data as { message?: string }).message || "Unknown error";
                 setError(msg);
                 setState("error");
-                options.onError?.(msg);
+                optionsRef.current.onError?.(msg);
               } else {
                 setLastEvent(eventObj);
-                options.onEvent?.(eventObj);
+                optionsRef.current.onEvent?.(eventObj);
               }
             } catch {
               // skip unparseable data lines
@@ -102,9 +104,9 @@ export function useSSE(options: UseSSEOptions = {}): UseSSEReturn {
       const msg = err instanceof Error ? err.message : "Connection lost";
       setError(msg);
       setState("error");
-      options.onError?.(msg);
+      optionsRef.current.onError?.(msg);
     }
-  }, [options.onEvent, options.onComplete, options.onError]);
+  }, []);
 
   const close = useCallback(() => {
     abortRef.current?.abort();
