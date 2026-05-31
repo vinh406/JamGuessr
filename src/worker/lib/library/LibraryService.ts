@@ -131,7 +131,10 @@ const MIN_TOTAL_TRACKS = 20;
  * Call this once per request with the connection string; the returned
  * object exposes all library operations without needing a `db` parameter.
  */
-export function createLibraryService(connectionString: string) {
+export function createLibraryService(
+  connectionString: string,
+  env?: { PLAYLIST_IMPORT_DO?: DurableObjectNamespace },
+) {
   let _db: DbInstance | null = null;
   function db(): DbInstance {
     if (!_db) _db = getDb(connectionString);
@@ -464,7 +467,10 @@ export function createLibraryService(connectionString: string) {
         case "playlist": {
           // Check for duplicate before slow Spotify API calls
           const existingPlaylist = await db().query.libraryPlaylists.findFirst({
-            where: and(eq(libraryPlaylists.userId, userId), eq(libraryPlaylists.spotifyId, parsed.id)),
+            where: and(
+              eq(libraryPlaylists.userId, userId),
+              eq(libraryPlaylists.spotifyId, parsed.id),
+            ),
           });
           if (existingPlaylist) {
             return { success: false, error: "Playlist already exists in your library" };
@@ -472,7 +478,7 @@ export function createLibraryService(connectionString: string) {
 
           const [metadata, tracks] = await Promise.all([
             getPlaylistMetadata(parsed.id),
-            getPlaylistTracks(parsed.id),
+            getPlaylistTracks(parsed.id, env?.PLAYLIST_IMPORT_DO),
           ]);
 
           if (!metadata) {

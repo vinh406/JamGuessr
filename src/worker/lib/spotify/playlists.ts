@@ -1,6 +1,13 @@
 import { getSpotifyClientForUser } from "./client";
 import type { Playlist, Song } from "../../../shared/types";
 import spotifyUrlInfo from "spotify-url-info";
+import {
+  PARTNER_QUERY_HASH,
+  BATCH_SIZE,
+  CONCURRENCY,
+  fetchPartnerPage,
+  type PartnerPlaylistResponse,
+} from "./partner-api";
 
 // ── Embed page helpers (scrapes Spotify for full playlist data) ────────────────
 
@@ -57,51 +64,6 @@ function embedTrackToSong(track: SpotifyEmbedTrack): Song {
   };
 }
 
-const PARTNER_QUERY_HASH = "a65e12194ed5fc443a1cdebed5fabe33ca5b07b987185d63c72483867ad13cb4";
-
-interface PartnerTrack {
-  itemV2: {
-    data: {
-      __typename: string;
-      uri: string;
-      name: string;
-      artists: { items: { profile: { name: string }; uri: string }[] };
-      albumOfTrack: {
-        name: string;
-        coverArt: { sources: { url: string; height: number; width: number }[] };
-      };
-      trackDuration: { totalMilliseconds: number };
-      playability: { playable: boolean; reason: string };
-    };
-  };
-}
-
-interface PartnerPlaylistResponse {
-  data: {
-    playlistV2: {
-      content: {
-        items: PartnerTrack[];
-        totalCount: number;
-        pagingInfo: { limit: number; offset: number };
-      };
-    };
-  };
-}
-
-function partnerTrackToSong(track: PartnerTrack): Song {
-  const data = track.itemV2.data;
-  return {
-    id: data.uri.replace("spotify:track:", ""),
-    title: data.name,
-    artist: data.artists.items.map((a) => a.profile.name).join(", "),
-    album: data.albumOfTrack.name,
-    albumImageUrl:
-      data.albumOfTrack.coverArt.sources.sort((a, b) => b.width - a.width)[0]?.url ?? undefined,
-    previewUrl: undefined,
-    duration: data.trackDuration.totalMilliseconds,
-  };
-}
-
 async function parseSpotifyEmbedPage(
   playlistId: string,
   fetchFn: typeof fetch = fetch,
@@ -143,54 +105,17 @@ async function fetchPartnerPlaylistTracks(
   total: number,
   fetchFn: typeof fetch = fetch,
 ): Promise<Song[]> {
-  const BATCH_SIZE = 50;
-  const CONCURRENCY = 10;
-
   const offsets: number[] = [];
   for (let o = startOffset; o < total; o += BATCH_SIZE) {
     offsets.push(o);
   }
 
-  async function fetchPage(offset: number): Promise<Song[]> {
-    const response = await fetchFn("https://api-partner.spotify.com/pathfinder/v2/query", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json;charset=UTF-8",
-        Authorization: `Bearer ${accessToken}`,
-        "app-platform": "WebPlayer",
-        "User-Agent": "Mozilla/5.0",
-      },
-      body: JSON.stringify({
-        variables: {
-          uri: `spotify:playlist:${playlistId}`,
-          offset,
-          limit: BATCH_SIZE,
-          includeEpisodeContentRatingsV2: false,
-        },
-        operationName: "fetchPlaylistContents",
-        extensions: {
-          persistedQuery: {
-            version: 1,
-            sha256Hash: PARTNER_QUERY_HASH,
-          },
-        },
-      }),
-    });
-
-    if (!response.ok) return [];
-
-    const data: PartnerPlaylistResponse = await response.json();
-    const items = data.data?.playlistV2?.content?.items ?? [];
-
-    return items
-      .filter((item) => item.itemV2?.data?.__typename === "Track")
-      .map(partnerTrackToSong);
-  }
-
   const allTracks: Song[] = [];
   for (let i = 0; i < offsets.length; i += CONCURRENCY) {
     const batch = offsets.slice(i, i + CONCURRENCY);
-    const results = await Promise.all(batch.map(fetchPage));
+    const results = await Promise.all(
+      batch.map((o) => fetchPartnerPage(playlistId, accessToken, o, fetchFn)),
+    );
     for (const page of results) {
       allTracks.push(...page);
     }
@@ -354,7 +279,10 @@ export async function getCurrentUserPlaylists(userId: string, env: Env): Promise
   return playlists;
 }
 
-export async function getPlaylistTracks(playlistId: string): Promise<Song[]> {
+export async function getPlaylistTracks(
+  playlistId: string,
+  doNamespace?: DurableObjectNamespace,
+): Promise<Song[]> {
   // 1. Try embed page + partner API pagination (gets full track list)
   try {
     const embed = await parseSpotifyEmbedPage(playlistId);
@@ -391,12 +319,30 @@ export async function getPlaylistTracks(playlistId: string): Promise<Song[]> {
           const total = countData.data?.playlistV2?.content?.totalCount;
 
           if (typeof total === "number" && total > 0) {
-            const partnerTracks = await fetchPartnerPlaylistTracks(
-              playlistId,
-              accessToken,
-              0,
-              total,
-            );
+            let partnerTracks: Song[];
+
+            if (doNamespace) {
+              // Use Durable Object to batch partner API calls across invocations
+              const doId = doNamespace.idFromName(playlistId);
+              const doStub = doNamespace.get(doId);
+              partnerTracks = [];
+
+              let offset = 0;
+              while (offset < total) {
+                const resp = await doStub.fetch("https://doplaylistimport/fetch", {
+                  method: "POST",
+                  body: JSON.stringify({ playlistId, accessToken, offset, total }),
+                });
+                const result = (await resp.json()) as { tracks: Song[]; nextOffset: number | null };
+                partnerTracks.push(...result.tracks);
+                if (result.nextOffset === null) break;
+                offset = result.nextOffset;
+              }
+            } else {
+              // Fallback: direct partner API (may hit 50 subrequest limit on free plan)
+              partnerTracks = await fetchPartnerPlaylistTracks(playlistId, accessToken, 0, total);
+            }
+
             // Build a map of partner tracks by Spotify ID for album art merge
             const partnerMap = new Map<string, Song>();
             for (const pt of partnerTracks) {

@@ -33,6 +33,10 @@ export class RoomManager {
     return this.env.DATABASE_URL;
   }
 
+  getPlaylistImportDO(): DurableObjectNamespace {
+    return this.env.PLAYLIST_IMPORT_DO;
+  }
+
   // Session Management delegation
   setSessions(sessions: Map<WebSocket, UserSession>): void {
     this.sessionManager.setSessions(sessions);

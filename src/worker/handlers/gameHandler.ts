@@ -77,7 +77,7 @@ export class GameHandler {
       if (libraryTracks.length > 0) {
         songs = libraryTracks;
       } else {
-        songs = await getPlaylistTracks(roomPlaylist.id);
+        songs = await getPlaylistTracks(roomPlaylist.id, this.roomManager.getPlaylistImportDO());
       }
     }
 
@@ -250,7 +250,7 @@ export class GameHandler {
 
     let songs: Song[] = [];
     if (roomPlaylist?.id) {
-      songs = await getPlaylistTracks(roomPlaylist.id);
+      songs = await getPlaylistTracks(roomPlaylist.id, this.roomManager.getPlaylistImportDO());
     }
 
     // Check if there are enough unused songs to play another full game

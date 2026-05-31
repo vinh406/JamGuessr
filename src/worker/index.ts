@@ -9,6 +9,7 @@ import {
   parseSpotifyLink,
 } from "./lib/spotify/playlists";
 export { WebSocketHibernationServer } from "./websocketDurableObject";
+export { PlaylistImportDO } from "./playlistImportDO";
 
 const app = new OpenAPIHono<{ Bindings: Env }>();
 

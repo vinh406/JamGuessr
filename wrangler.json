@@ -48,6 +48,10 @@
       {
         "name": "WEBSOCKET_HIBERNATION_SERVER",
         "class_name": "WebSocketHibernationServer"
+      },
+      {
+        "name": "PLAYLIST_IMPORT_DO",
+        "class_name": "PlaylistImportDO"
       }
     ]
   },
@@ -55,6 +59,10 @@
     {
       "tag": "v1",
       "new_sqlite_classes": ["WebSocketHibernationServer"]
+    },
+    {
+      "tag": "v2",
+      "new_sqlite_classes": ["PlaylistImportDO"]
     }
   ]
   /**

@@ -229,7 +229,7 @@ export function createLibraryHandlers() {
     if (!user) return c.json({ error: "Unauthorized" }, 401);
 
     const { cursor, limit } = c.req.valid("query");
-    const lib = createLibraryService(c.env.DATABASE_URL);
+    const lib = createLibraryService(c.env.DATABASE_URL, c.env);
     const result = await lib.getItems(user.id, cursor, limit);
     return c.json(result, 200);
   });
@@ -262,7 +262,7 @@ export function createLibraryHandlers() {
     if (!user) return c.json({ error: "Unauthorized" }, 401);
 
     const { cursor, limit } = c.req.valid("query");
-    const lib = createLibraryService(c.env.DATABASE_URL);
+    const lib = createLibraryService(c.env.DATABASE_URL, c.env);
     const result = await lib.getDirectTracks(user.id, cursor, limit);
     return c.json(result, 200);
   });
@@ -302,7 +302,7 @@ export function createLibraryHandlers() {
 
     const { spotifyId } = c.req.valid("param");
     const { cursor, limit } = c.req.valid("query");
-    const lib = createLibraryService(c.env.DATABASE_URL);
+    const lib = createLibraryService(c.env.DATABASE_URL, c.env);
     const result = await lib.getPlaylistTracksPaginated(user.id, spotifyId, cursor, limit);
     return c.json(result, 200);
   });
@@ -341,7 +341,7 @@ export function createLibraryHandlers() {
 
     const { spotifyId } = c.req.valid("param");
     const { cursor, limit } = c.req.valid("query");
-    const lib = createLibraryService(c.env.DATABASE_URL);
+    const lib = createLibraryService(c.env.DATABASE_URL, c.env);
     const result = await lib.getAlbumTracksPaginated(user.id, spotifyId, cursor, limit);
     return c.json(result, 200);
   });
@@ -352,7 +352,7 @@ export function createLibraryHandlers() {
       return c.json({ error: "Unauthorized" }, 401);
     }
     const spotifyId = c.req.param("spotifyId");
-    const lib = createLibraryService(c.env.DATABASE_URL);
+    const lib = createLibraryService(c.env.DATABASE_URL, c.env);
     const playlists = await lib.getUserPlaylists(user.id);
     const match = playlists.find((p) => p.spotifyId === spotifyId);
     if (match) {
@@ -379,7 +379,7 @@ export function createLibraryHandlers() {
       return c.json({ error: "Missing spotifyId" }, 400);
     }
     const link = `https://open.spotify.com/playlist/${spotifyId}`;
-    const lib = createLibraryService(c.env.DATABASE_URL);
+    const lib = createLibraryService(c.env.DATABASE_URL, c.env);
     const result = await lib.addFromSpotifyLink(user.id, link);
     if (!result.success) {
       return c.json({ error: result.error }, 400);
@@ -447,7 +447,7 @@ export function createLibraryHandlers() {
 
       if (signal.aborted) return;
 
-      const lib = createLibraryService(c.env.DATABASE_URL);
+      const lib = createLibraryService(c.env.DATABASE_URL, c.env);
 
       const result = await lib.addFromSpotifyLink(user.id, parsed.data.link, (current, total) => {
         emit("progress", {
@@ -507,7 +507,7 @@ export function createLibraryHandlers() {
     }
 
     const trackId = c.req.param("trackId");
-    const lib = createLibraryService(c.env.DATABASE_URL);
+    const lib = createLibraryService(c.env.DATABASE_URL, c.env);
 
     // Verify track exists and belongs to user
     const track = await lib.getTrackById(trackId);
@@ -556,7 +556,7 @@ export function createLibraryHandlers() {
     }
 
     const trackId = c.req.param("trackId");
-    const lib = createLibraryService(c.env.DATABASE_URL);
+    const lib = createLibraryService(c.env.DATABASE_URL, c.env);
     const track = await lib.getTrackById(trackId);
 
     if (!track || track.userId !== user.id) {
@@ -620,7 +620,7 @@ export function createLibraryHandlers() {
       return c.json({ error: "Invalid request" }, 400);
     }
 
-    const lib = createLibraryService(c.env.DATABASE_URL);
+    const lib = createLibraryService(c.env.DATABASE_URL, c.env);
 
     // Verify ownership before starting SSE
     if (parsed.data.type === "playlist") {
@@ -687,7 +687,7 @@ export function createLibraryHandlers() {
     }
 
     const playlistId = c.req.param("playlistId");
-    const lib = createLibraryService(c.env.DATABASE_URL);
+    const lib = createLibraryService(c.env.DATABASE_URL, c.env);
 
     // Verify playlist exists and belongs to user
     const playlist = await lib.getPlaylistById(playlistId);
@@ -733,7 +733,7 @@ export function createLibraryHandlers() {
     }
 
     const albumId = c.req.param("albumId");
-    const lib = createLibraryService(c.env.DATABASE_URL);
+    const lib = createLibraryService(c.env.DATABASE_URL, c.env);
 
     // Verify album exists and belongs to user
     const album = await lib.getAlbumById(albumId);
@@ -772,7 +772,7 @@ export function createLibraryHandlers() {
       return c.json({ error: "Unauthorized" }, 401);
     }
 
-    const lib = createLibraryService(c.env.DATABASE_URL);
+    const lib = createLibraryService(c.env.DATABASE_URL, c.env);
     const stats = await lib.getUserLibraryStats(user.id);
 
     return c.json(
