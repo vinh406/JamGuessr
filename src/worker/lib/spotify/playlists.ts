@@ -282,6 +282,7 @@ export async function getCurrentUserPlaylists(userId: string, env: Env): Promise
 export async function getPlaylistTracks(
   playlistId: string,
   doNamespace?: DurableObjectNamespace,
+  quick?: boolean,
 ): Promise<Song[]> {
   // 1. Try embed page + partner API pagination (gets full track list)
   try {
@@ -289,6 +290,20 @@ export async function getPlaylistTracks(
     if (embed) {
       const { entity, accessToken } = embed;
       const tracks = entity.trackList.map(embedTrackToSong);
+
+      if (quick) {
+        // Fetch first partner page for album art (1 subrequest, ~50 tracks)
+        try {
+          const page = await fetchPartnerPage(playlistId, accessToken, 0);
+          const imageMap = new Map(page.map((t) => [t.id, t.albumImageUrl]));
+          return tracks.map((t) => ({
+            ...t,
+            albumImageUrl: imageMap.get(t.id) ?? t.albumImageUrl,
+          }));
+        } catch {
+          return tracks;
+        }
+      }
 
       // Fetch ALL tracks from partner API for album art enrichment
       try {

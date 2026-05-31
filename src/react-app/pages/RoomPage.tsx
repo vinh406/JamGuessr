@@ -251,7 +251,7 @@ export default function RoomPage() {
       {pendingLibraryImport && !libraryImporting && (
         <ConfirmDialog
           title="Add to Library?"
-          message={`This playlist isn't in your music library yet. Add it now to make future games faster?`}
+          message={`This playlist isn't in your music library yet. Do you want to add it? If you skip, only the first ~50 tracks will be used.`}
           confirmLabel="Add to Library"
           cancelLabel="Skip"
           onConfirm={handleConfirmLibraryImport}

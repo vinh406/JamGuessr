@@ -77,7 +77,11 @@ export class GameHandler {
       if (libraryTracks.length > 0) {
         songs = libraryTracks;
       } else {
-        songs = await getPlaylistTracks(roomPlaylist.id, this.roomManager.getPlaylistImportDO());
+        songs = await getPlaylistTracks(
+          roomPlaylist.id,
+          this.roomManager.getPlaylistImportDO(),
+          true,
+        );
       }
     }
 
