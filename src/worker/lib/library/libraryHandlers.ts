@@ -273,12 +273,10 @@ export function createLibraryHandlers() {
     path: "/items/playlist/{spotifyId}/tracks",
     request: {
       params: z.object({
-        spotifyId: z
-          .string()
-          .openapi({
-            param: { name: "spotifyId", in: "path" },
-            description: "Spotify playlist ID",
-          }),
+        spotifyId: z.string().openapi({
+          param: { name: "spotifyId", in: "path" },
+          description: "Spotify playlist ID",
+        }),
       }),
       query: QueryCursorSchema.extend({
         limit: z.coerce.number().optional().default(50),
@@ -643,17 +641,9 @@ export function createLibraryHandlers() {
       if (signal.aborted) return;
 
       if (parsed.data.type === "playlist") {
-        await lib.removePlaylist(user.id, parsed.data.id, (phase) => {
-          if (phase === "cleaning_up") {
-            emit("phase", { phase: "cleaning_up", label: "Cleaning up orphaned tracks..." });
-          }
-        });
+        await lib.removePlaylist(user.id, parsed.data.id);
       } else {
-        await lib.removeAlbum(user.id, parsed.data.id, (phase) => {
-          if (phase === "cleaning_up") {
-            emit("phase", { phase: "cleaning_up", label: "Cleaning up orphaned tracks..." });
-          }
-        });
+        await lib.removeAlbum(user.id, parsed.data.id);
       }
 
       if (signal.aborted) return;

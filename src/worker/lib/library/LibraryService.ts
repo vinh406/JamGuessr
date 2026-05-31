@@ -1,4 +1,4 @@
-import { eq, and, inArray, count, notExists, lt, desc } from "drizzle-orm";
+import { eq, and, inArray, count, exists, lt, desc } from "drizzle-orm";
 import { getDb, type DbInstance } from "../../db";
 import type { Song } from "../../../shared/types";
 import {
@@ -569,27 +569,6 @@ export function createLibraryService(connectionString: string) {
       }
     },
 
-    /** Remove a specific source entry from a track; delete track if orphaned */
-    async removeSourceEntry(userId: string, trackId: string, sourceId: string): Promise<void> {
-      await db()
-        .delete(libraryTrackSources)
-        .where(
-          and(
-            eq(libraryTrackSources.userId, userId),
-            eq(libraryTrackSources.trackId, trackId),
-            eq(libraryTrackSources.id, sourceId),
-          ),
-        );
-
-      const remainingSources = await db().query.libraryTrackSources.findFirst({
-        where: eq(libraryTrackSources.trackId, trackId),
-      });
-
-      if (!remainingSources) {
-        await db().delete(libraryTracks).where(eq(libraryTracks.id, trackId));
-      }
-    },
-
     /** Add a playlist (rejects if user already has this spotifyId) */
     async addPlaylist(
       userId: string,
@@ -627,24 +606,8 @@ export function createLibraryService(connectionString: string) {
       return { playlist: playlist! };
     },
 
-    /** Remove a playlist and cascade-delete orphaned tracks */
-    async removePlaylist(
-      userId: string,
-      playlistId: string,
-      onProgress?: (phase: string) => void,
-    ): Promise<void> {
-      onProgress?.("removing_sources");
-
-      const sourceEntries = await db().query.libraryTrackSources.findMany({
-        where: and(
-          eq(libraryTrackSources.userId, userId),
-          eq(libraryTrackSources.sourceType, "playlist"),
-          eq(libraryTrackSources.playlistId, playlistId),
-        ),
-      });
-
-      const trackIds = sourceEntries.map((s: LibraryTrackSource) => s.trackId);
-
+    /** Remove a playlist and its source entries (tracks are kept for other sources) */
+    async removePlaylist(userId: string, playlistId: string): Promise<void> {
       await db()
         .delete(libraryTrackSources)
         .where(
@@ -654,29 +617,6 @@ export function createLibraryService(connectionString: string) {
             eq(libraryTrackSources.playlistId, playlistId),
           ),
         );
-
-      if (trackIds.length > 0) {
-        onProgress?.("cleaning_up");
-
-        const orphanedTracks = await db()
-          .select({ id: libraryTracks.id })
-          .from(libraryTracks)
-          .where(
-            and(
-              inArray(libraryTracks.id, trackIds),
-              notExists(
-                db()
-                  .select({ id: libraryTrackSources.id })
-                  .from(libraryTrackSources)
-                  .where(eq(libraryTrackSources.trackId, libraryTracks.id)),
-              ),
-            ),
-          );
-
-        for (const track of orphanedTracks) {
-          await db().delete(libraryTracks).where(eq(libraryTracks.id, track.id));
-        }
-      }
 
       await db()
         .delete(libraryPlaylists)
@@ -724,24 +664,8 @@ export function createLibraryService(connectionString: string) {
       return { album: album! };
     },
 
-    /** Remove an album and cascade-delete orphaned tracks */
-    async removeAlbum(
-      userId: string,
-      albumId: string,
-      onProgress?: (phase: string) => void,
-    ): Promise<void> {
-      onProgress?.("removing_sources");
-
-      const sourceEntries = await db().query.libraryTrackSources.findMany({
-        where: and(
-          eq(libraryTrackSources.userId, userId),
-          eq(libraryTrackSources.sourceType, "album"),
-          eq(libraryTrackSources.albumId, albumId),
-        ),
-      });
-
-      const trackIds = sourceEntries.map((s: LibraryTrackSource) => s.trackId);
-
+    /** Remove an album and its source entries (tracks are kept for other sources) */
+    async removeAlbum(userId: string, albumId: string): Promise<void> {
       await db()
         .delete(libraryTrackSources)
         .where(
@@ -751,29 +675,6 @@ export function createLibraryService(connectionString: string) {
             eq(libraryTrackSources.albumId, albumId),
           ),
         );
-
-      if (trackIds.length > 0) {
-        onProgress?.("cleaning_up");
-
-        const orphanedTracks = await db()
-          .select({ id: libraryTracks.id })
-          .from(libraryTracks)
-          .where(
-            and(
-              inArray(libraryTracks.id, trackIds),
-              notExists(
-                db()
-                  .select({ id: libraryTrackSources.id })
-                  .from(libraryTrackSources)
-                  .where(eq(libraryTrackSources.trackId, libraryTracks.id)),
-              ),
-            ),
-          );
-
-        for (const track of orphanedTracks) {
-          await db().delete(libraryTracks).where(eq(libraryTracks.id, track.id));
-        }
-      }
 
       await db()
         .delete(libraryAlbums)
@@ -785,7 +686,17 @@ export function createLibraryService(connectionString: string) {
       const [trackResult] = await db()
         .select({ count: count() })
         .from(libraryTracks)
-        .where(eq(libraryTracks.userId, userId));
+        .where(
+          and(
+            eq(libraryTracks.userId, userId),
+            exists(
+              db()
+                .select({ id: libraryTrackSources.id })
+                .from(libraryTrackSources)
+                .where(eq(libraryTrackSources.trackId, libraryTracks.id)),
+            ),
+          ),
+        );
 
       const [playlistResult] = await db()
         .select({ count: count() })
@@ -953,14 +864,14 @@ export function createLibraryService(connectionString: string) {
         .where(
           and(
             eq(libraryTracks.userId, userId),
-            notExists(
+            exists(
               db()
                 .select({ id: libraryTrackSources.id })
                 .from(libraryTrackSources)
                 .where(
                   and(
                     eq(libraryTrackSources.trackId, libraryTracks.id),
-                    inArray(libraryTrackSources.sourceType, ["playlist", "album"]),
+                    eq(libraryTrackSources.sourceType, "direct"),
                   ),
                 ),
             ),
@@ -977,17 +888,17 @@ export function createLibraryService(connectionString: string) {
       const cursorDate = cursor ? new Date(cursor) : undefined;
 
       const tracks = await db().query.libraryTracks.findMany({
-        where: (t, { and: andOp, lt, eq, notExists: notExistsOp }) => {
+        where: (t, { and: andOp, lt, eq, exists: existsOp }) => {
           const conditions = [
             eq(t.userId, userId),
-            notExistsOp(
+            existsOp(
               db()
                 .select({ id: libraryTrackSources.id })
                 .from(libraryTrackSources)
                 .where(
                   and(
                     eq(libraryTrackSources.trackId, t.id),
-                    inArray(libraryTrackSources.sourceType, ["playlist", "album"]),
+                    eq(libraryTrackSources.sourceType, "direct"),
                   ),
                 ),
             ),
