@@ -20,6 +20,7 @@ interface Track {
   artists: { name: string; id?: string }[];
   albumName?: string;
   albumId?: string;
+  albumImageUrl?: string;
   durationMs?: number;
   addedAt: string;
   sources: TrackSource[];
@@ -329,10 +330,16 @@ export default function LibraryPage() {
                 <div className="space-y-2">
                   {directTracks.map((track) => (
                     <div key={track.id} className="bg-gray-800/40 rounded-xl px-4 py-3 border border-gray-700/30 flex items-center gap-4 group hover:border-gray-600/50 transition-colors">
-                      <div className="w-10 h-10 bg-gray-700/50 rounded-lg flex items-center justify-center flex-shrink-0">
-                        <svg className="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
-                        </svg>
+                      <div className="w-10 h-10 rounded-lg flex-shrink-0 overflow-hidden">
+                        {track.albumImageUrl ? (
+                          <img src={track.albumImageUrl} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full bg-gray-700/50 flex items-center justify-center">
+                            <svg className="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
+                            </svg>
+                          </div>
+                        )}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="text-white font-medium truncate">{track.name}</div>
@@ -494,10 +501,16 @@ export default function LibraryPage() {
             <div className="space-y-2">
               {trackListModal.tracks.map((track) => (
                 <div key={track.id} className="flex items-center gap-3 py-2 border-b border-gray-700/30 last:border-0 group">
-                  <div className="w-8 h-8 bg-gray-700/50 rounded flex items-center justify-center flex-shrink-0">
-                    <svg className="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
-                    </svg>
+                  <div className="w-8 h-8 rounded flex-shrink-0 overflow-hidden">
+                    {track.albumImageUrl ? (
+                      <img src={track.albumImageUrl} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full bg-gray-700/50 flex items-center justify-center">
+                        <svg className="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
+                          <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
+                        </svg>
+                      </div>
+                    )}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="text-white text-sm font-medium truncate">{track.name}</div>
