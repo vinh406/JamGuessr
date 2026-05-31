@@ -105,6 +105,7 @@ export const libraryTracks = pgTable(
     artists: jsonb("artists").notNull().$type<{ name: string; id?: string }[]>(),
     albumName: text("album_name").notNull().default(""),
     albumId: text("album_id"),
+    albumImageUrl: text("album_image_url"),
     durationMs: integer("duration_ms").notNull().default(0),
     addedAt: timestamp("added_at").defaultNow().notNull(),
   },

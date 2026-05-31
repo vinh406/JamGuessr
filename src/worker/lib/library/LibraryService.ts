@@ -34,6 +34,7 @@ export interface TrackData {
   artists: { name: string; id?: string }[];
   albumName?: string;
   albumId?: string;
+  albumImageUrl?: string;
   durationMs?: number;
 }
 
@@ -257,6 +258,41 @@ export function createLibraryService(connectionString: string) {
       });
     },
 
+    /** Get tracks for a playlist stored in the user's library, by Spotify playlist ID */
+    async getLibraryPlaylistTracks(
+      userId: string,
+      spotifyId: string,
+    ): Promise<Song[]> {
+      const playlist = await db().query.libraryPlaylists.findFirst({
+        where: and(
+          eq(libraryPlaylists.userId, userId),
+          eq(libraryPlaylists.spotifyId, spotifyId),
+        ),
+      });
+      if (!playlist) return [];
+
+      const sources = await db().query.libraryTrackSources.findMany({
+        where: and(
+          eq(libraryTrackSources.userId, userId),
+          eq(libraryTrackSources.playlistId, playlist.id),
+          eq(libraryTrackSources.sourceType, "playlist"),
+        ),
+        with: { track: true },
+      });
+
+      return sources
+        .filter((s) => s.track)
+        .map((s) => ({
+          id: s.track.spotifyId,
+          title: s.track.name,
+          artist: s.track.artists.map((a) => a.name).join(", "),
+          album: s.track.albumName,
+          albumImageUrl: s.track.albumImageUrl ?? undefined,
+          previewUrl: undefined,
+          duration: s.track.durationMs || 0,
+        }));
+    },
+
     /** Get all tracks for multiple users (for blend algorithm) */
     async getTracksForUsers(userIds: string[]): Promise<Map<string, LibraryTrack[]>> {
       const tracks = await db().query.libraryTracks.findMany({
@@ -294,6 +330,7 @@ export function createLibraryService(connectionString: string) {
           artists: trackData.artists,
           albumName: trackData.albumName || "",
           albumId: trackData.albumId,
+          albumImageUrl: trackData.albumImageUrl,
           durationMs: trackData.durationMs || 0,
         })
         .returning();
@@ -422,6 +459,7 @@ export function createLibraryService(connectionString: string) {
             name: t.title,
             artists: [{ name: t.artist }],
             albumName: t.album || undefined,
+            albumImageUrl: t.albumImageUrl || undefined,
             durationMs: t.duration || undefined,
           }));
 
@@ -863,7 +901,7 @@ export function createLibraryService(connectionString: string) {
         title: track.name,
         artist: track.artists.map((a) => a.name).join(", "),
         album: track.albumName,
-        albumImageUrl: undefined,
+        albumImageUrl: track.albumImageUrl ?? undefined,
         previewUrl: undefined,
         duration: track.durationMs || 0,
       }));
