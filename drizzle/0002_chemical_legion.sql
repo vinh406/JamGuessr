@@ -1,0 +1,1 @@
+ALTER TABLE "library_tracks" ADD COLUMN "album_image_url" text;
