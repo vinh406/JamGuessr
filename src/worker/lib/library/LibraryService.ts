@@ -462,6 +462,14 @@ export function createLibraryService(connectionString: string) {
         }
 
         case "playlist": {
+          // Check for duplicate before slow Spotify API calls
+          const existingPlaylist = await db().query.libraryPlaylists.findFirst({
+            where: and(eq(libraryPlaylists.userId, userId), eq(libraryPlaylists.spotifyId, parsed.id)),
+          });
+          if (existingPlaylist) {
+            return { success: false, error: "Playlist already exists in your library" };
+          }
+
           const [metadata, tracks] = await Promise.all([
             getPlaylistMetadata(parsed.id),
             getPlaylistTracks(parsed.id),
@@ -472,19 +480,13 @@ export function createLibraryService(connectionString: string) {
           }
 
           // Create the playlist record
-          const playlistResult = await this.addPlaylist(userId, {
+          const { playlist } = await this.addPlaylist(userId, {
             id: crypto.randomUUID(),
             spotifyId: parsed.id,
             name: metadata.name,
             imageUrl: metadata.imageUrl,
             trackCount: metadata.trackCount,
           });
-
-          if ("error" in playlistResult) {
-            return { success: false, error: playlistResult.error };
-          }
-
-          const playlist = playlistResult.playlist;
 
           // Add all tracks with playlist source
           const trackData = tracks.map((t) => ({
@@ -509,6 +511,14 @@ export function createLibraryService(connectionString: string) {
         }
 
         case "album": {
+          // Check for duplicate before slow Spotify API calls
+          const existingAlbum = await db().query.libraryAlbums.findFirst({
+            where: and(eq(libraryAlbums.userId, userId), eq(libraryAlbums.spotifyId, parsed.id)),
+          });
+          if (existingAlbum) {
+            return { success: false, error: "Album already exists in your library" };
+          }
+
           const [metadata, tracks] = await Promise.all([
             getAlbumMetadata(parsed.id),
             getAlbumTracks(parsed.id),
@@ -519,7 +529,7 @@ export function createLibraryService(connectionString: string) {
           }
 
           // Create the album record
-          const albumResult = await this.addAlbum(userId, {
+          const { album } = await this.addAlbum(userId, {
             id: crypto.randomUUID(),
             spotifyId: parsed.id,
             name: metadata.name,
@@ -528,12 +538,6 @@ export function createLibraryService(connectionString: string) {
             imageUrl: metadata.imageUrl,
             totalTracks: metadata.totalTracks,
           });
-
-          if ("error" in albumResult) {
-            return { success: false, error: albumResult.error };
-          }
-
-          const album = albumResult.album;
 
           // Add all tracks with album source
           const trackData = tracks.map((t) => ({
@@ -569,7 +573,7 @@ export function createLibraryService(connectionString: string) {
       }
     },
 
-    /** Add a playlist (rejects if user already has this spotifyId) */
+    /** Add a playlist (caller must check for duplicates first) */
     async addPlaylist(
       userId: string,
       playlistData: {
@@ -579,18 +583,7 @@ export function createLibraryService(connectionString: string) {
         imageUrl?: string;
         trackCount: number;
       },
-    ): Promise<{ playlist: PlaylistRecord } | { error: string }> {
-      // Check for duplicate
-      const existing = await db().query.libraryPlaylists.findFirst({
-        where: and(
-          eq(libraryPlaylists.userId, userId),
-          eq(libraryPlaylists.spotifyId, playlistData.spotifyId),
-        ),
-      });
-      if (existing) {
-        return { error: "Playlist already exists in your library" };
-      }
-
+    ): Promise<{ playlist: PlaylistRecord }> {
       const [playlist] = await db()
         .insert(libraryPlaylists)
         .values({
@@ -623,7 +616,7 @@ export function createLibraryService(connectionString: string) {
         .where(and(eq(libraryPlaylists.userId, userId), eq(libraryPlaylists.id, playlistId)));
     },
 
-    /** Add an album (rejects if user already has this spotifyId) */
+    /** Add an album (caller must check for duplicates first) */
     async addAlbum(
       userId: string,
       albumData: {
@@ -635,18 +628,7 @@ export function createLibraryService(connectionString: string) {
         imageUrl?: string;
         totalTracks?: number;
       },
-    ): Promise<{ album: AlbumRecord } | { error: string }> {
-      // Check for duplicate
-      const existing = await db().query.libraryAlbums.findFirst({
-        where: and(
-          eq(libraryAlbums.userId, userId),
-          eq(libraryAlbums.spotifyId, albumData.spotifyId),
-        ),
-      });
-      if (existing) {
-        return { error: "Album already exists in your library" };
-      }
-
+    ): Promise<{ album: AlbumRecord }> {
       const [album] = await db()
         .insert(libraryAlbums)
         .values({
