@@ -1,0 +1,1 @@
+ALTER TABLE "library_tracks" ADD COLUMN "preview_url" text;

@@ -35,6 +35,7 @@ export interface TrackData {
   albumName?: string;
   albumId?: string;
   albumImageUrl?: string;
+  previewUrl?: string;
   durationMs?: number;
 }
 
@@ -188,6 +189,7 @@ export function createLibraryService(
           albumName: t.albumName || "",
           albumId: t.albumId,
           albumImageUrl: t.albumImageUrl,
+          previewUrl: t.previewUrl,
           durationMs: t.durationMs || 0,
         }));
 
@@ -323,7 +325,7 @@ export function createLibraryService(
           artist: s.track.artists.map((a) => a.name).join(", "),
           album: s.track.albumName,
           albumImageUrl: s.track.albumImageUrl ?? undefined,
-          previewUrl: undefined,
+          previewUrl: s.track.previewUrl ?? undefined,
           duration: s.track.durationMs || 0,
         }));
     },
@@ -366,6 +368,7 @@ export function createLibraryService(
           albumName: trackData.albumName || "",
           albumId: trackData.albumId,
           albumImageUrl: trackData.albumImageUrl,
+          previewUrl: trackData.previewUrl,
           durationMs: trackData.durationMs || 0,
         })
         .returning();
@@ -502,6 +505,7 @@ export function createLibraryService(
             artists: [{ name: t.artist }],
             albumName: t.album || undefined,
             albumImageUrl: t.albumImageUrl || undefined,
+            previewUrl: t.previewUrl || undefined,
             durationMs: t.duration || undefined,
           }));
 
@@ -554,6 +558,7 @@ export function createLibraryService(
             albumName: t.album || metadata.name,
             albumId: album.id,
             albumImageUrl: metadata.imageUrl || undefined,
+            previewUrl: t.previewUrl || undefined,
             durationMs: t.duration || undefined,
           }));
 
@@ -1058,7 +1063,7 @@ export function createLibraryService(
         artist: track.artists.map((a) => a.name).join(", "),
         album: track.albumName,
         albumImageUrl: track.albumImageUrl ?? undefined,
-        previewUrl: undefined,
+        previewUrl: track.previewUrl ?? undefined,
         duration: track.durationMs || 0,
       }));
 

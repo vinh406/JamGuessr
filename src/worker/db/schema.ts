@@ -106,6 +106,7 @@ export const libraryTracks = pgTable(
     albumName: text("album_name").notNull().default(""),
     albumId: text("album_id"),
     albumImageUrl: text("album_image_url"),
+    previewUrl: text("preview_url"),
     durationMs: integer("duration_ms").notNull().default(0),
     addedAt: timestamp("added_at").defaultNow().notNull(),
   },
