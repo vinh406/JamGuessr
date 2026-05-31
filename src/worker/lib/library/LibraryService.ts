@@ -983,27 +983,27 @@ export function createLibraryService(connectionString: string) {
     ): Promise<PaginatedTracks> {
       const cursorDate = cursor ? new Date(cursor) : undefined;
 
-      const baseWhere = and(
-        eq(libraryTracks.userId, userId),
-        notExists(
-          db()
-            .select({ id: libraryTrackSources.id })
-            .from(libraryTrackSources)
-            .where(
-              and(
-                eq(libraryTrackSources.trackId, libraryTracks.id),
-                inArray(libraryTrackSources.sourceType, ["playlist", "album"]),
-              ),
-            ),
-        ),
-      );
-
-      const where = cursorDate
-        ? and(baseWhere, lt(libraryTracks.addedAt, cursorDate))
-        : baseWhere;
-
       const tracks = await db().query.libraryTracks.findMany({
-        where,
+        where: (t, { and: andOp, lt, eq, notExists: notExistsOp }) => {
+          const conditions = [
+            eq(t.userId, userId),
+            notExistsOp(
+              db()
+                .select({ id: libraryTrackSources.id })
+                .from(libraryTrackSources)
+                .where(
+                  and(
+                    eq(libraryTrackSources.trackId, t.id),
+                    inArray(libraryTrackSources.sourceType, ["playlist", "album"]),
+                  ),
+                ),
+            ),
+          ];
+          if (cursorDate) {
+            conditions.push(lt(t.addedAt, cursorDate));
+          }
+          return andOp(...conditions);
+        },
         orderBy: (t, { desc }) => [desc(t.addedAt)],
         limit: limit + 1,
       });
