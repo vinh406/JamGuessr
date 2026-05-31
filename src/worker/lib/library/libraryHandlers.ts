@@ -37,6 +37,7 @@ const TrackSchema = z
     artists: z.array(ArtistSchema).openapi({ description: "List of artists" }),
     albumName: z.string().optional().openapi({ description: "Album name" }),
     albumId: z.string().optional().openapi({ description: "Spotify album ID" }),
+    albumImageUrl: z.string().optional().openapi({ description: "Album cover image URL" }),
     durationMs: z.number().optional().openapi({ description: "Duration in milliseconds" }),
     addedAt: z.string().openapi({
       description: "ISO timestamp when track was added",
@@ -250,6 +251,7 @@ export function createLibraryHandlers() {
         artists: track.artists,
         albumName: track.albumName ?? undefined,
         albumId: track.albumId ?? undefined,
+        albumImageUrl: track.albumImageUrl ?? undefined,
         durationMs: track.durationMs ?? undefined,
         addedAt: track.addedAt instanceof Date ? track.addedAt.toISOString() : track.addedAt,
         sources: tws.sources.map((s) => ({
@@ -286,6 +288,43 @@ export function createLibraryHandlers() {
     }));
 
     return c.json({ tracks, playlists: playlistsApi, albums: albumsApi }, 200);
+  });
+
+  app.get("/playlist/:spotifyId", async (c) => {
+    const user = await getAuthenticatedUser(c);
+    if (!user) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+    const spotifyId = c.req.param("spotifyId");
+    const lib = createLibraryService(c.env.DATABASE_URL);
+    const playlists = await lib.getUserPlaylists(user.id);
+    const match = playlists.find((p) => p.spotifyId === spotifyId);
+    if (match) {
+      return c.json({
+        inLibrary: true,
+        playlist: { name: match.name, imageUrl: match.imageUrl ?? undefined, trackCount: match.trackCount },
+      });
+    }
+    return c.json({ inLibrary: false });
+  });
+
+  app.post("/import-playlist", async (c) => {
+    const user = await getAuthenticatedUser(c);
+    if (!user) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+    const body = await c.req.json().catch(() => ({}));
+    const { spotifyId } = body;
+    if (!spotifyId) {
+      return c.json({ error: "Missing spotifyId" }, 400);
+    }
+    const link = `https://open.spotify.com/playlist/${spotifyId}`;
+    const lib = createLibraryService(c.env.DATABASE_URL);
+    const result = await lib.addFromSpotifyLink(user.id, link);
+    if (!result.success) {
+      return c.json({ error: result.error }, 400);
+    }
+    return c.json({ success: true, trackCount: result.trackCount });
   });
 
   // POST /add - Add any Spotify content (track, playlist, or album) from a URL
@@ -469,6 +508,7 @@ export function createLibraryHandlers() {
         track: {
           ...track,
           albumId: track.albumId ?? undefined,
+          albumImageUrl: track.albumImageUrl ?? undefined,
           addedAt: track.addedAt.toISOString(),
           sources: [],
         },
