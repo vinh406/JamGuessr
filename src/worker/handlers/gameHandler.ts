@@ -8,10 +8,7 @@ import { createLibraryService } from "../lib/library/LibraryService";
 
 const PREVIEW_CONCURRENCY = 5;
 
-async function ensurePreviewsForGame(
-  songs: Song[],
-  needed: number,
-): Promise<Song[]> {
+async function ensurePreviewsForGame(songs: Song[], needed: number): Promise<Song[]> {
   const shuffled = shuffleArray(songs);
   const pool = shuffled.slice(0, Math.min(shuffled.length, needed * 5));
 

@@ -39,10 +39,14 @@ export default function ConfirmDialog({
                 {cancelLabel}
               </Button>
             </Dialog.Close>
-            <Button variant="primary" size="sm" onClick={() => {
-              setOpen(false);
-              setTimeout(onConfirm, 150);
-            }}>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => {
+                setOpen(false);
+                setTimeout(onConfirm, 150);
+              }}
+            >
               {confirmLabel}
             </Button>
           </div>

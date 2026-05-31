@@ -35,7 +35,11 @@ export function sseStream<T>(
         const message = err instanceof Error ? err.message : "Unknown error";
         emit("error", { message });
       } finally {
-        try { controller.close(); } catch { /* ignore if already closed */ }
+        try {
+          controller.close();
+        } catch {
+          /* ignore if already closed */
+        }
       }
     },
     cancel() {

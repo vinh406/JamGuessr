@@ -95,13 +95,12 @@ function partnerTrackToSong(track: PartnerTrack): Song {
     title: data.name,
     artist: data.artists.items.map((a) => a.profile.name).join(", "),
     album: data.albumOfTrack.name,
-    albumImageUrl: data.albumOfTrack.coverArt.sources.sort((a, b) => b.width - a.width)[0]?.url ?? undefined,
+    albumImageUrl:
+      data.albumOfTrack.coverArt.sources.sort((a, b) => b.width - a.width)[0]?.url ?? undefined,
     previewUrl: undefined,
     duration: data.trackDuration.totalMilliseconds,
   };
 }
-
-
 
 async function parseSpotifyEmbedPage(
   playlistId: string,
@@ -114,8 +113,7 @@ async function parseSpotifyEmbedPage(
 
   const response = await fetchFn(url, {
     headers: {
-      "User-Agent":
-        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
       Accept: "text/html,application/xhtml+xml",
     },
   });
@@ -123,14 +121,11 @@ async function parseSpotifyEmbedPage(
   if (!response.ok) return null;
 
   const html = await response.text();
-  const match = html.match(
-    /<script id="__NEXT_DATA__"[^>]*>(.*?)<\/script>/,
-  );
+  const match = html.match(/<script id="__NEXT_DATA__"[^>]*>(.*?)<\/script>/);
 
   if (!match?.[1]) return null;
 
-  const parsed: { props: { pageProps: { state: SpotifyEmbedState } } } =
-    JSON.parse(match[1]);
+  const parsed: { props: { pageProps: { state: SpotifyEmbedState } } } = JSON.parse(match[1]);
   const state = parsed.props?.pageProps?.state;
   if (!state) return null;
 
@@ -157,33 +152,30 @@ async function fetchPartnerPlaylistTracks(
   }
 
   async function fetchPage(offset: number): Promise<Song[]> {
-    const response = await fetchFn(
-      "https://api-partner.spotify.com/pathfinder/v2/query",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json;charset=UTF-8",
-          Authorization: `Bearer ${accessToken}`,
-          "app-platform": "WebPlayer",
-          "User-Agent": "Mozilla/5.0",
-        },
-        body: JSON.stringify({
-          variables: {
-            uri: `spotify:playlist:${playlistId}`,
-            offset,
-            limit: BATCH_SIZE,
-            includeEpisodeContentRatingsV2: false,
-          },
-          operationName: "fetchPlaylistContents",
-          extensions: {
-            persistedQuery: {
-              version: 1,
-              sha256Hash: PARTNER_QUERY_HASH,
-            },
-          },
-        }),
+    const response = await fetchFn("https://api-partner.spotify.com/pathfinder/v2/query", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json;charset=UTF-8",
+        Authorization: `Bearer ${accessToken}`,
+        "app-platform": "WebPlayer",
+        "User-Agent": "Mozilla/5.0",
       },
-    );
+      body: JSON.stringify({
+        variables: {
+          uri: `spotify:playlist:${playlistId}`,
+          offset,
+          limit: BATCH_SIZE,
+          includeEpisodeContentRatingsV2: false,
+        },
+        operationName: "fetchPlaylistContents",
+        extensions: {
+          persistedQuery: {
+            version: 1,
+            sha256Hash: PARTNER_QUERY_HASH,
+          },
+        },
+      }),
+    });
 
     if (!response.ok) return [];
 
@@ -267,33 +259,30 @@ export async function getPlaylistMetadata(playlistId: string): Promise<Playlist 
 
       // Get real total from partner API
       try {
-        const countResponse = await fetch(
-          "https://api-partner.spotify.com/pathfinder/v2/query",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json;charset=UTF-8",
-              Authorization: `Bearer ${accessToken}`,
-              "app-platform": "WebPlayer",
-              "User-Agent": "Mozilla/5.0",
-            },
-            body: JSON.stringify({
-              variables: {
-                uri: `spotify:playlist:${playlistId}`,
-                offset: 0,
-                limit: 1,
-                includeEpisodeContentRatingsV2: false,
-              },
-              operationName: "fetchPlaylistContents",
-              extensions: {
-                persistedQuery: { version: 1, sha256Hash: PARTNER_QUERY_HASH },
-              },
-            }),
+        const countResponse = await fetch("https://api-partner.spotify.com/pathfinder/v2/query", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json;charset=UTF-8",
+            Authorization: `Bearer ${accessToken}`,
+            "app-platform": "WebPlayer",
+            "User-Agent": "Mozilla/5.0",
           },
-        );
+          body: JSON.stringify({
+            variables: {
+              uri: `spotify:playlist:${playlistId}`,
+              offset: 0,
+              limit: 1,
+              includeEpisodeContentRatingsV2: false,
+            },
+            operationName: "fetchPlaylistContents",
+            extensions: {
+              persistedQuery: { version: 1, sha256Hash: PARTNER_QUERY_HASH },
+            },
+          }),
+        });
 
         if (countResponse.ok) {
-          const countData = await countResponse.json() as PartnerPlaylistResponse;
+          const countData = (await countResponse.json()) as PartnerPlaylistResponse;
           const total = countData.data?.playlistV2?.content?.totalCount;
           if (typeof total === "number") trackCount = total;
         }
@@ -301,9 +290,7 @@ export async function getPlaylistMetadata(playlistId: string): Promise<Playlist 
         // Non-critical - use embed track count as fallback
       }
 
-      const image = entity.coverArt?.sources?.reduce?.((a, b) =>
-        a.width > b.width ? a : b,
-      );
+      const image = entity.coverArt?.sources?.reduce?.((a, b) => (a.width > b.width ? a : b));
 
       return {
         id: playlistId,
@@ -377,33 +364,30 @@ export async function getPlaylistTracks(playlistId: string): Promise<Song[]> {
 
       // Fetch ALL tracks from partner API for album art enrichment
       try {
-        const countResponse = await fetch(
-          "https://api-partner.spotify.com/pathfinder/v2/query",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json;charset=UTF-8",
-              Authorization: `Bearer ${accessToken}`,
-              "app-platform": "WebPlayer",
-              "User-Agent": "Mozilla/5.0",
-            },
-            body: JSON.stringify({
-              variables: {
-                uri: `spotify:playlist:${playlistId}`,
-                offset: 0,
-                limit: 1,
-                includeEpisodeContentRatingsV2: false,
-              },
-              operationName: "fetchPlaylistContents",
-              extensions: {
-                persistedQuery: { version: 1, sha256Hash: PARTNER_QUERY_HASH },
-              },
-            }),
+        const countResponse = await fetch("https://api-partner.spotify.com/pathfinder/v2/query", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json;charset=UTF-8",
+            Authorization: `Bearer ${accessToken}`,
+            "app-platform": "WebPlayer",
+            "User-Agent": "Mozilla/5.0",
           },
-        );
+          body: JSON.stringify({
+            variables: {
+              uri: `spotify:playlist:${playlistId}`,
+              offset: 0,
+              limit: 1,
+              includeEpisodeContentRatingsV2: false,
+            },
+            operationName: "fetchPlaylistContents",
+            extensions: {
+              persistedQuery: { version: 1, sha256Hash: PARTNER_QUERY_HASH },
+            },
+          }),
+        });
 
         if (countResponse.ok) {
-          const countData = await countResponse.json() as PartnerPlaylistResponse;
+          const countData = (await countResponse.json()) as PartnerPlaylistResponse;
           const total = countData.data?.playlistV2?.content?.totalCount;
 
           if (typeof total === "number" && total > 0) {

@@ -18,7 +18,10 @@ const ArtistSchema = z
 const TrackSourceSchema = z
   .object({
     type: z.enum(["direct", "playlist", "album"]).openapi({ description: "Source type" }),
-    playlistId: z.string().optional().openapi({ description: "Playlist ID if source is a playlist" }),
+    playlistId: z
+      .string()
+      .optional()
+      .openapi({ description: "Playlist ID if source is a playlist" }),
     albumId: z.string().optional().openapi({ description: "Album ID if source is an album" }),
   })
   .openapi("TrackSource");
@@ -43,11 +46,11 @@ const TrackSchema = z
       description: "ISO timestamp when track was added",
       example: "2024-01-15T10:30:00Z",
     }),
-    sources: z.array(TrackSourceSchema).openapi({ description: "Sources that contributed this track" }),
+    sources: z
+      .array(TrackSourceSchema)
+      .openapi({ description: "Sources that contributed this track" }),
   })
   .openapi("Track");
-
-
 
 // Library stats schema
 const LibraryStatsSchema = z
@@ -85,20 +88,29 @@ const LibraryItemsResponseSchema = z
 
 const LibraryTracksResponseSchema = z
   .object({
-    tracks: z.array(TrackSchema.omit({ sources: true })).openapi({ description: "Paginated tracks" }),
+    tracks: z
+      .array(TrackSchema.omit({ sources: true }))
+      .openapi({ description: "Paginated tracks" }),
     nextCursor: z.string().nullable().openapi({ description: "Cursor for next page" }),
   })
   .openapi("LibraryTracksResponse");
 
 const QueryCursorSchema = z.object({
-  cursor: z.string().optional().openapi({
-    param: { name: "cursor", in: "query" },
-    description: "Cursor for pagination",
-  }),
-  limit: z.coerce.number().optional().default(20).openapi({
-    param: { name: "limit", in: "query" },
-    description: "Items per page",
-  }),
+  cursor: z
+    .string()
+    .optional()
+    .openapi({
+      param: { name: "cursor", in: "query" },
+      description: "Cursor for pagination",
+    }),
+  limit: z.coerce
+    .number()
+    .optional()
+    .default(20)
+    .openapi({
+      param: { name: "limit", in: "query" },
+      description: "Items per page",
+    }),
 });
 
 // Add from Spotify link request schema
@@ -236,7 +248,10 @@ export function createLibraryHandlers() {
         content: { "application/json": { schema: LibraryTracksResponseSchema } },
         description: "Paginated directly-added tracks",
       },
-      401: { content: { "application/json": { schema: ErrorResponseSchema } }, description: "Unauthorized" },
+      401: {
+        content: { "application/json": { schema: ErrorResponseSchema } },
+        description: "Unauthorized",
+      },
     },
     tags: ["Library"],
     summary: "Get direct tracks",
@@ -258,7 +273,12 @@ export function createLibraryHandlers() {
     path: "/items/playlist/{spotifyId}/tracks",
     request: {
       params: z.object({
-        spotifyId: z.string().openapi({ param: { name: "spotifyId", in: "path" }, description: "Spotify playlist ID" }),
+        spotifyId: z
+          .string()
+          .openapi({
+            param: { name: "spotifyId", in: "path" },
+            description: "Spotify playlist ID",
+          }),
       }),
       query: QueryCursorSchema.extend({
         limit: z.coerce.number().optional().default(50),
@@ -269,7 +289,10 @@ export function createLibraryHandlers() {
         content: { "application/json": { schema: LibraryTracksResponseSchema } },
         description: "Paginated playlist tracks",
       },
-      401: { content: { "application/json": { schema: ErrorResponseSchema } }, description: "Unauthorized" },
+      401: {
+        content: { "application/json": { schema: ErrorResponseSchema } },
+        description: "Unauthorized",
+      },
     },
     tags: ["Library"],
     summary: "Get playlist tracks",
@@ -292,7 +315,9 @@ export function createLibraryHandlers() {
     path: "/items/album/{spotifyId}/tracks",
     request: {
       params: z.object({
-        spotifyId: z.string().openapi({ param: { name: "spotifyId", in: "path" }, description: "Spotify album ID" }),
+        spotifyId: z
+          .string()
+          .openapi({ param: { name: "spotifyId", in: "path" }, description: "Spotify album ID" }),
       }),
       query: QueryCursorSchema.extend({
         limit: z.coerce.number().optional().default(50),
@@ -303,7 +328,10 @@ export function createLibraryHandlers() {
         content: { "application/json": { schema: LibraryTracksResponseSchema } },
         description: "Paginated album tracks",
       },
-      401: { content: { "application/json": { schema: ErrorResponseSchema } }, description: "Unauthorized" },
+      401: {
+        content: { "application/json": { schema: ErrorResponseSchema } },
+        description: "Unauthorized",
+      },
     },
     tags: ["Library"],
     summary: "Get album tracks",
@@ -332,7 +360,11 @@ export function createLibraryHandlers() {
     if (match) {
       return c.json({
         inLibrary: true,
-        playlist: { name: match.name, imageUrl: match.imageUrl ?? undefined, trackCount: match.trackCount },
+        playlist: {
+          name: match.name,
+          imageUrl: match.imageUrl ?? undefined,
+          trackCount: match.trackCount,
+        },
       });
     }
     return c.json({ inLibrary: false });

@@ -35,7 +35,10 @@ function AppContent() {
         element={isAuthenticated ? <Navigate to="/" replace /> : <LoginPage />}
       />
       <Route path="/room/:roomName" element={<RoomPage />} />
-      <Route path="/library" element={isAuthenticated ? <LibraryPage /> : <Navigate to="/login" replace />} />
+      <Route
+        path="/library"
+        element={isAuthenticated ? <LibraryPage /> : <Navigate to="/login" replace />}
+      />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

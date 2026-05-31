@@ -191,7 +191,11 @@ export function createLibraryService(connectionString: string) {
       const insertedTracks: LibraryTrack[] = [];
       if (newTracksData.length > 0) {
         insertedTracks.push(
-          ...(await db().insert(libraryTracks).values(newTracksData).onConflictDoNothing().returning()),
+          ...(await db()
+            .insert(libraryTracks)
+            .values(newTracksData)
+            .onConflictDoNothing()
+            .returning()),
         );
       }
 
@@ -293,15 +297,9 @@ export function createLibraryService(connectionString: string) {
     },
 
     /** Get tracks for a playlist stored in the user's library, by Spotify playlist ID */
-    async getLibraryPlaylistTracks(
-      userId: string,
-      spotifyId: string,
-    ): Promise<Song[]> {
+    async getLibraryPlaylistTracks(userId: string, spotifyId: string): Promise<Song[]> {
       const playlist = await db().query.libraryPlaylists.findFirst({
-        where: and(
-          eq(libraryPlaylists.userId, userId),
-          eq(libraryPlaylists.spotifyId, spotifyId),
-        ),
+        where: and(eq(libraryPlaylists.userId, userId), eq(libraryPlaylists.spotifyId, spotifyId)),
       });
       if (!playlist) return [];
 
@@ -872,11 +870,7 @@ export function createLibraryService(connectionString: string) {
 
     // ── Paginated reads ─────────────────────────────────────────────
 
-    async getItems(
-      userId: string,
-      cursor?: string,
-      limit: number = 20,
-    ): Promise<PaginatedItems> {
+    async getItems(userId: string, cursor?: string, limit: number = 20): Promise<PaginatedItems> {
       const cursorDate = cursor ? new Date(cursor) : undefined;
       const take = limit + 1;
 
@@ -903,8 +897,7 @@ export function createLibraryService(connectionString: string) {
 
       const items: LibraryItem[] = [];
 
-      const formatDate = (d: Date | string) =>
-        d instanceof Date ? d.toISOString() : String(d);
+      const formatDate = (d: Date | string) => (d instanceof Date ? d.toISOString() : String(d));
 
       for (const p of playlists) {
         items.push({
@@ -1018,10 +1011,7 @@ export function createLibraryService(connectionString: string) {
       limit: number = 50,
     ): Promise<PaginatedTracks> {
       const playlist = await db().query.libraryPlaylists.findFirst({
-        where: and(
-          eq(libraryPlaylists.userId, userId),
-          eq(libraryPlaylists.spotifyId, spotifyId),
-        ),
+        where: and(eq(libraryPlaylists.userId, userId), eq(libraryPlaylists.spotifyId, spotifyId)),
       });
       if (!playlist) return { tracks: [], nextCursor: null };
 
@@ -1053,10 +1043,7 @@ export function createLibraryService(connectionString: string) {
       limit: number = 50,
     ): Promise<PaginatedTracks> {
       const album = await db().query.libraryAlbums.findFirst({
-        where: and(
-          eq(libraryAlbums.userId, userId),
-          eq(libraryAlbums.spotifyId, spotifyId),
-        ),
+        where: and(eq(libraryAlbums.userId, userId), eq(libraryAlbums.spotifyId, spotifyId)),
       });
       if (!album) return { tracks: [], nextCursor: null };
 
@@ -1081,15 +1068,11 @@ export function createLibraryService(connectionString: string) {
       return this.formatTrackPage(tracks, limit);
     },
 
-    formatTrackPage(
-      tracks: LibraryTrack[],
-      limit: number,
-    ): PaginatedTracks {
+    formatTrackPage(tracks: LibraryTrack[], limit: number): PaginatedTracks {
       const hasMore = tracks.length > limit;
       const page = hasMore ? tracks.slice(0, limit) : tracks;
 
-      const formatDate = (d: Date | string) =>
-        d instanceof Date ? d.toISOString() : String(d);
+      const formatDate = (d: Date | string) => (d instanceof Date ? d.toISOString() : String(d));
 
       return {
         tracks: page.map((t) => ({

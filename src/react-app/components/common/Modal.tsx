@@ -56,7 +56,13 @@ export function Modal({
             </Dialog.Close>
           </div>
 
-          <div ref={scrollContainerRef} onScroll={onScroll} className={scrollable ? "flex-1 overflow-y-auto p-6" : "p-6"}>{children}</div>
+          <div
+            ref={scrollContainerRef}
+            onScroll={onScroll}
+            className={scrollable ? "flex-1 overflow-y-auto p-6" : "p-6"}
+          >
+            {children}
+          </div>
 
           {footer && <div className="p-6 border-t border-gray-700/50">{footer}</div>}
         </Dialog.Popup>
