@@ -10,6 +10,7 @@ export function roomReducer(state: RoomState, action: RoomAction): RoomState {
 
       return {
         ...state,
+        ui: { ...state.ui, isStartingGame: false },
         metadata: {
           ...state.metadata,
           roomName: unified.room,

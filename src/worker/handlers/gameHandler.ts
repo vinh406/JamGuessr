@@ -68,6 +68,13 @@ export class GameHandler {
     const settings = this.roomManager.getRoomSettings();
     const roomPlaylist = this.roomManager.getRoomPlaylist();
 
+    // Broadcast game_started immediately so all clients see "Game starting..."
+    broadcastToRoom(
+      this.roomManager.getSessions(),
+      session.room,
+      MessageBuilders.gameStarted(settings.rounds, settings.timePerRound, settings.audioTime),
+    );
+
     let songs: Song[] = [];
     if (roomPlaylist?.id) {
       // Try library first
@@ -94,21 +101,17 @@ export class GameHandler {
         ws,
         MessageBuilders.error("Not enough songs available. Please set a larger Spotify playlist."),
       );
+      broadcastToRoom(
+        this.roomManager.getSessions(),
+        session.room,
+        MessageBuilders.unifiedRoomState(this.roomManager.getUnifiedRoomState(session.room)),
+      );
       return;
     }
 
     this.roomManager.initGame(songs, settings.rounds, session.room);
 
-    const gameStartedMessage = MessageBuilders.gameStarted(
-      settings.rounds,
-      settings.timePerRound,
-      settings.audioTime,
-    );
-    broadcastToRoom(this.roomManager.getSessions(), session.room, gameStartedMessage);
-
-    setTimeout(() => {
-      this.handleStartRoundInternal(session.room);
-    }, 2000);
+    this.handleStartRoundInternal(session.room);
   }
 
   private async handleStartRoundInternal(room: string): Promise<void> {

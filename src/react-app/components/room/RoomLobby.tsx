@@ -204,6 +204,7 @@ export function RoomLobby({
           {!isHost && (
             <Button
               onClick={onToggleReady}
+              disabled={isStartingGame}
               variant={isReady ? "primary" : "secondary"}
               size="lg"
               className={`w-full ${
