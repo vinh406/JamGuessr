@@ -66,16 +66,20 @@ export default function HomePage() {
               {" albums in your library"}
             </p>
           ) : (
-            hasStats && (
-              <p className="text-gray-500 text-sm mt-2">
-                {stats!.totalSongs} track{stats!.totalSongs !== 1 ? "s" : ""}
-                {stats!.totalPlaylists > 0 &&
-                  ` · ${stats!.totalPlaylists} playlist${stats!.totalPlaylists !== 1 ? "s" : ""}`}
-                {stats!.totalAlbums > 0 &&
-                  ` · ${stats!.totalAlbums} album${stats!.totalAlbums !== 1 ? "s" : ""}`}
-                {" in your library"}
-              </p>
-            )
+            <p className="text-gray-500 text-sm mt-2">
+              {hasStats ? (
+                <>
+                  {stats!.totalSongs} track{stats!.totalSongs !== 1 ? "s" : ""}
+                  {stats!.totalPlaylists > 0 &&
+                    ` · ${stats!.totalPlaylists} playlist${stats!.totalPlaylists !== 1 ? "s" : ""}`}
+                  {stats!.totalAlbums > 0 &&
+                    ` · ${stats!.totalAlbums} album${stats!.totalAlbums !== 1 ? "s" : ""}`}
+                  {" in your library"}
+                </>
+              ) : (
+                "Add tracks in your library to get started"
+              )}
+            </p>
           )}
         </div>
 
