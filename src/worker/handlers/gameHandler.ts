@@ -6,33 +6,24 @@ import { getPlaylistTracks, getTrackPreviewUrl } from "../lib/spotify/playlists"
 import { shuffleArray } from "../lib/websocket/game/GameUtils";
 import { createLibraryService } from "../lib/library/LibraryService";
 
-const PREVIEW_CONCURRENCY = 5;
+const PREVIEW_CONCURRENCY = 10;
 
 async function ensurePreviewsForGame(songs: Song[], needed: number): Promise<Song[]> {
   const shuffled = shuffleArray(songs);
-  const pool = shuffled.slice(0, Math.min(shuffled.length, needed * 5));
+  const valid: Song[] = [];
 
-  const needPreview: { song: Song; index: number }[] = [];
-  for (let i = 0; i < pool.length; i++) {
-    if (!pool[i]!.previewUrl) {
-      needPreview.push({ song: pool[i]!, index: i });
-    }
-  }
-
-  for (let i = 0; i < needPreview.length; i += PREVIEW_CONCURRENCY) {
-    const batch = needPreview.slice(i, i + PREVIEW_CONCURRENCY);
-    await Promise.all(
-      batch.map(async ({ song, index }) => {
+  for (let i = 0; i < shuffled.length && valid.length < needed; i += PREVIEW_CONCURRENCY) {
+    const batch = shuffled.slice(i, i + PREVIEW_CONCURRENCY);
+    const results = await Promise.all(
+      batch.map(async (song) => {
+        if (song.previewUrl) return song;
         const url = await getTrackPreviewUrl(song.id);
-        pool[index] = { ...song, previewUrl: url };
+        return url ? { ...song, previewUrl: url } : null;
       }),
     );
-  }
-
-  const valid: Song[] = [];
-  for (const song of pool) {
-    if (valid.length >= needed) break;
-    if (song.previewUrl) valid.push(song);
+    for (const song of results) {
+      if (song && valid.length < needed) valid.push(song);
+    }
   }
 
   return valid;
