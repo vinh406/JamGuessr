@@ -10,6 +10,7 @@ import { GameView } from "../components/game/GameView";
 import { RoundEndView } from "../components/game/RoundEndView";
 import { useAuth } from "../hooks/useAuth";
 import LoadingSpinner from "../components/common/LoadingSpinner";
+import ConfirmDialog from "../components/common/ConfirmDialog";
 import { Button } from "../components/ui";
 import Header from "../components/Header";
 
@@ -71,7 +72,11 @@ export default function RoomPage() {
     setShowPlaylistModal,
     handleOpenPlaylistModal,
     setSpotifyLink,
+    handleConfirmLibraryImport,
+    handleSkipLibraryImport,
   } = actions;
+
+  const { pendingLibraryImport, libraryImporting } = state.ui;
 
   const isGameActive = gamePhase === "playing" || gamePhase === "roundEnd";
 
@@ -241,6 +246,26 @@ export default function RoomPage() {
           onCreateBlend={handleCreateBlend}
           onClose={() => setShowPlaylistModal(false)}
         />
+      )}
+
+      {pendingLibraryImport && !libraryImporting && (
+        <ConfirmDialog
+          title="Add to Library?"
+          message={`This playlist isn't in your music library yet. Add it now to make future games faster?`}
+          confirmLabel="Add to Library"
+          cancelLabel="Skip"
+          onConfirm={handleConfirmLibraryImport}
+          onCancel={handleSkipLibraryImport}
+        />
+      )}
+
+      {pendingLibraryImport && libraryImporting && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
+          <div className="bg-gray-800 rounded-2xl p-6 border border-gray-700/50 flex items-center gap-4">
+            <div className="w-6 h-6 border-2 border-green-500 border-t-transparent rounded-full animate-spin"></div>
+            <span className="text-gray-300">Adding to your library...</span>
+          </div>
+        </div>
       )}
     </div>
   );

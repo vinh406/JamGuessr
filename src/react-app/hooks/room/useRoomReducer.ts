@@ -227,6 +227,12 @@ export function roomReducer(state: RoomState, action: RoomAction): RoomState {
     case "SET_PLAYLISTS_LOADING":
       return { ...state, ui: { ...state.ui, playlistsLoading: action.loading } };
 
+    case "SET_PENDING_LIBRARY_IMPORT":
+      return { ...state, ui: { ...state.ui, pendingLibraryImport: action.playlist ? { playlist: action.playlist } : null } };
+
+    case "SET_LIBRARY_IMPORTING":
+      return { ...state, ui: { ...state.ui, libraryImporting: action.importing } };
+
     case "LOCAL_ANSWER":
       return {
         ...state,

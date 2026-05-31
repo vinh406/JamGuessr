@@ -274,16 +274,67 @@ export function useRoomActions({ state, dispatch }: UseRoomActionsParams) {
   );
 
   const handleSelectPlaylist = useCallback(
-    (playlist: Playlist) => {
-      dispatch({ type: "PLAYLIST_UPDATED", playlist });
-      send({
-        type: "update_playlist",
-        payload: { playlist },
-      });
-      dispatch({ type: "SET_SHOW_PLAYLIST_MODAL", show: false });
+    async (playlist: Playlist) => {
+      // Check if playlist is already in user's library
+      dispatch({ type: "SET_PLAYLISTS_LOADING", loading: true });
+      try {
+        const res = await fetch(`/api/library/playlist/${playlist.id}`);
+        const data = await res.json();
+        if (data.inLibrary) {
+          // Already in library — proceed normally
+          dispatch({ type: "PLAYLIST_UPDATED", playlist });
+          send({ type: "update_playlist", payload: { playlist } });
+          dispatch({ type: "SET_SHOW_PLAYLIST_MODAL", show: false });
+          return;
+        }
+        // Not in library — ask user
+        dispatch({ type: "SET_SHOW_PLAYLIST_MODAL", show: false });
+        dispatch({ type: "SET_PENDING_LIBRARY_IMPORT", playlist });
+      } catch {
+        // On error, just proceed normally
+        dispatch({ type: "PLAYLIST_UPDATED", playlist });
+        send({ type: "update_playlist", payload: { playlist } });
+        dispatch({ type: "SET_SHOW_PLAYLIST_MODAL", show: false });
+      }
+      dispatch({ type: "SET_PLAYLISTS_LOADING", loading: false });
     },
     [dispatch, send],
   );
+
+  const handleConfirmLibraryImport = useCallback(async () => {
+    const playlist = state.ui.pendingLibraryImport?.playlist;
+    if (!playlist) return;
+
+    dispatch({ type: "SET_LIBRARY_IMPORTING", importing: true });
+    try {
+      const res = await fetch("/api/library/import-playlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ spotifyId: playlist.id }),
+      });
+      if (res.ok) {
+        dispatch({ type: "PLAYLIST_UPDATED", playlist });
+        send({ type: "update_playlist", payload: { playlist } });
+      } else {
+        // Import failed — still proceed with the playlist
+        dispatch({ type: "PLAYLIST_UPDATED", playlist });
+        send({ type: "update_playlist", payload: { playlist } });
+      }
+    } catch {
+      dispatch({ type: "PLAYLIST_UPDATED", playlist });
+      send({ type: "update_playlist", payload: { playlist } });
+    }
+    dispatch({ type: "SET_LIBRARY_IMPORTING", importing: false });
+    dispatch({ type: "SET_PENDING_LIBRARY_IMPORT", playlist: null });
+  }, [state.ui.pendingLibraryImport, dispatch, send]);
+
+  const handleSkipLibraryImport = useCallback(() => {
+    const playlist = state.ui.pendingLibraryImport?.playlist;
+    if (!playlist) return;
+    dispatch({ type: "PLAYLIST_UPDATED", playlist });
+    send({ type: "update_playlist", payload: { playlist } });
+    dispatch({ type: "SET_PENDING_LIBRARY_IMPORT", playlist: null });
+  }, [state.ui.pendingLibraryImport, dispatch, send]);
 
   const handleAnswer = useCallback(
     (choiceIndex: number) => {
@@ -370,6 +421,8 @@ export function useRoomActions({ state, dispatch }: UseRoomActionsParams) {
     handleVote,
     handleSendMessage,
     handleOpenPlaylistModal,
+    handleConfirmLibraryImport,
+    handleSkipLibraryImport,
     setShowSettingsModal: (show: boolean) => dispatch({ type: "SET_SHOW_SETTINGS_MODAL", show }),
     setShowPlaylistModal: (show: boolean) => dispatch({ type: "SET_SHOW_PLAYLIST_MODAL", show }),
     setSpotifyLink: (link: string) => dispatch({ type: "SET_SPOTIFY_LINK", link }),

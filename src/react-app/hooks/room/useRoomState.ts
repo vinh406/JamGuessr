@@ -44,6 +44,8 @@ const initialState: RoomState = {
     spotifyLink: "",
     availablePlaylists: [],
     playlistsLoading: true,
+    pendingLibraryImport: null,
+    libraryImporting: false,
     isStartingGame: false,
     chatMessages: [],
     isConnected: false,

@@ -18,13 +18,19 @@ export class RoomManager {
   private roomSettings: RoomSettings;
   private roomPlaylist: Playlist | null;
   private roundTimer: ReturnType<typeof setTimeout> | null = null;
+  private env: Env;
 
   constructor(env: Env) {
+    this.env = env;
     this.sessionManager = new SessionManager();
     this.gameEngine = new GameEngine();
     this.roomSettings = { ...DEFAULT_ROOM_SETTINGS };
     this.roomPlaylist = null;
     this.gameEngine.setLastFmApiKey(env.LAST_FM_API_KEY);
+  }
+
+  getDatabaseUrl(): string {
+    return this.env.DATABASE_URL;
   }
 
   // Session Management delegation

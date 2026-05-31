@@ -4,6 +4,7 @@ import type { AnswerMessage, VotePlayAgainMessage, Song, UserSession } from "../
 import { SCORING } from "../../shared/constants";
 import { getPlaylistTracks, getTrackPreviewUrl } from "../lib/spotify/playlists";
 import { shuffleArray } from "../lib/websocket/game/GameUtils";
+import { createLibraryService } from "../lib/library/LibraryService";
 
 const PREVIEW_CONCURRENCY = 5;
 
@@ -72,7 +73,15 @@ export class GameHandler {
 
     let songs: Song[] = [];
     if (roomPlaylist?.id) {
-      songs = await getPlaylistTracks(roomPlaylist.id);
+      // Try library first
+      const dbUrl = this.roomManager.getDatabaseUrl();
+      const lib = createLibraryService(dbUrl);
+      const libraryTracks = await lib.getLibraryPlaylistTracks(session.userId, roomPlaylist.id);
+      if (libraryTracks.length > 0) {
+        songs = libraryTracks;
+      } else {
+        songs = await getPlaylistTracks(roomPlaylist.id);
+      }
     }
 
     // Filter to only songs with audio previews — ensures all game rounds play audio
