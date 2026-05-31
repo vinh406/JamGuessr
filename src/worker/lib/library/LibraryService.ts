@@ -151,6 +151,7 @@ export function createLibraryService(connectionString: string) {
           artists: t.artists,
           albumName: t.albumName || "",
           albumId: t.albumId,
+          albumImageUrl: t.albumImageUrl,
           durationMs: t.durationMs || 0,
         }));
 
