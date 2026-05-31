@@ -358,6 +358,7 @@ export function createLibraryService(connectionString: string) {
         artists: { name: string; id?: string }[];
         albumName?: string;
         albumId?: string;
+        albumImageUrl?: string;
         durationMs?: number;
       },
     ): Promise<{ success: true; trackId: string } | { success: false; error: string }> {
@@ -421,6 +422,7 @@ export function createLibraryService(connectionString: string) {
             name: metadata.name,
             artists: [{ name: metadata.artist }],
             albumName: metadata.albumName || undefined,
+            albumImageUrl: metadata.imageUrl || undefined,
             durationMs: metadata.durationMs || undefined,
           });
 
@@ -510,6 +512,7 @@ export function createLibraryService(connectionString: string) {
             artists: [{ name: t.artist }],
             albumName: t.album || metadata.name,
             albumId: album.id,
+            albumImageUrl: metadata.imageUrl || undefined,
             durationMs: t.duration || undefined,
           }));
 
