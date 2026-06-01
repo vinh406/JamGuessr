@@ -9,24 +9,43 @@ import { createLibraryService } from "../lib/library/LibraryService";
 const PREVIEW_CONCURRENCY = 10;
 
 async function ensurePreviewsForGame(songs: Song[], needed: number): Promise<Song[]> {
-  const shuffled = shuffleArray(songs);
-  const valid: Song[] = [];
+  const withPreview: Song[] = [];
+  const withoutPreview: Song[] = [];
 
-  for (let i = 0; i < shuffled.length && valid.length < needed; i += PREVIEW_CONCURRENCY) {
-    const batch = shuffled.slice(i, i + PREVIEW_CONCURRENCY);
+  for (const song of songs) {
+    if (song.previewUrl) {
+      withPreview.push(song);
+    } else {
+      withoutPreview.push(song);
+    }
+  }
+
+  if (withPreview.length >= needed) {
+    return [...withPreview, ...withoutPreview];
+  }
+
+  const newlyFetched: Song[] = [];
+  for (
+    let i = 0;
+    i < withoutPreview.length && withPreview.length + newlyFetched.length < needed;
+    i += PREVIEW_CONCURRENCY
+  ) {
+    const batch = withoutPreview.slice(i, i + PREVIEW_CONCURRENCY);
     const results = await Promise.all(
       batch.map(async (song) => {
-        if (song.previewUrl) return song;
         const url = await getTrackPreviewUrl(song.id);
         return url ? { ...song, previewUrl: url } : null;
       }),
     );
-    for (const song of results) {
-      if (song && valid.length < needed) valid.push(song);
+    for (const result of results) {
+      if (result) newlyFetched.push(result);
     }
   }
 
-  return valid;
+  const fetchedIds = new Set(newlyFetched.map((s) => s.id));
+  const stillWithout = withoutPreview.filter((s) => !fetchedIds.has(s.id));
+
+  return [...withPreview, ...newlyFetched, ...stillWithout];
 }
 
 export class GameHandler {
@@ -83,10 +102,12 @@ export class GameHandler {
       }
     }
 
-    // Filter to only songs with audio previews — ensures all game rounds play audio
+    // Shuffle once, then ensure first `rounds` songs have previews
+    songs = shuffleArray(songs);
     songs = await ensurePreviewsForGame(songs, settings.rounds);
 
-    if (songs.length < settings.rounds) {
+    const songsWithPreviews = songs.filter((s) => s.previewUrl);
+    if (songsWithPreviews.length < settings.rounds) {
       this.roomManager.cancelStartGame();
       sendToSocket(
         ws,
@@ -244,17 +265,10 @@ export class GameHandler {
 
   private async handleContinueGame(room: string): Promise<void> {
     const settings = this.roomManager.getRoomSettings();
-    const roomPlaylist = this.roomManager.getRoomPlaylist();
-
-    let songs: Song[] = [];
-    if (roomPlaylist?.id) {
-      songs = await getPlaylistTracks(roomPlaylist.id, this.roomManager.getPlaylistImportDO());
-    }
-
-    // Check if there are enough unused songs to play another full game
     const gameState = this.roomManager.getUnifiedRoomState(room).game;
-    const remainingSongs = gameState.songs.length - gameState.currentSongIndex;
-    if (remainingSongs < settings.rounds) {
+    const remaining = gameState.songs.slice(gameState.currentSongIndex);
+
+    if (remaining.length < settings.rounds) {
       const errorMessage = MessageBuilders.error(
         "Not enough songs available. Please set a larger Spotify playlist.",
       );
@@ -262,8 +276,21 @@ export class GameHandler {
       return;
     }
 
-    // We pass isContinuing=true to keep the songs list and index
-    this.roomManager.initGame(songs, settings.rounds, room, true);
+    const ensured = await ensurePreviewsForGame(remaining, settings.rounds);
+    const enoughWithPreviews = ensured.slice(0, settings.rounds).every((s) => s.previewUrl);
+    if (!enoughWithPreviews) {
+      const errorMessage = MessageBuilders.error(
+        "Not enough songs available. Please set a larger Spotify playlist.",
+      );
+      broadcastToRoom(this.roomManager.getSessions(), room, errorMessage);
+      return;
+    }
+
+    // Rebuild full song list: played songs + reordered remaining songs (previews at front)
+    const played = gameState.songs.slice(0, gameState.currentSongIndex);
+    const allSongs = [...played, ...ensured];
+
+    this.roomManager.initGame(allSongs, settings.rounds, room, true);
 
     const gameStartedMessage = MessageBuilders.gameStarted(
       settings.rounds,

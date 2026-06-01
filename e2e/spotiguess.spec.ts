@@ -18,7 +18,7 @@ test.describe("Spotiguess E2E", () => {
 
     // 3. Wait for room page to load
     await expect(page.locator("text=Game Room")).toBeVisible();
-    await expect(page.locator("text=Room:")).toBeVisible();
+    await expect(page.locator(`text=${TEST_ROOM_CODE}`)).toBeVisible();
 
     // 4. Open playlist modal
     const playlistBtn = page.getByText("Select Playlist").first();
@@ -34,6 +34,13 @@ test.describe("Spotiguess E2E", () => {
 
     const importBtn = page.getByRole("button", { name: /import/i });
     await importBtn.click();
+
+    // 6. Dismiss the "Add to Library?" dialog if it appears
+    const libraryDialog = page.getByRole("dialog", { name: /add to library/i });
+    await libraryDialog.waitFor({ state: "visible", timeout: 15000 }).catch(() => {});
+    if (await libraryDialog.isVisible()) {
+      await page.getByRole("button", { name: /skip/i }).first().click();
+    }
 
     // 7. Verify Select Playlist text is updated to show playlist name
     await expect(
@@ -55,11 +62,18 @@ test.describe("Spotiguess E2E", () => {
     const saveSettingsBtn = page.getByRole("button", { name: /save/i });
     await saveSettingsBtn.click();
 
-    // 9. Click Start Game button (host)
+    // 9. Set up audio request tracking before starting the game
+    const uniqueAudioPreviews = new Set<string>();
+    page.on("request", (request) => {
+      if (request.url().includes("p.scdn.co/mp3-preview")) {
+        uniqueAudioPreviews.add(request.url());
+      }
+    });
+
+    // 10. Click Start Game button (host)
     const startGameBtn = page.getByRole("button", { name: /start game/i });
     await expect(startGameBtn).toBeVisible();
     await startGameBtn.click();
-    await page.waitForTimeout(3000); // Wait for game to start and first question to load
 
     // Loop to play two games
     for (let game = 1; game <= 2; game++) {
@@ -68,6 +82,15 @@ test.describe("Spotiguess E2E", () => {
 
       for (let round = 1; round <= 5; round++) {
         await expect(page.locator(`text=Round ${round}`)).toBeVisible({ timeout: 10000 });
+
+        // Verify a unique audio preview URL was fetched for this round
+        await expect
+          .poll(() => uniqueAudioPreviews.size, {
+            timeout: 15000,
+            message: `Expected unique audio preview URL for round ${round}`,
+          })
+          .toBe(round + (game - 1) * 5);
+
         // Click the first answer button (contains number "1")
         const firstOption = page.locator("button:has-text('1')").first();
         await expect(firstOption).toBeVisible({ timeout: 10000 });

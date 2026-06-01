@@ -6,12 +6,7 @@ import type {
   GameStateSnapshot,
 } from "../../../../shared/types";
 import { getSimilarTracks, getArtistTopTracks, type LastFMSimilarTrack } from "../../lastfm/client";
-import {
-  calculateScore,
-  generateChoices,
-  generateChoicesWithLastFM,
-  shuffleArray,
-} from "./GameUtils";
+import { calculateScore, generateChoices, generateChoicesWithLastFM } from "./GameUtils";
 
 export class GameEngine {
   private phase: GamePhase = "lobby";
@@ -54,18 +49,12 @@ export class GameEngine {
   ): void {
     this.phase = "playing";
 
+    this.songs = songs;
+
     if (!isContinuing) {
-      this.songs = shuffleArray(songs);
       this.currentSongIndex = 0;
-    } else {
-      // If continuing, we don't reshuffle and keep currentSongIndex as is
-      // But we should ensure we have enough songs left
-      if (this.currentSongIndex + rounds > this.songs.length) {
-        // Not enough songs left, reshuffle everything
-        this.songs = shuffleArray(songs);
-        this.currentSongIndex = 0;
-      }
     }
+    // For continuing: keep currentSongIndex (caller already prepared the array)
 
     this.totalRounds = rounds;
     this.currentRound = 1;
