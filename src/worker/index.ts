@@ -3,11 +3,7 @@ import { Scalar } from "@scalar/hono-api-reference";
 import { cors } from "hono/cors";
 import { auth } from "./lib/better-auth";
 import { libraryHandlers } from "./lib/library/libraryHandlers";
-import {
-  getCurrentUserPlaylists,
-  getPlaylistMetadata,
-  parseSpotifyLink,
-} from "./lib/spotify/playlists";
+import { getCurrentUserPlaylists } from "./lib/spotify/playlists";
 export { WebSocketHibernationServer } from "./websocketDurableObject";
 export { PlaylistImportDO } from "./playlistImportDO";
 
@@ -25,12 +21,6 @@ app.use("*", (c, next) => {
 });
 
 // Response schemas
-const RootResponseSchema = z
-  .object({
-    name: z.string().openapi({ description: "API name", example: "SpotiGuess API" }),
-  })
-  .openapi("RootResponse");
-
 const HealthResponseSchema = z
   .object({
     status: z.string().openapi({ description: "Health status", example: "ok" }),
@@ -59,68 +49,6 @@ const PlaylistsResponseSchema = z
       .openapi({ description: "Array of user's Spotify playlists" }),
   })
   .openapi("PlaylistsResponse");
-
-const ImportPlaylistRequestSchema = z
-  .object({
-    link: z.string().min(1).openapi({
-      description: "Spotify playlist URL or URI",
-      example: "https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M",
-    }),
-  })
-  .openapi("ImportPlaylistRequest");
-
-const PlaylistMetadataSchema = z
-  .object({
-    id: z
-      .string()
-      .openapi({ description: "Spotify playlist ID", example: "37i9dQZF1DXcBWIGoYBM5M" }),
-    name: z.string().openapi({ description: "Playlist name", example: "Today's Top Hits" }),
-    description: z.string().optional().openapi({ description: "Playlist description" }),
-    imageUrl: z.string().optional().openapi({ description: "Playlist cover image URL" }),
-    trackCount: z.number().optional().openapi({ description: "Total number of tracks" }),
-    ownerId: z.string().optional().openapi({ description: "Playlist owner ID" }),
-    spotifyUrl: z.string().optional().openapi({ description: "Spotify URL for the playlist" }),
-    tracks: z
-      .array(
-        z.object({
-          id: z.string(),
-          name: z.string(),
-          artists: z.array(z.string()),
-          durationMs: z.number(),
-        }),
-      )
-      .optional()
-      .openapi({ description: "Playlist tracks (limited preview)" }),
-  })
-  .openapi("PlaylistMetadata");
-
-const ImportPlaylistResponseSchema = z
-  .object({
-    playlist: PlaylistMetadataSchema,
-  })
-  .openapi("ImportPlaylistResponse");
-
-const ErrorResponseSchema = z
-  .object({
-    error: z.string().openapi({ description: "Error message", example: "Invalid playlist link" }),
-  })
-  .openapi("ErrorResponse");
-
-// Root endpoint
-const rootRoute = createRoute({
-  method: "get",
-  path: "/api/",
-  responses: {
-    200: {
-      content: { "application/json": { schema: RootResponseSchema } },
-      description: "Service information",
-    },
-  },
-  tags: ["Health"],
-  summary: "API root",
-  description: "Returns basic service information including the API name",
-});
-app.openapi(rootRoute, (c) => c.json({ name: "SpotiGuess API" }));
 
 // Health check endpoint
 const healthRoute = createRoute({
@@ -167,55 +95,6 @@ app.openapi(getPlaylistsRoute, async (c) => {
   const playlists = session?.user ? await getCurrentUserPlaylists(session.user.id, c.env) : [];
 
   return c.json({ playlists });
-});
-
-// Import playlist endpoint
-const importPlaylistRoute = createRoute({
-  method: "post",
-  path: "/api/playlists/import",
-  request: {
-    body: {
-      content: {
-        "application/json": {
-          schema: ImportPlaylistRequestSchema,
-        },
-      },
-    },
-  },
-  responses: {
-    200: {
-      content: { "application/json": { schema: ImportPlaylistResponseSchema } },
-      description: "Playlist imported successfully",
-    },
-    400: {
-      content: { "application/json": { schema: ErrorResponseSchema } },
-      description: "Invalid request - missing or invalid playlist link",
-    },
-    404: {
-      content: { "application/json": { schema: ErrorResponseSchema } },
-      description: "Playlist not found or access denied",
-    },
-  },
-  tags: ["Playlists"],
-  summary: "Import playlist",
-  description: "Import a Spotify playlist by URL to get its metadata",
-});
-app.openapi(importPlaylistRoute, async (c) => {
-  const { link } = c.req.valid("json");
-
-  const parsed = parseSpotifyLink(link);
-
-  if (!parsed || parsed.type !== "playlist") {
-    return c.json({ error: "Invalid Spotify playlist link" }, 400);
-  }
-
-  const playlist = await getPlaylistMetadata(parsed.id);
-
-  if (!playlist) {
-    return c.json({ error: "Playlist not found or access denied" }, 404);
-  }
-
-  return c.json({ playlist }, 200);
 });
 
 // OpenAPI documentation endpoint (Swagger UI)
