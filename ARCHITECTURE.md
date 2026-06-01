@@ -13,9 +13,10 @@
 
 ### Frontend
 
-- **Framework**: React 18+ with TypeScript
+- **Framework**: React 19 with TypeScript
+- **Routing**: React Router v7
 - **Build**: Vite
-- **Styling**: Tailwind CSS
+- **Styling**: Tailwind CSS v4
 - **State**: React Context + WebSocket hooks
 
 ### External Services
@@ -314,21 +315,22 @@ gameResults: id, roomCode, totalRounds, playerCount, startedAt, completedAt,
 - Leaderboard updates
 - Play again voting
 
-### Phase 4: Spotify Integration
+### Phase 4: Spotify Integration ✅
 
-- Fetch user's top tracks
-- Blend algorithm
-- Song preview playback
-- Album art display
+- Playlist track fetching
+- OAuth token management with refresh
+- Preview URL handling
+- Song preview playback in game rounds
+- (Planned: user's top tracks, blend algorithm, album art display)
 
-### Phase 5: Persistence & Polish
+### Phase 5: Persistence & Polish 🚧
 
-- Database tables for songs and game results
-- Save game results at end
 - Error handling and validation
 - Loading states and UX improvements
+- 🚧 Database tables for songs and game results
+- 🚧 Save game results at end
 
-### Phase 6: Deployment
+### Phase 6: Deployment ✅
 
 - Deploy to Cloudflare
 - Environment configuration
@@ -344,46 +346,60 @@ spotiguess/
 │   │   │   ├── common/              # Shared UI components
 │   │   │   ├── game/                # Game view components
 │   │   │   ├── room/                # Room lobby components
-│   │   │   └── ui/                   # Base UI components
-│   │   ├── contexts/                # React contexts (Auth)
+│   │   │   ├── ui/                   # Base UI components
+│   │   │   └── Header.tsx
+│   │   ├── contexts/
+│   │   │   └── AuthContext.tsx       # Auth context provider
 │   │   ├── hooks/
 │   │   │   ├── room/                # Room-related hooks (useRoomState, useRoomActions)
 │   │   │   ├── useAuth.ts           # Auth hook
-│   │   │   └── useGameSocket.ts     # WebSocket hook
-│   │   ├── pages/                   # Page components
+│   │   │   ├── useGameSocket.ts     # WebSocket hook
+│   │   │   ├── useLibraryImport.ts  # Playlist import hook
+│   │   │   └── useSSE.ts            # Server-Sent Events hook
+│   │   ├── pages/
+│   │   │   ├── HomePage.tsx
+│   │   │   ├── LoginPage.tsx
+│   │   │   ├── RoomPage.tsx
+│   │   │   └── LibraryPage.tsx
 │   │   ├── App.tsx
 │   │   └── main.tsx
-│   ├── worker/                      # Backend
+│   ├── worker/                      # Backend (Hono + Cloudflare Workers)
 │   │   ├── db/
 │   │   │   └── schema.ts           # Drizzle schema
+│   │   ├── handlers/                # WebSocket message handlers
+│   │   │   ├── roomHandler.ts
+│   │   │   ├── gameHandler.ts
+│   │   │   ├── chatHandler.ts
+│   │   │   └── index.ts
 │   │   ├── lib/
 │   │   │   ├── better-auth/         # Auth configuration
 │   │   │   ├── lastfm/              # Last.fm API client
+│   │   │   ├── library/             # Library management handlers
 │   │   │   ├── spotify/             # Spotify API client
+│   │   │   ├── sse.ts               # Server-Sent Events utility
 │   │   │   └── websocket/
 │   │   │       ├── game/            # Game logic modules
-│   │   │       │   ├── GameEngine.ts     # Game engine class
-│   │   │       │   └── GameUtils.ts      # Game helper functions
-│   │   │       ├── handlers/         # WebSocket message handlers
-│   │   │       │   ├── roomHandler.ts    # Room-related handlers
-│   │   │       │   ├── gameHandler.ts    # Game-related handlers
-│   │   │       │   ├── chatHandler.ts    # Chat handler
-│   │   │       │   └── index.ts         # Main router
-│   │   │       ├── broadcast.ts     # Broadcasting utilities
-│   │   │       ├── messageBuilders.ts # Message builders
-│   │   │       ├── roomManager.ts   # Room state management
-│   │   │       └── sessionManager.ts # Session management
-│   │   ├── index.ts                # Hono app entry
-│   │   └── websocketDurableObject.ts
+│   │   │       │   ├── GameEngine.ts
+│   │   │       │   └── GameUtils.ts
+│   │   │       ├── broadcast.ts
+│   │   │       ├── messageBuilders.ts
+│   │   │       ├── roomManager.ts
+│   │   │       └── sessionManager.ts
+│   │   ├── types/
+│   │   │   └── spotify-url-info.d.ts
+│   │   ├── index.ts                # Hono app entry point
+│   │   ├── playlistImportDO.ts      # Playlist import Durable Object
+│   │   └── websocketDurableObject.ts # WebSocket Durable Object
 │   └── shared/                      # Shared types and constants
 │       ├── types/
-│       │   ├── index.ts             # Re-exports all types
-│       │   ├── player.ts            # Player, UserSession, PlayerScore
-│       │   ├── room.ts              # RoomSettings, Playlist, UnifiedRoomState
-│       │   ├── game.ts              # Song, SongChoice, GamePhase, GameStateSnapshot
-│       │   └── messages.ts          # All message types
-│       └── constants.ts             # Shared constants
+│       │   ├── index.ts
+│       │   ├── player.ts
+│       │   ├── room.ts
+│       │   ├── game.ts
+│       │   └── messages.ts
+│       └── constants.ts
 ├── drizzle/                         # Database migrations
+├── e2e/                             # Playwright E2E tests
 ├── wrangler.json                    # Cloudflare config
 └── package.json
 ```

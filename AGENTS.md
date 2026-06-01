@@ -1,34 +1,42 @@
-# Cloudflare Workers
+# Spotiguess
 
-STOP. Your knowledge of Cloudflare Workers APIs and limits may be outdated. Always retrieve current documentation before any Workers, KV, R2, D1, Durable Objects, Queues, Vectorize, AI, or Agents SDK task.
-
-## Docs
-
-- https://developers.cloudflare.com/workers/
-- MCP: `https://docs.mcp.cloudflare.com/mcp`
-
-For all limits and quotas, retrieve from the product's `/platform/limits/` page. eg. `/workers/platform/limits`
+Multiplayer Spotify song guessing game on Cloudflare Workers.
 
 ## Commands
 
-| Command               | Purpose                   |
-| --------------------- | ------------------------- |
-| `npx wrangler dev`    | Local development         |
-| `npx wrangler deploy` | Deploy to Cloudflare      |
-| `npx wrangler types`  | Generate TypeScript types |
+| Command | Purpose |
+|---------|---------|
+| `npm run dev` | Local dev server (Vite) |
+| `npm run build` | Type-check + build |
+| `npm run check` | Type-check + build + dry-run deploy |
+| `npm run deploy` | Deploy to Cloudflare |
+| `npm run preview` | Build + preview via `wrangler dev` |
+| `npm run lint` | oxlint lint |
+| `npm run fmt` | oxfmt format |
+| `npm run cf-typegen` | Regenerate `worker-configuration.d.ts` |
+| `npm run db:generate` | Drizzle schema → SQL migration |
+| `npm run db:migrate` | Apply pending migrations |
+| `npm run db:push` | Push schema (dev) |
+| `npx playwright test` | Run E2E tests |
 
-Run `wrangler types` after changing bindings in wrangler.jsonc.
+Run `cf-typegen` after changing wrangler.json bindings.
 
-## Node.js Compatibility
+## Architecture
 
-https://developers.cloudflare.com/workers/runtime-apis/nodejs/
+- **Frontend**: `src/react-app/` — React 19 + Tailwind CSS v4 + React Router v7
+- **Backend**: `src/worker/` — Hono on Cloudflare Workers
+- **Shared**: `src/shared/` — types, constants, validation (imported by both)
+- **SPA hosting**: Cloudflare Workers assets with SPA fallback (`not_found_handling: "single-page-application"`). Worker handles `/docs`, `/api/*`, `/ws/*` first
+- **API docs**: OpenAPI spec + Scalar UI at `/docs`
+- **DB**: PostgreSQL via Cloudflare Hyperdrive + Drizzle ORM. Schema in `src/worker/db/schema.ts`, migrations in `drizzle/`
+- **Auth**: better-auth with Spotify OAuth
+- **Real-time**: WebSocket → Durable Object (`WebSocketHibernationServer`) at `/ws/:room?`. All room/game state ephemeral in DO memory, only final results persisted to DB
+- **Durable Objects**: `WebSocketHibernationServer` (game rooms), `PlaylistImportDO` (playlist import)
 
-## Errors
+## Key Conventions
 
-- **Error 1102** (CPU/Memory exceeded): Retrieve limits from `/workers/platform/limits/`
-- **All errors**: https://developers.cloudflare.com/workers/observability/errors/
-
-## Product Docs
-
-Retrieve API references and limits from:
-`/kv/` · `/r2/` · `/d1/` · `/durable-objects/` · `/queues/` · `/vectorize/` · `/workers-ai/` · `/agents/`
+- TypeScript strict mode with `noUncheckedIndexedAccess`, `noImplicitReturns`, `noPropertyAccessFromIndexSignature` — access arrays/objects via optional chaining, not bare indexing
+- oxlint for linting (TS + React plugins, `no-explicit-any` is error)
+- oxfmt for formatting (run `npm run fmt` before committing)
+- No test runner in package.json — E2E via Playwright (`e2e/spotiguess.spec.ts`)
+- `.env` required for local dev; copy `.env.example` for reference
