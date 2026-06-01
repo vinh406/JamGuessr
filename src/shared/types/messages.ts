@@ -73,8 +73,7 @@ export type IncomingMessage =
   | UpdatePlaylistMessage
   | StartGameMessage
   | AnswerMessage
-  | VotePlayAgainMessage
-  | BaseMessage;
+  | VotePlayAgainMessage;
 
 export interface ErrorMessage extends BaseMessage {
   type: "error";

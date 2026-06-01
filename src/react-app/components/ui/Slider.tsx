@@ -1,5 +1,5 @@
 import { Slider as BaseSlider } from "@base-ui/react/slider";
-import { forwardRef, type ReactNode } from "react";
+import { forwardRef } from "react";
 
 interface SliderProps {
   value?: number;
@@ -10,7 +10,6 @@ interface SliderProps {
   onChange?: (value: number) => void;
   className?: string;
   disabled?: boolean;
-  children?: ReactNode;
 }
 
 export const Slider = forwardRef<HTMLDivElement, SliderProps>(
