@@ -12,6 +12,7 @@ interface RoomLobbyProps {
   isStartingGame: boolean;
   currentWarning: string | null;
   currentUser: { username: string; userId: string } | null;
+  isImporting?: boolean;
   onToggleReady: () => void;
   onStartGame: () => void;
   onOpenSettings: () => void;
@@ -29,6 +30,7 @@ export function RoomLobby({
   isStartingGame,
   currentWarning,
   currentUser,
+  isImporting,
   onToggleReady,
   onStartGame,
   onOpenSettings,
@@ -54,7 +56,7 @@ export function RoomLobby({
           <Button
             variant="secondary"
             onClick={onOpenPlaylist}
-            disabled={!isHost}
+            disabled={!isHost || isImporting}
             className={`flex items-center gap-3`}
           >
             <svg
@@ -204,7 +206,7 @@ export function RoomLobby({
           {!isHost && (
             <Button
               onClick={onToggleReady}
-              disabled={isStartingGame}
+              disabled={isStartingGame || isImporting}
               variant={isReady ? "primary" : "secondary"}
               size="lg"
               className={`w-full ${
@@ -218,7 +220,7 @@ export function RoomLobby({
           {isHost && (
             <Button
               onClick={onStartGame}
-              disabled={!canStartGame || isStartingGame}
+              disabled={!canStartGame || isStartingGame || isImporting}
               size="lg"
               className={`w-full transition-all ${
                 canStartGame && !isStartingGame

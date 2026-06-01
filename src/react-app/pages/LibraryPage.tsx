@@ -4,6 +4,7 @@ import { Button, Input } from "../components/ui";
 import { Modal } from "../components/common/Modal";
 import ConfirmDialog from "../components/common/ConfirmDialog";
 import LoadingSpinner from "../components/common/LoadingSpinner";
+import { useLibraryImport } from "../hooks/useLibraryImport";
 import { useSSE, type SSEState } from "../hooks/useSSE";
 import { toast } from "sonner";
 
@@ -76,9 +77,7 @@ export default function LibraryPage() {
   const [drawerLoading, setDrawerLoading] = useState(false);
 
   const [link, setLink] = useState("");
-  const [importState, setImportState] = useState<SSEState>("idle");
   const [removeState, setRemoveState] = useState<SSEState>("idle");
-  const importToastId = useRef<string | number | null>(null);
   const removeToastId = useRef<string | number | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<{
     type: "track" | "playlist" | "album";
@@ -205,40 +204,14 @@ export default function LibraryPage() {
     fetchStats();
   }, [fetchItems, fetchStats]);
 
-  const importSSE = useSSE({
-    onEvent: (event) => {
-      if (event.event === "phase") {
-        const d = event.data as { phase: string; label: string };
-        if (importToastId.current) {
-          toast.loading(d.label, { id: importToastId.current });
-        }
-      } else if (event.event === "progress") {
-        const d = event.data as { current: number; total: number; label: string };
-        if (importToastId.current) {
-          toast.loading(`${d.label} (${d.current}/${d.total})`, { id: importToastId.current });
-        }
-      }
-    },
-    onComplete: () => {
-      setImportState("complete");
-      if (importToastId.current) {
-        toast.success("Import complete!", { id: importToastId.current });
-        importToastId.current = null;
-      }
+  const { startImport, state: importState } = useLibraryImport();
+
+  useEffect(() => {
+    if (importState === "complete") {
       setLink("");
       refetchItems();
-      setTimeout(() => {
-        setImportState("idle");
-      }, 3000);
-    },
-    onError: (msg) => {
-      setImportState("error");
-      if (importToastId.current) {
-        toast.error(msg, { id: importToastId.current });
-        importToastId.current = null;
-      }
-    },
-  });
+    }
+  }, [importState, refetchItems]);
 
   const removeSSE = useSSE({
     onEvent: (event) => {
@@ -275,9 +248,7 @@ export default function LibraryPage() {
 
   const handleImport = () => {
     if (!link.trim() || importState === "connecting" || importState === "streaming") return;
-    setImportState("connecting");
-    importToastId.current = toast.loading("Connecting...");
-    importSSE.start("/api/library/add", { link: link.trim() });
+    startImport(link.trim());
   };
 
   const handleDelete = async () => {
@@ -495,7 +466,6 @@ export default function LibraryPage() {
                     value={link}
                     onChange={(e) => {
                       setLink(e.target.value);
-                      setImportState("idle");
                     }}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && detectedType) handleImport();

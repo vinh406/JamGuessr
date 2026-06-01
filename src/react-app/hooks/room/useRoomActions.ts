@@ -2,6 +2,7 @@ import { useCallback, useRef, useEffect } from "react";
 import { useNavigate, useParams } from "react-router";
 import { useAuth } from "../useAuth";
 import { useGameSocket } from "../useGameSocket";
+import { useLibraryImport } from "../useLibraryImport";
 import type {
   OutgoingMessage,
   ChatMessage,
@@ -226,6 +227,15 @@ export function useRoomActions({ state, dispatch }: UseRoomActionsParams) {
     dispatch({ type: "SET_CONNECTED", connected: isConnected });
   }, [isConnected, dispatch]);
 
+  const { startImport, state: importState } = useLibraryImport();
+
+  useEffect(() => {
+    dispatch({
+      type: "SET_LIBRARY_IMPORTING",
+      importing: importState === "connecting" || importState === "streaming",
+    });
+  }, [importState, dispatch]);
+
   const handleJoinRoom = useCallback(
     (username: string) => {
       sessionStorage.setItem("chat-username", username);
@@ -301,32 +311,18 @@ export function useRoomActions({ state, dispatch }: UseRoomActionsParams) {
     [dispatch, send],
   );
 
-  const handleConfirmLibraryImport = useCallback(async () => {
-    const playlist = state.ui.pendingLibraryImport?.playlist;
-    if (!playlist) return;
+  const handleConfirmLibraryImport = useCallback(() => {
+    const pending = state.ui.pendingLibraryImport;
+    if (!pending?.playlist) return;
 
-    dispatch({ type: "SET_LIBRARY_IMPORTING", importing: true });
-    try {
-      const res = await fetch("/api/library/import-playlist", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ spotifyId: playlist.id }),
-      });
-      if (res.ok) {
-        dispatch({ type: "PLAYLIST_UPDATED", playlist });
-        send({ type: "update_playlist", payload: { playlist } });
-      } else {
-        // Import failed — still proceed with the playlist
-        dispatch({ type: "PLAYLIST_UPDATED", playlist });
-        send({ type: "update_playlist", payload: { playlist } });
-      }
-    } catch {
-      dispatch({ type: "PLAYLIST_UPDATED", playlist });
-      send({ type: "update_playlist", payload: { playlist } });
-    }
-    dispatch({ type: "SET_LIBRARY_IMPORTING", importing: false });
+    const playlist = pending.playlist;
+    dispatch({ type: "PLAYLIST_UPDATED", playlist });
+    send({ type: "update_playlist", payload: { playlist } });
     dispatch({ type: "SET_PENDING_LIBRARY_IMPORT", playlist: null });
-  }, [state.ui.pendingLibraryImport, dispatch, send]);
+
+    const link = `https://open.spotify.com/playlist/${playlist.id}`;
+    startImport(link);
+  }, [state.ui.pendingLibraryImport, dispatch, send, startImport]);
 
   const handleSkipLibraryImport = useCallback(() => {
     const playlist = state.ui.pendingLibraryImport?.playlist;

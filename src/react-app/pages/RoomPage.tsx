@@ -192,6 +192,7 @@ export default function RoomPage() {
                   onStartGame={handleStartGame}
                   onOpenSettings={() => setShowSettingsModal(true)}
                   onOpenPlaylist={handleOpenPlaylistModal}
+                  isImporting={libraryImporting}
                 />
               </div>
             </div>
@@ -257,15 +258,6 @@ export default function RoomPage() {
           onConfirm={handleConfirmLibraryImport}
           onCancel={handleSkipLibraryImport}
         />
-      )}
-
-      {pendingLibraryImport && libraryImporting && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center">
-          <div className="bg-gray-800 rounded-2xl p-6 border border-gray-700/50 flex items-center gap-4">
-            <div className="w-6 h-6 border-2 border-green-500 border-t-transparent rounded-full animate-spin"></div>
-            <span className="text-gray-300">Adding to your library...</span>
-          </div>
-        </div>
       )}
     </div>
   );
