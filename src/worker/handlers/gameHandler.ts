@@ -3,7 +3,7 @@ import { MessageBuilders, broadcastToRoom, sendToSocket } from "../lib/websocket
 import type { AnswerMessage, VotePlayAgainMessage, Song, UserSession } from "../../shared/types";
 import { SCORING } from "../../shared/constants";
 import { getPlaylistTracks, getTrackPreviewUrl } from "../lib/spotify/playlists";
-import { shuffleArray } from "../lib/websocket/game/GameUtils";
+import { shuffleArray } from "../../shared/utils";
 import { createLibraryService } from "../lib/library/LibraryService";
 
 const PREVIEW_CONCURRENCY = 10;

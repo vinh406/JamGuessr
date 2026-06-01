@@ -1,4 +1,5 @@
 import { SCORING } from "../../../../shared/constants";
+import { shuffleArray } from "../../../../shared/utils";
 import type { Song, SongChoice } from "../../../../shared/types";
 import type { LastFMSimilarTrack } from "../../lastfm/client";
 
@@ -13,15 +14,6 @@ export function calculateScore(
   const speedBonus = Math.round(SCORING.MAX_SPEED_BONUS * Math.max(0, speedRatio));
   const streakBonus = streak * SCORING.STREAK_BONUS;
   return SCORING.BASE_POINTS + speedBonus + streakBonus;
-}
-
-export function shuffleArray<T>(array: T[]): T[] {
-  const shuffled = [...array] as (T | undefined)[];
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [shuffled[i]!, shuffled[j]!] = [shuffled[j]!, shuffled[i]!];
-  }
-  return shuffled as T[];
 }
 
 export function generateChoices(correctSong: Song, allSongs: Song[]): SongChoice[] {

@@ -1,5 +1,6 @@
 import { eq, and, inArray, count, exists, lt, desc } from "drizzle-orm";
 import { getDb, type DbInstance } from "../../db";
+import { shuffleArray, formatDate } from "../../../shared/utils";
 import type { Song } from "../../../shared/types";
 import {
   parseSpotifyLink,
@@ -801,8 +802,6 @@ export function createLibraryService(
 
       const items: LibraryItem[] = [];
 
-      const formatDate = (d: Date | string) => (d instanceof Date ? d.toISOString() : String(d));
-
       for (const p of playlists) {
         items.push({
           type: "playlist",
@@ -976,8 +975,6 @@ export function createLibraryService(
       const hasMore = tracks.length > limit;
       const page = hasMore ? tracks.slice(0, limit) : tracks;
 
-      const formatDate = (d: Date | string) => (d instanceof Date ? d.toISOString() : String(d));
-
       return {
         tracks: page.map((t) => ({
           id: t.id,
@@ -1073,17 +1070,6 @@ export function createLibraryService(
 }
 
 // ── Pure helpers (no db needed) ──────────────────────────────────────────────
-
-function shuffleArray<T>(array: T[]): T[] {
-  const result = [...array];
-  for (let i = result.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    const temp = result[i]!;
-    result[i] = result[j]!;
-    result[j] = temp;
-  }
-  return result;
-}
 
 function deduplicateBySpotifyId(tracks: LibraryTrack[]): LibraryTrack[] {
   const seen = new Set<string>();
