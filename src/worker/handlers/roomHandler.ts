@@ -164,6 +164,11 @@ export class RoomHandler {
 
     if (!validateHost(ws, session)) return;
 
+    if (this.roomManager.getCurrentGamePhase() !== "lobby") {
+      sendToSocket(ws, MessageBuilders.error("Cannot change settings while a game is in progress"));
+      return;
+    }
+
     const { rounds, timePerRound, audioTime } = data.payload || {};
     const updatedSettings = this.roomManager.updateSettings(rounds, timePerRound, audioTime);
 
@@ -177,6 +182,11 @@ export class RoomHandler {
     if (!session) return;
 
     if (!validateHost(ws, session)) return;
+
+    if (this.roomManager.getCurrentGamePhase() !== "lobby") {
+      sendToSocket(ws, MessageBuilders.error("Cannot change playlist while a game is in progress"));
+      return;
+    }
 
     const { playlist } = data.payload || {};
     if (!playlist) return;

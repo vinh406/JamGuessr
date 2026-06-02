@@ -56,7 +56,7 @@ export function RoomLobby({
           <Button
             variant="secondary"
             onClick={onOpenPlaylist}
-            disabled={!isHost || isImporting}
+            disabled={!isHost || isImporting || isStartingGame}
             className={`flex items-center gap-3`}
           >
             <svg
@@ -94,7 +94,7 @@ export function RoomLobby({
           <Button
             variant="secondary"
             onClick={onOpenSettings}
-            disabled={!isHost}
+            disabled={!isHost || isStartingGame}
             className="flex items-center gap-3"
           >
             <svg
