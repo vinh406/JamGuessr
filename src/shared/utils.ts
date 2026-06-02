@@ -7,6 +7,10 @@ export function shuffleArray<T>(array: T[]): T[] {
   return result;
 }
 
+export function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
+}
+
 export function formatDate(d: Date | string): string {
   return d instanceof Date ? d.toISOString() : String(d);
 }
