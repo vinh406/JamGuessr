@@ -6,6 +6,7 @@ import {
   BATCH_SIZE,
   CONCURRENCY,
   fetchPartnerPage,
+  paginateFetch,
   type PartnerPlaylistResponse,
 } from "./partner-api";
 
@@ -105,23 +106,9 @@ async function fetchPartnerPlaylistTracks(
   total: number,
   fetchFn: typeof fetch = fetch,
 ): Promise<Song[]> {
-  const offsets: number[] = [];
-  for (let o = startOffset; o < total; o += BATCH_SIZE) {
-    offsets.push(o);
-  }
-
-  const allTracks: Song[] = [];
-  for (let i = 0; i < offsets.length; i += CONCURRENCY) {
-    const batch = offsets.slice(i, i + CONCURRENCY);
-    const results = await Promise.all(
-      batch.map((o) => fetchPartnerPage(playlistId, accessToken, o, fetchFn)),
-    );
-    for (const page of results) {
-      allTracks.push(...page);
-    }
-  }
-
-  return allTracks;
+  return paginateFetch(total, startOffset, BATCH_SIZE, CONCURRENCY, (o) =>
+    fetchPartnerPage(playlistId, accessToken, o, fetchFn),
+  );
 }
 
 // ── Spotify URL parsing ──────────────────────────────────────────────────────

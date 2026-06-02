@@ -48,6 +48,30 @@ export function partnerTrackToSong(track: PartnerTrack): Song {
   };
 }
 
+export async function paginateFetch<T>(
+  total: number,
+  startOffset: number,
+  batchSize: number,
+  concurrency: number,
+  fetcher: (offset: number) => Promise<T[]>,
+): Promise<T[]> {
+  const offsets: number[] = [];
+  for (let o = startOffset; o < total; o += batchSize) {
+    offsets.push(o);
+  }
+
+  const allResults: T[] = [];
+  for (let i = 0; i < offsets.length; i += concurrency) {
+    const batch = offsets.slice(i, i + concurrency);
+    const results = await Promise.all(batch.map((o) => fetcher(o)));
+    for (const page of results) {
+      allResults.push(...page);
+    }
+  }
+
+  return allResults;
+}
+
 export async function fetchPartnerPage(
   playlistId: string,
   accessToken: string,

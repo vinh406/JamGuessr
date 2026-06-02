@@ -1,6 +1,5 @@
 import { DurableObject } from "cloudflare:workers";
-import type { Song } from "../shared/types";
-import { BATCH_SIZE, CONCURRENCY, fetchPartnerPage } from "./lib/spotify/partner-api";
+import { BATCH_SIZE, CONCURRENCY, fetchPartnerPage, paginateFetch } from "./lib/spotify/partner-api";
 
 const MAX_PAGES_PER_INVOCATION = 45;
 
@@ -15,21 +14,9 @@ export class PlaylistImportDO extends DurableObject {
 
     const endOffset = Math.min(offset + MAX_PAGES_PER_INVOCATION * BATCH_SIZE, total);
 
-    const offsets: number[] = [];
-    for (let o = offset; o < endOffset; o += BATCH_SIZE) {
-      offsets.push(o);
-    }
-
-    const allTracks: Song[] = [];
-    for (let i = 0; i < offsets.length; i += CONCURRENCY) {
-      const batch = offsets.slice(i, i + CONCURRENCY);
-      const results = await Promise.all(
-        batch.map((o) => fetchPartnerPage(playlistId, accessToken, o)),
-      );
-      for (const page of results) {
-        allTracks.push(...page);
-      }
-    }
+    const allTracks = await paginateFetch(endOffset, offset, BATCH_SIZE, CONCURRENCY, (o) =>
+      fetchPartnerPage(playlistId, accessToken, o),
+    );
 
     const nextOffset = endOffset < total ? endOffset : null;
 
