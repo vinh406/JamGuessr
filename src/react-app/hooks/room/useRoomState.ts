@@ -3,7 +3,7 @@ import { useParams } from "react-router";
 import { RoomState } from "../../../shared/types/room";
 import { DEFAULT_ROOM_SETTINGS } from "../../../shared/constants";
 import { useRoomActions } from "./useRoomActions";
-import { roomReducer } from "./useRoomReducer";
+import { DEFAULT_GAME_STATE, roomReducer } from "./useRoomReducer";
 
 const initialState: RoomState = {
   metadata: {
@@ -18,24 +18,7 @@ const initialState: RoomState = {
     isHost: false,
     isReady: false,
   },
-  game: {
-    gamePhase: "lobby",
-    currentRound: 0,
-    totalRounds: 0,
-    currentSong: null,
-    choices: [],
-    roundStartTime: 0,
-    roundEndTime: 0,
-    roundDuration: 0,
-    scores: [],
-    myScore: 0,
-    myStreak: 0,
-    hasAnswered: false,
-    selectedChoice: null,
-    endStateData: null,
-    votes: {},
-    voteEndsAt: null,
-  },
+  game: DEFAULT_GAME_STATE,
   ui: {
     currentUser: null,
     showUsernamePrompt: true,

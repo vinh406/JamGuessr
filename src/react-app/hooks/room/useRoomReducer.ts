@@ -1,5 +1,24 @@
 import { RoomAction, RoomState } from "../../../shared/types/room";
 
+export const DEFAULT_GAME_STATE: RoomState["game"] = {
+  gamePhase: "lobby",
+  currentRound: 0,
+  totalRounds: 0,
+  currentSong: null,
+  choices: [],
+  roundStartTime: 0,
+  roundEndTime: 0,
+  roundDuration: 0,
+  scores: [],
+  myScore: 0,
+  myStreak: 0,
+  hasAnswered: false,
+  selectedChoice: null,
+  endStateData: null,
+  votes: {},
+  voteEndsAt: null,
+};
+
 export function roomReducer(state: RoomState, action: RoomAction): RoomState {
   switch (action.type) {
     case "SYNC_UNIFIED_STATE": {
@@ -260,25 +279,7 @@ export function roomReducer(state: RoomState, action: RoomAction): RoomState {
       return {
         ...state,
         ui: { ...state.ui, isStartingGame: false },
-        game: {
-          ...state.game,
-          gamePhase: "lobby",
-          currentRound: 0,
-          totalRounds: 0,
-          currentSong: null,
-          choices: [],
-          roundStartTime: 0,
-          roundEndTime: 0,
-          roundDuration: 0,
-          scores: [],
-          myScore: 0,
-          myStreak: 0,
-          hasAnswered: false,
-          selectedChoice: null,
-          endStateData: null,
-          votes: {},
-          voteEndsAt: null,
-        },
+        game: { ...DEFAULT_GAME_STATE },
       };
 
     default:
