@@ -16,11 +16,10 @@ export function calculateScore(
   return SCORING.BASE_POINTS + speedBonus + streakBonus;
 }
 
-export function generateChoices(correctSong: Song, allSongs: Song[]): SongChoice[] {
-  const wrongSongs = allSongs.filter((s) => s.id !== correctSong.id);
-  const shuffled = shuffleArray(wrongSongs);
-  const decoys = shuffled.slice(0, 3);
-
+function assembleChoices(
+  correctSong: Song,
+  decoys: Array<{ title: string; artist: string; albumImageUrl?: string }>,
+): SongChoice[] {
   const choices: SongChoice[] = [
     {
       index: 0,
@@ -29,11 +28,11 @@ export function generateChoices(correctSong: Song, allSongs: Song[]): SongChoice
       albumImageUrl: correctSong.albumImageUrl,
       isCorrect: true,
     },
-    ...decoys.map((song, i) => ({
-      index: i + 1,
-      title: song.title,
-      artist: song.artist,
-      albumImageUrl: song.albumImageUrl,
+    ...decoys.map((d) => ({
+      index: 0,
+      title: d.title,
+      artist: d.artist,
+      albumImageUrl: d.albumImageUrl,
       isCorrect: false,
     })),
   ];
@@ -42,6 +41,14 @@ export function generateChoices(correctSong: Song, allSongs: Song[]): SongChoice
     ...choice,
     index: i,
   }));
+}
+
+export function generateChoices(correctSong: Song, allSongs: Song[]): SongChoice[] {
+  const wrongSongs = allSongs.filter((s) => s.id !== correctSong.id);
+  const shuffled = shuffleArray(wrongSongs);
+  const decoys = shuffled.slice(0, 3);
+
+  return assembleChoices(correctSong, decoys);
 }
 
 export function generateChoicesWithLastFM(
@@ -57,43 +64,17 @@ export function generateChoicesWithLastFM(
   const similarTracks = similarTracksCache.get(correctSong.id) ?? [];
   const shuffledSimilar = shuffleArray(similarTracks);
 
-  const similarDecoys: SongChoice[] = shuffledSimilar.slice(0, 3).map((track) => ({
-    index: 0,
-    title: track.name,
-    artist: track.artist,
-    albumImageUrl: track.imageUrl ?? undefined,
-    isCorrect: false,
-  }));
+  const similarDecoys: Array<{ title: string; artist: string; albumImageUrl?: string }> =
+    shuffledSimilar.slice(0, 3).map((track) => ({
+      title: track.name,
+      artist: track.artist,
+      albumImageUrl: track.imageUrl ?? undefined,
+    }));
 
   const needed = 3 - similarDecoys.length;
-  let fallbackDecoys: SongChoice[] = [];
-  if (needed > 0) {
-    const wrongSongs = allSongs.filter((s) => s.id !== correctSong.id);
-    const shuffled = shuffleArray(wrongSongs);
-    fallbackDecoys = shuffled.slice(0, needed).map((song) => ({
-      index: 0,
-      title: song.title,
-      artist: song.artist,
-      albumImageUrl: song.albumImageUrl,
-      isCorrect: false,
-    }));
-  }
+  const wrongSongs = allSongs.filter((s) => s.id !== correctSong.id);
+  const shuffled = shuffleArray(wrongSongs);
+  const fallbackDecoys = shuffled.slice(0, needed);
 
-  const decoys = [...similarDecoys, ...fallbackDecoys];
-
-  const choices: SongChoice[] = [
-    {
-      index: 0,
-      title: correctSong.title,
-      artist: correctSong.artist,
-      albumImageUrl: correctSong.albumImageUrl,
-      isCorrect: true,
-    },
-    ...decoys,
-  ];
-
-  return shuffleArray(choices).map((choice, i) => ({
-    ...choice,
-    index: i,
-  }));
+  return assembleChoices(correctSong, [...similarDecoys, ...fallbackDecoys]);
 }
