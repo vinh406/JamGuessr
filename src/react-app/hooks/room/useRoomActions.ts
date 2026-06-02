@@ -18,6 +18,11 @@ import type {
   UnifiedRoomState,
   RoundEndedMessage,
   RoundStartedMessage,
+  SettingsUpdatedMessage,
+  PlaylistUpdatedMessage,
+  GameStartedMessage,
+  AnswerResultMessage,
+  LeaderboardUpdateMessage,
 } from "../../../shared/types";
 import { RoomAction, RoomState } from "../../../shared/types/room";
 
@@ -111,105 +116,100 @@ export function useRoomActions({ state, dispatch }: UseRoomActionsParams) {
       // Adjust timer values in the message to compensate for clock differences
       const message = adjustMessageTimes(serverMessage, offset);
 
-      // Dispatch the (possibly adjusted) message
-      switch (message.type) {
-        case "unified_room_state":
+      const handleUserUpdate = (msg: OutgoingMessage) => {
+        dispatch({
+          type: "UPDATE_PLAYERS",
+          users:
+            (msg as UserJoinedMessage | UserLeftMessage | UsersUpdatedMessage).users || [],
+          currentUserId,
+        });
+        if (msg.type === "user_joined" || msg.type === "user_left") {
+          dispatch({ type: "CHAT_MESSAGE", message: msg as unknown as ChatBoxMessage });
+        }
+      };
+
+      const handlers: Record<string, (msg: OutgoingMessage) => void> = {
+        unified_room_state(msg) {
           dispatch({
             type: "SYNC_UNIFIED_STATE",
-            state: (message as UnifiedRoomStateMessage).state,
+            state: (msg as UnifiedRoomStateMessage).state,
             currentUserId,
           });
-          break;
-
-        case "user_joined":
-        case "user_left":
-        case "users_updated":
-          dispatch({
-            type: "UPDATE_PLAYERS",
-            users:
-              (message as UserJoinedMessage | UserLeftMessage | UsersUpdatedMessage).users || [],
-            currentUserId,
-          });
-          if (message.type === "user_joined" || message.type === "user_left") {
-            dispatch({ type: "CHAT_MESSAGE", message: message as unknown as ChatBoxMessage });
-          }
-          break;
-
-        case "settings_updated":
-          if (message.settings) dispatch({ type: "SETTINGS_UPDATED", settings: message.settings });
-          break;
-
-        case "playlist_updated":
-          if (message.playlist) dispatch({ type: "PLAYLIST_UPDATED", playlist: message.playlist });
-          break;
-
-        case "game_started":
+        },
+        user_joined: handleUserUpdate,
+        user_left: handleUserUpdate,
+        users_updated: handleUserUpdate,
+        settings_updated(msg) {
+          const m = msg as SettingsUpdatedMessage;
+          if (m.settings) dispatch({ type: "SETTINGS_UPDATED", settings: m.settings });
+        },
+        playlist_updated(msg) {
+          const m = msg as PlaylistUpdatedMessage;
+          if (m.playlist) dispatch({ type: "PLAYLIST_UPDATED", playlist: m.playlist });
+        },
+        game_started(msg) {
+          const m = msg as GameStartedMessage;
           dispatch({
             type: "GAME_STARTED",
-            totalRounds: message.totalRounds,
-            timePerRound: message.timePerRound,
-            audioTime: message.audioTime,
+            totalRounds: m.totalRounds,
+            timePerRound: m.timePerRound,
+            audioTime: m.audioTime,
           });
-          break;
-
-        case "round_started":
+        },
+        round_started(msg) {
+          const m = msg as RoundStartedMessage;
           dispatch({
             type: "ROUND_STARTED",
-            round: message.round,
-            totalRounds: message.totalRounds,
-            song: {
-              previewUrl: message.song.previewUrl,
-              albumImageUrl: message.song.albumImageUrl,
-            },
-            choices: message.choices,
-            startTime: message.startTime,
-            endTime: message.endTime,
-            duration: message.duration,
+            round: m.round,
+            totalRounds: m.totalRounds,
+            song: { previewUrl: m.song.previewUrl, albumImageUrl: m.song.albumImageUrl },
+            choices: m.choices,
+            startTime: m.startTime,
+            endTime: m.endTime,
+            duration: m.duration,
           });
-          break;
-
-        case "round_ended":
+        },
+        round_ended(msg) {
+          const m = msg as RoundEndedMessage;
           dispatch({
             type: "ROUND_ENDED",
-            round: message.round,
-            correctAnswer: message.correctAnswer,
-            scores: message.scores,
-            nextRoundAt: message.nextRoundAt,
-            isFinal: message.isFinal,
-            voteEndsAt: message.voteEndsAt,
+            round: m.round,
+            correctAnswer: m.correctAnswer,
+            scores: m.scores,
+            nextRoundAt: m.nextRoundAt,
+            isFinal: m.isFinal,
+            voteEndsAt: m.voteEndsAt,
           });
-          break;
-
-        case "vote_update":
-          dispatch({
-            type: "VOTE_UPDATE",
-            votes: (message as VoteUpdateMessage).votes,
-            voteEndsAt: (message as VoteUpdateMessage).voteEndsAt,
-          });
-          break;
-
-        case "answer_result":
+        },
+        vote_update(msg) {
+          const m = msg as VoteUpdateMessage;
+          dispatch({ type: "VOTE_UPDATE", votes: m.votes, voteEndsAt: m.voteEndsAt });
+        },
+        answer_result(msg) {
+          const m = msg as AnswerResultMessage;
           dispatch({
             type: "ANSWER_RESULT",
-            isCorrect: message.isCorrect,
-            points: message.points,
-            streak: message.streak,
+            isCorrect: m.isCorrect,
+            points: m.points,
+            streak: m.streak,
           });
-          break;
+        },
+        leaderboard_update(msg) {
+          dispatch({
+            type: "LEADERBOARD_UPDATE",
+            leaderboard: (msg as LeaderboardUpdateMessage).leaderboard,
+          });
+        },
+        message(msg) {
+          dispatch({ type: "CHAT_MESSAGE", message: msg as ChatMessage });
+        },
+        error(msg) {
+          dispatch({ type: "CHAT_MESSAGE", message: msg as ErrorMessage });
+          console.error("Server error:", (msg as ErrorMessage).content);
+        },
+      };
 
-        case "leaderboard_update":
-          dispatch({ type: "LEADERBOARD_UPDATE", leaderboard: message.leaderboard });
-          break;
-
-        case "message":
-          dispatch({ type: "CHAT_MESSAGE", message: message as ChatMessage });
-          break;
-
-        case "error":
-          dispatch({ type: "CHAT_MESSAGE", message: message as ErrorMessage });
-          console.error("Server error:", message.content);
-          break;
-      }
+      handlers[message.type]?.(message);
     },
     [state.ui.currentUser?.userId, dispatch],
   );
