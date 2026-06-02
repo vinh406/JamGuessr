@@ -32,7 +32,6 @@ export class MessageRouter {
         await this.roomHandler.handleLeave(ws);
         break;
       case "message":
-      case "chat_message":
         await this.chatHandler.handleChatMessage(ws, message as ChatMessage);
         break;
       case "ready":

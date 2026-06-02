@@ -202,7 +202,6 @@ export function useRoomActions({ state, dispatch }: UseRoomActionsParams) {
           break;
 
         case "message":
-        case "chat_message":
           dispatch({ type: "CHAT_MESSAGE", message: message as ChatMessage });
           break;
 

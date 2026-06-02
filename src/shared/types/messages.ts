@@ -23,7 +23,7 @@ export interface LeaveMessage extends BaseMessage {
 }
 
 export interface ChatMessage extends BaseMessage {
-  type: "message" | "chat_message";
+  type: "message";
   content: string;
   username?: string;
   userId?: string;
