@@ -36,9 +36,6 @@ export const MessageBuilders = {
     // Convert Map to Record for JSON serialization if they are Maps in the engine but Records in the type
     const serializedGame = {
       ...state.game,
-      scores: Object.fromEntries(
-        state.game.scores instanceof Map ? state.game.scores : Object.entries(state.game.scores),
-      ),
       answers: Object.fromEntries(
         state.game.answers instanceof Map ? state.game.answers : Object.entries(state.game.answers),
       ),

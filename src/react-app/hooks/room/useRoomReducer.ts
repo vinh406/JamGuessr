@@ -24,7 +24,7 @@ export function roomReducer(state: RoomState, action: RoomAction): RoomState {
     case "SYNC_UNIFIED_STATE": {
       const { state: unified, currentUserId } = action;
       const myPlayer = unified.users.find((u) => u.userId === currentUserId);
-      const myScoreObj = unified.game.scores[currentUserId];
+      const myScoreObj = unified.game.scores.find((s) => s.userId === currentUserId);
       const myAnswer = unified.game.answers[currentUserId];
 
       return {
@@ -65,7 +65,7 @@ export function roomReducer(state: RoomState, action: RoomAction): RoomState {
           roundStartTime: unified.game.roundStartTime,
           roundEndTime: unified.game.roundEndTime,
           roundDuration: unified.game.roundDuration,
-          scores: Object.values(unified.game.scores).sort((a, b) => b.score - a.score),
+                  scores: [...unified.game.scores].sort((a, b) => b.score - a.score),
           myScore: myScoreObj?.score ?? 0,
           myStreak: myScoreObj?.streak ?? 0,
           hasAnswered: !!myAnswer,
@@ -74,7 +74,7 @@ export function roomReducer(state: RoomState, action: RoomAction): RoomState {
             unified.game.phase === "roundEnd"
               ? {
                   correctAnswer: unified.game.choices.find((c) => c.isCorrect),
-                  scores: Object.values(unified.game.scores).sort((a, b) => b.score - a.score),
+          scores: [...unified.game.scores].sort((a, b) => b.score - a.score),
                   voteEndsAt: unified.game.voteEndsAt ?? undefined,
                 }
               : null,

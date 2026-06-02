@@ -255,7 +255,7 @@ export class GameEngine {
       songs: this.songs,
       currentSongIndex: this.currentSongIndex,
       choices: this.choices,
-      scores: Object.fromEntries(this.scores),
+      scores: Array.from(this.scores.values()),
       answers: Object.fromEntries(this.answers),
       roundStartTime: this.roundStartTime,
       roundEndTime: this.roundEndTime,
