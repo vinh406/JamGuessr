@@ -192,15 +192,8 @@ export class GameHandler {
       // Setup the timer to return to lobby
       if (this.voteTimer) clearTimeout(this.voteTimer);
       this.voteTimer = setTimeout(() => {
-        // Only reset if we're still in the voting period and it hasn't been reset yet
         if (this.roomManager.getVoteEndsAt()) {
-          this.roomManager.resetGame(room);
-          const unifiedState = this.roomManager.getUnifiedRoomState(room);
-          broadcastToRoom(
-            this.roomManager.getSessions(),
-            room,
-            MessageBuilders.unifiedRoomState(unifiedState),
-          );
+          this.returnToLobby(room);
         }
         this.voteTimer = null;
       }, SCORING.VOTE_DURATION);
@@ -230,13 +223,7 @@ export class GameHandler {
       // Someone voted NO, immediately return to lobby after a short delay
       if (this.voteTimer) clearTimeout(this.voteTimer);
       this.voteTimer = setTimeout(() => {
-        this.roomManager.resetGame(session.room);
-        const unifiedState = this.roomManager.getUnifiedRoomState(session.room);
-        broadcastToRoom(
-          this.roomManager.getSessions(),
-          session.room,
-          MessageBuilders.unifiedRoomState(unifiedState),
-        );
+        this.returnToLobby(session.room);
         this.voteTimer = null;
       }, 3000);
       return;
@@ -251,13 +238,7 @@ export class GameHandler {
         // Not everyone voted yes
         if (this.voteTimer) clearTimeout(this.voteTimer);
         this.voteTimer = setTimeout(() => {
-          this.roomManager.resetGame(session.room);
-          const unifiedState = this.roomManager.getUnifiedRoomState(session.room);
-          broadcastToRoom(
-            this.roomManager.getSessions(),
-            session.room,
-            MessageBuilders.unifiedRoomState(unifiedState),
-          );
+          this.returnToLobby(session.room);
           this.voteTimer = null;
         }, 3000);
       }
@@ -334,4 +315,13 @@ export class GameHandler {
     );
   }
 
+  private returnToLobby(room: string): void {
+    this.roomManager.resetGame(room);
+    const unifiedState = this.roomManager.getUnifiedRoomState(room);
+    broadcastToRoom(
+      this.roomManager.getSessions(),
+      room,
+      MessageBuilders.unifiedRoomState(unifiedState),
+    );
+  }
 }
