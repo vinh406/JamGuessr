@@ -366,30 +366,34 @@ spotiguess/
 │   ├── worker/                      # Backend (Hono + Cloudflare Workers)
 │   │   ├── db/
 │   │   │   └── schema.ts           # Drizzle schema
-│   │   ├── handlers/                # WebSocket message handlers
-│   │   │   ├── roomHandler.ts
-│   │   │   ├── gameHandler.ts
-│   │   │   ├── chatHandler.ts
-│   │   │   └── index.ts
-│   │   ├── lib/
+│   │   ├── durable-objects/         # Durable Object classes
+│   │   │   ├── websocketDurableObject.ts  # WebSocket (game rooms)
+│   │   │   └── playlistImportDO.ts  # Async playlist import
+│   │   ├── routes/                  # HTTP route handlers
+│   │   │   └── libraryHandlers.ts   # /api/library endpoints
+│   │   ├── services/                # Domain services
 │   │   │   ├── better-auth/         # Auth configuration
 │   │   │   ├── lastfm/              # Last.fm API client
-│   │   │   ├── library/             # Library management handlers
+│   │   │   ├── library/             # LibraryService
 │   │   │   ├── spotify/             # Spotify API client
-│   │   │   ├── sse.ts               # Server-Sent Events utility
-│   │   │   └── websocket/
-│   │   │       ├── game/            # Game logic modules
-│   │   │       │   ├── GameEngine.ts
-│   │   │       │   └── GameUtils.ts
-│   │   │       ├── broadcast.ts
-│   │   │       ├── messageBuilders.ts
-│   │   │       ├── roomManager.ts
-│   │   │       └── sessionManager.ts
+│   │   │   └── sse.ts               # Server-Sent Events utility
+│   │   ├── ws/                      # All WebSocket concerns
+│   │   │   ├── chatHandler.ts
+│   │   │   ├── gameHandler.ts
+│   │   │   ├── roomHandler.ts
+│   │   │   ├── messageRouter.ts     # Incoming message dispatch
+│   │   │   ├── utils.ts             # Shared handler utilities
+│   │   │   ├── broadcast.ts
+│   │   │   ├── messageBuilders.ts
+│   │   │   ├── roomManager.ts       # Room state management
+│   │   │   ├── sessionManager.ts    # WebSocket session mapping
+│   │   │   ├── index.ts             # Barrel exports
+│   │   │   └── game/                # Game logic modules
+│   │   │       ├── GameEngine.ts
+│   │   │       └── GameUtils.ts
 │   │   ├── types/
 │   │   │   └── spotify-url-info.d.ts
-│   │   ├── index.ts                # Hono app entry point
-│   │   ├── playlistImportDO.ts      # Playlist import Durable Object
-│   │   └── websocketDurableObject.ts # WebSocket Durable Object
+│   │   └── index.ts                # Hono app entry point
 │   └── shared/                      # Shared types and constants
 │       ├── types/
 │       │   ├── index.ts
