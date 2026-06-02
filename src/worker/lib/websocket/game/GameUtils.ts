@@ -55,50 +55,31 @@ export function generateChoicesWithLastFM(
   }
 
   const similarTracks = similarTracksCache.get(correctSong.id) ?? [];
-  let decoys: SongChoice[];
+  const shuffledSimilar = shuffleArray(similarTracks);
 
-  if (similarTracks.length >= 3) {
-    const shuffledSimilar = shuffleArray(similarTracks);
-    decoys = shuffledSimilar.slice(0, 3).map((track, i) => ({
-      index: i + 1,
-      title: track.name,
-      artist: track.artist,
-      albumImageUrl: track.imageUrl ?? undefined,
-      isCorrect: false,
-    }));
-  } else if (similarTracks.length > 0) {
+  const similarDecoys: SongChoice[] = shuffledSimilar.slice(0, 3).map((track) => ({
+    index: 0,
+    title: track.name,
+    artist: track.artist,
+    albumImageUrl: track.imageUrl ?? undefined,
+    isCorrect: false,
+  }));
+
+  const needed = 3 - similarDecoys.length;
+  let fallbackDecoys: SongChoice[] = [];
+  if (needed > 0) {
     const wrongSongs = allSongs.filter((s) => s.id !== correctSong.id);
     const shuffled = shuffleArray(wrongSongs);
-    const fallbackDecoys = shuffled.slice(0, 3 - similarTracks.length);
-
-    decoys = [
-      ...similarTracks.map((track, i) => ({
-        index: i + 1,
-        title: track.name,
-        artist: track.artist,
-        albumImageUrl: track.imageUrl ?? undefined,
-        isCorrect: false,
-      })),
-      ...fallbackDecoys.map((song, i) => ({
-        index: similarTracks.length + i + 1,
-        title: song.title,
-        artist: song.artist,
-        albumImageUrl: song.albumImageUrl,
-        isCorrect: false,
-      })),
-    ];
-  } else {
-    decoys = allSongs
-      .filter((s) => s.id !== correctSong.id)
-      .slice(0, 3)
-      .map((song, i) => ({
-        index: i + 1,
-        title: song.title,
-        artist: song.artist,
-        albumImageUrl: song.albumImageUrl,
-        isCorrect: false,
-      }));
+    fallbackDecoys = shuffled.slice(0, needed).map((song) => ({
+      index: 0,
+      title: song.title,
+      artist: song.artist,
+      albumImageUrl: song.albumImageUrl,
+      isCorrect: false,
+    }));
   }
+
+  const decoys = [...similarDecoys, ...fallbackDecoys];
 
   const choices: SongChoice[] = [
     {
