@@ -1,5 +1,5 @@
-import { RoomManager } from "../lib/websocket";
-import { MessageBuilders, broadcastToRoom, sendToSocket } from "../lib/websocket";
+import { RoomManager } from "../services/websocket";
+import { MessageBuilders, broadcastToRoom, sendToSocket } from "../services/websocket";
 import type {
   UserSession,
   JoinMessage,

@@ -1,10 +1,10 @@
-import { RoomManager } from "../lib/websocket";
-import { MessageBuilders, broadcastToRoom, sendToSocket } from "../lib/websocket";
+import { RoomManager } from "../services/websocket";
+import { MessageBuilders, broadcastToRoom, sendToSocket } from "../services/websocket";
 import type { AnswerMessage, VotePlayAgainMessage, Song } from "../../shared/types";
 import { SCORING } from "../../shared/constants";
-import { getPlaylistTracks, getTrackPreviewUrl } from "../lib/spotify/playlists";
+import { getPlaylistTracks, getTrackPreviewUrl } from "../services/spotify/playlists";
 import { shuffleArray } from "../../shared/utils";
-import { createLibraryService } from "../lib/library/LibraryService";
+import { createLibraryService } from "../services/library/LibraryService";
 import { getSessionOrError, validateHost } from "./utils";
 
 const PREVIEW_CONCURRENCY = 10;

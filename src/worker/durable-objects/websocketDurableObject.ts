@@ -1,6 +1,6 @@
 import { DurableObject } from "cloudflare:workers";
 import { MessageRouter } from "../handlers";
-import { RoomManager } from "../lib/websocket";
+import { RoomManager } from "../services/websocket";
 import { IncomingMessage, UserSession } from "../../shared/types";
 
 export class WebSocketHibernationServer extends DurableObject {

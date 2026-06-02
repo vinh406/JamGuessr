@@ -1,9 +1,9 @@
 import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
 import { Scalar } from "@scalar/hono-api-reference";
 import { cors } from "hono/cors";
-import { auth } from "./lib/better-auth";
-import { libraryHandlers } from "./lib/library/libraryHandlers";
-import { getCurrentUserPlaylists } from "./lib/spotify/playlists";
+import { auth } from "./services/better-auth";
+import { libraryHandlers } from "./services/library/libraryHandlers";
+import { getCurrentUserPlaylists } from "./services/spotify/playlists";
 export { WebSocketHibernationServer } from "./durable-objects/websocketDurableObject";
 export { PlaylistImportDO } from "./durable-objects/playlistImportDO";
 
