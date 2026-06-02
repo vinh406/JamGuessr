@@ -7,7 +7,7 @@ import type {
   UpdatePlaylistMessage,
 } from "../../shared/types";
 import { MAX_USERNAME_LENGTH, ROOM_CODE_REGEX } from "../../shared/constants";
-import { validateHost } from "./utils";
+import { getSessionOrError, validateHost } from "./utils";
 
 export class RoomHandler {
   constructor(private roomManager: RoomManager) {}
@@ -159,11 +159,8 @@ export class RoomHandler {
   }
 
   async handleUpdateSettings(ws: WebSocket, data: UpdateSettingsMessage): Promise<void> {
-    const session = this.roomManager.getUserSession(ws);
-    if (!session) {
-      sendToSocket(ws, MessageBuilders.error("You must join a room first"));
-      return;
-    }
+    const session = getSessionOrError(this.roomManager, ws);
+    if (!session) return;
 
     if (!validateHost(ws, session)) return;
 
@@ -176,11 +173,8 @@ export class RoomHandler {
   }
 
   async handleUpdatePlaylist(ws: WebSocket, data: UpdatePlaylistMessage): Promise<void> {
-    const session = this.roomManager.getUserSession(ws);
-    if (!session) {
-      sendToSocket(ws, MessageBuilders.error("You must join a room first"));
-      return;
-    }
+    const session = getSessionOrError(this.roomManager, ws);
+    if (!session) return;
 
     if (!validateHost(ws, session)) return;
 

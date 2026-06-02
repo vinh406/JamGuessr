@@ -5,7 +5,7 @@ import { SCORING } from "../../shared/constants";
 import { getPlaylistTracks, getTrackPreviewUrl } from "../lib/spotify/playlists";
 import { shuffleArray } from "../../shared/utils";
 import { createLibraryService } from "../lib/library/LibraryService";
-import { validateHost } from "./utils";
+import { getSessionOrError, validateHost } from "./utils";
 
 const PREVIEW_CONCURRENCY = 10;
 
@@ -55,11 +55,8 @@ export class GameHandler {
   constructor(private roomManager: RoomManager) {}
 
   async handleStartGame(ws: WebSocket): Promise<void> {
-    const session = this.roomManager.getUserSession(ws);
-    if (!session) {
-      sendToSocket(ws, MessageBuilders.error("You must join a room first"));
-      return;
-    }
+    const session = getSessionOrError(this.roomManager, ws);
+    if (!session) return;
 
     if (!validateHost(ws, session)) return;
 
@@ -201,11 +198,8 @@ export class GameHandler {
   }
 
   async handleVote(ws: WebSocket, data: VotePlayAgainMessage): Promise<void> {
-    const session = this.roomManager.getUserSession(ws);
-    if (!session) {
-      sendToSocket(ws, MessageBuilders.error("You must join a room first"));
-      return;
-    }
+    const session = getSessionOrError(this.roomManager, ws);
+    if (!session) return;
 
     if (!this.roomManager.getVoteEndsAt()) {
       sendToSocket(ws, MessageBuilders.error("No active vote at this time"));
@@ -287,11 +281,8 @@ export class GameHandler {
   }
 
   async handleAnswer(ws: WebSocket, data: AnswerMessage): Promise<void> {
-    const session = this.roomManager.getUserSession(ws);
-    if (!session) {
-      sendToSocket(ws, MessageBuilders.error("You must join a room first"));
-      return;
-    }
+    const session = getSessionOrError(this.roomManager, ws);
+    if (!session) return;
 
     if (this.roomManager.getCurrentGamePhase() !== "playing") {
       sendToSocket(ws, MessageBuilders.error("Game is not currently playing"));
