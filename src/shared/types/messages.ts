@@ -1,6 +1,6 @@
 import { UserSession, PlayerScore } from "./player";
 import { RoomSettings, Playlist, UnifiedRoomState } from "./room";
-import { Song, SongChoice } from "./game";
+import { SongChoice } from "./game";
 
 interface BaseMessage {
   type: string;
@@ -139,7 +139,7 @@ export interface RoundStartedMessage extends BaseMessage {
   type: "round_started";
   round: number;
   totalRounds: number;
-  song: Song;
+  song: { previewUrl?: string; albumImageUrl?: string };
   choices: SongChoice[];
   startTime: number;
   endTime: number;
