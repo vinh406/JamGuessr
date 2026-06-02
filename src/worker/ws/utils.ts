@@ -1,5 +1,5 @@
-import { MessageBuilders, sendToSocket } from "../services/websocket";
-import type { RoomManager } from "../services/websocket";
+import { MessageBuilders, sendToSocket } from ".";
+import type { RoomManager } from ".";
 import type { UserSession } from "../../shared/types";
 
 export function getSessionOrError(

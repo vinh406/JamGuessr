@@ -7,9 +7,9 @@ import type {
   PlayerScore,
   GamePhase,
   UnifiedRoomState,
-} from "../../../shared/types";
-import { DEFAULT_ROOM_SETTINGS, SETTINGS_LIMITS, SCORING } from "../../../shared/constants";
-import { clamp } from "../../../shared/utils";
+} from "../../shared/types";
+import { DEFAULT_ROOM_SETTINGS, SETTINGS_LIMITS, SCORING } from "../../shared/constants";
+import { clamp } from "../../shared/utils";
 import { SessionManager } from "./sessionManager";
 import { GameEngine } from "./game/GameEngine";
 

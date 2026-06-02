@@ -10,7 +10,7 @@ import type {
   AnswerMessage,
   VotePlayAgainMessage,
 } from "../../shared/types";
-import { RoomManager } from "../services/websocket";
+import { RoomManager } from ".";
 
 export class MessageRouter {
   private roomHandler: RoomHandler;

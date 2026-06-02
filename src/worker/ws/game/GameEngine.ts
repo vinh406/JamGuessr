@@ -4,8 +4,8 @@ import type {
   SongChoice,
   PlayerScore,
   GameStateSnapshot,
-} from "../../../../shared/types";
-import { getSimilarTracks, getArtistTopTracks, type LastFMSimilarTrack } from "../../lastfm/client";
+} from "../../../shared/types";
+import { getSimilarTracks, getArtistTopTracks, type LastFMSimilarTrack } from "../../services/lastfm/client";
 import { calculateScore, generateChoices, generateChoicesWithLastFM } from "./GameUtils";
 
 export class GameEngine {

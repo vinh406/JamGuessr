@@ -21,7 +21,7 @@ import type {
   UnifiedRoomStateMessage,
   GameStateSnapshot,
   VoteUpdateMessage,
-} from "../../../shared/types";
+} from "../../shared/types";
 
 export const MessageBuilders = {
   error(content: string): ErrorMessage {

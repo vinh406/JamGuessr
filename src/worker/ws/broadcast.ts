@@ -1,4 +1,4 @@
-import type { OutgoingMessage, BroadcastMessage, UserSession } from "../../../shared/types";
+import type { OutgoingMessage, BroadcastMessage, UserSession } from "../../shared/types";
 
 /**
  * Broadcasts a message to all WebSocket connections in a specific room

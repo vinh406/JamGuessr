@@ -1,7 +1,7 @@
-import { SCORING } from "../../../../shared/constants";
-import { shuffleArray } from "../../../../shared/utils";
-import type { Song, SongChoice } from "../../../../shared/types";
-import type { LastFMSimilarTrack } from "../../lastfm/client";
+import { SCORING } from "../../../shared/constants";
+import { shuffleArray } from "../../../shared/utils";
+import type { Song, SongChoice } from "../../../shared/types";
+import type { LastFMSimilarTrack } from "../../services/lastfm/client";
 
 export function calculateScore(
   isCorrect: boolean,

@@ -1,4 +1,4 @@
-import type { UserSession } from "../../../shared/types";
+import type { UserSession } from "../../shared/types";
 
 export class SessionManager {
   private sessions: Map<WebSocket, UserSession>;

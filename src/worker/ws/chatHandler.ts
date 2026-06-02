@@ -1,5 +1,5 @@
-import { RoomManager } from "../services/websocket";
-import { MessageBuilders, broadcastToRoom, sendToSocket } from "../services/websocket";
+import { RoomManager } from ".";
+import { MessageBuilders, broadcastToRoom, sendToSocket } from ".";
 import type { ChatMessage } from "../../shared/types";
 import { MAX_CHAT_MESSAGE_LENGTH } from "../../shared/constants";
 import { getSessionOrError } from "./utils";
