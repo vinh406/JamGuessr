@@ -600,23 +600,96 @@ export function createLibraryHandlers() {
     );
   });
 
-  // GET /blend - Get blended playlist for a room (Phase 3 - stubbed)
+  // Song schema for blend response
+  const SongSchema = z
+    .object({
+      id: z.string().openapi({ description: "Spotify track ID", example: "4cOdK2wGLETKBW3PvgRsqC" }),
+      title: z.string().openapi({ description: "Song title", example: "Anti-Hero" }),
+      artist: z.string().openapi({ description: "Artist name(s)", example: "Taylor Swift" }),
+      album: z.string().openapi({ description: "Album name", example: "Midnights" }),
+      albumImageUrl: z.string().optional().openapi({ description: "Album cover URL" }),
+      previewUrl: z.string().optional().openapi({ description: "Spotify preview URL" }),
+      duration: z.number().openapi({ description: "Duration in milliseconds", example: 200000 }),
+    })
+    .openapi("Song");
+
+  // Blend query schema
+  const BlendQuerySchema = z.object({
+    userIds: z
+      .string()
+      .openapi({
+        param: { name: "userIds", in: "query" },
+        description: "Comma-separated list of user IDs to blend",
+        example: "user1,user2,user3",
+      }),
+    targetTrackCount: z.coerce
+      .number()
+      .optional()
+      .default(30)
+      .openapi({
+        param: { name: "targetTrackCount", in: "query" },
+        description: "Target number of tracks in the blended playlist (default: 30)",
+      }),
+    minTracksPerUser: z.coerce
+      .number()
+      .optional()
+      .openapi({
+        param: { name: "minTracksPerUser", in: "query" },
+        description: "Minimum tracks per user before emitting a warning",
+      }),
+  });
+
+  const BlendResponseSchema = z
+    .object({
+      songs: z.array(SongSchema).openapi({ description: "Blended playlist songs" }),
+      warnings: z.array(z.string()).openapi({ description: "Non-blocking warnings" }),
+    })
+    .openapi("BlendResponse");
+
+  // GET /blend - Get blended playlist from multiple users' libraries
   const getBlendRoute = createRoute({
     method: "get",
     path: "/blend",
+    request: { query: BlendQuerySchema },
     responses: {
-      501: {
+      200: {
+        content: { "application/json": { schema: BlendResponseSchema } },
+        description: "Blended playlist combining all specified users' libraries",
+      },
+      400: {
         content: { "application/json": { schema: ErrorResponseSchema } },
-        description: "Not implemented",
+        description: "Bad request — must provide at least one userId",
+      },
+      401: {
+        content: { "application/json": { schema: ErrorResponseSchema } },
+        description: "Unauthorized - authentication required",
       },
     },
     tags: ["Room"],
     summary: "Get blended playlist",
     description:
-      "Generate a blended playlist combining all room members' libraries (not yet implemented)",
+      "Generate a blended playlist combining multiple users' libraries. Provide comma-separated userIds.",
   });
   app.openapi(getBlendRoute, async (c) => {
-    return c.json({ error: "Room blend not yet implemented" }, 501);
+    const user = await getAuthenticatedUser(c);
+    if (!user) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    const query = c.req.valid("query");
+    const userIds = query.userIds
+      .split(",")
+      .map((id) => id.trim())
+      .filter(Boolean);
+    if (userIds.length === 0) {
+      return c.json({ error: "At least one userId is required" }, 400);
+    }
+
+    const lib = createLibraryService(c.env.DATABASE_URL, c.env);
+    const result = await lib.getRoomBlendedPlaylist(userIds, query.targetTrackCount, {
+      minTracksPerUser: query.minTracksPerUser,
+    });
+    return c.json(result, 200);
   });
 
   return app;

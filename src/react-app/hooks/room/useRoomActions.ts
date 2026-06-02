@@ -401,7 +401,16 @@ export function useRoomActions({ state, dispatch }: UseRoomActionsParams) {
     dispatch({ type: "SET_SHOW_PLAYLIST_MODAL", show: false });
   }, [state.ui.spotifyLink, handleSelectPlaylist, dispatch]);
 
-  const handleCreateBlend = () => console.log("Creating blend...");
+  const handleCreateBlend = useCallback(() => {
+    const blendPlaylist: Playlist = {
+      id: "blend",
+      name: "Room Blend",
+      trackCount: 0,
+    };
+    send({ type: "update_playlist", payload: { playlist: blendPlaylist } });
+    dispatch({ type: "PLAYLIST_UPDATED", playlist: blendPlaylist });
+    dispatch({ type: "SET_SHOW_PLAYLIST_MODAL", show: false });
+  }, [dispatch, send]);
 
   return {
     handleJoinRoom,

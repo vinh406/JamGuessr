@@ -397,6 +397,7 @@ export function createLibraryService(
         albumName?: string;
         albumId?: string;
         albumImageUrl?: string;
+        previewUrl?: string;
         durationMs?: number;
       },
     ): Promise<{ success: true; trackId: string } | { success: false; error: string }> {
@@ -461,6 +462,7 @@ export function createLibraryService(
             artists: [{ name: metadata.artist }],
             albumName: metadata.albumName || undefined,
             albumImageUrl: metadata.imageUrl || undefined,
+            previewUrl: metadata.previewUrl || undefined,
             durationMs: metadata.durationMs || undefined,
           });
 
@@ -1055,7 +1057,7 @@ export function createLibraryService(
       }
 
       const songs: Song[] = combined.slice(0, targetTrackCount).map((track) => ({
-        id: track.id,
+        id: track.spotifyId,
         title: track.name,
         artist: track.artists.map((a) => a.name).join(", "),
         album: track.albumName,

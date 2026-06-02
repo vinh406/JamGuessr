@@ -84,19 +84,32 @@ export class GameHandler {
     );
 
     let songs: Song[] = [];
+    const dbUrl = this.roomManager.getDatabaseUrl();
+    const lib = createLibraryService(dbUrl);
     if (roomPlaylist?.id) {
-      // Try library first
-      const dbUrl = this.roomManager.getDatabaseUrl();
-      const lib = createLibraryService(dbUrl);
-      const libraryTracks = await lib.getLibraryPlaylistTracks(session.userId, roomPlaylist.id);
-      if (libraryTracks.length > 0) {
-        songs = libraryTracks;
+      if (roomPlaylist.id === "blend") {
+        const userIds = roomUsers.map((u) => u.userId);
+        const targetCount = Math.max(settings.rounds * 2, 20);
+        const result = await lib.getRoomBlendedPlaylist(userIds, targetCount, {
+          minTracksPerUser: 5,
+        });
+        songs = result.songs;
+        if (result.warnings.length > 0) {
+          for (const warning of result.warnings) {
+            sendToSocket(ws, MessageBuilders.error(warning));
+          }
+        }
       } else {
-        songs = await getPlaylistTracks(
-          roomPlaylist.id,
-          this.roomManager.getPlaylistImportDO(),
-          true,
-        );
+        const libraryTracks = await lib.getLibraryPlaylistTracks(session.userId, roomPlaylist.id);
+        if (libraryTracks.length > 0) {
+          songs = libraryTracks;
+        } else {
+          songs = await getPlaylistTracks(
+            roomPlaylist.id,
+            this.roomManager.getPlaylistImportDO(),
+            true,
+          );
+        }
       }
     }
 
