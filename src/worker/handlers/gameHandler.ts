@@ -1,10 +1,11 @@
 import { RoomManager } from "../lib/websocket";
 import { MessageBuilders, broadcastToRoom, sendToSocket } from "../lib/websocket";
-import type { AnswerMessage, VotePlayAgainMessage, Song, UserSession } from "../../shared/types";
+import type { AnswerMessage, VotePlayAgainMessage, Song } from "../../shared/types";
 import { SCORING } from "../../shared/constants";
 import { getPlaylistTracks, getTrackPreviewUrl } from "../lib/spotify/playlists";
 import { shuffleArray } from "../../shared/utils";
 import { createLibraryService } from "../lib/library/LibraryService";
+import { validateHost } from "./utils";
 
 const PREVIEW_CONCURRENCY = 10;
 
@@ -60,7 +61,7 @@ export class GameHandler {
       return;
     }
 
-    if (!this.validateHost(ws, session)) return;
+    if (!validateHost(ws, session)) return;
 
     if (!this.roomManager.tryStartGame()) {
       sendToSocket(ws, MessageBuilders.error("Game is already starting or in progress"));
@@ -333,11 +334,4 @@ export class GameHandler {
     );
   }
 
-  private validateHost(ws: WebSocket, session: UserSession): boolean {
-    if (!session.isHost) {
-      sendToSocket(ws, MessageBuilders.error("Only the host can perform this action"));
-      return false;
-    }
-    return true;
-  }
 }

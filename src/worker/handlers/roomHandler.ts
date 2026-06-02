@@ -7,6 +7,7 @@ import type {
   UpdatePlaylistMessage,
 } from "../../shared/types";
 import { MAX_USERNAME_LENGTH, ROOM_CODE_REGEX } from "../../shared/constants";
+import { validateHost } from "./utils";
 
 export class RoomHandler {
   constructor(private roomManager: RoomManager) {}
@@ -157,14 +158,6 @@ export class RoomHandler {
     }
   }
 
-  private validateHost(ws: WebSocket, session: UserSession): boolean {
-    if (!session.isHost) {
-      sendToSocket(ws, MessageBuilders.error("Only the host can perform this action"));
-      return false;
-    }
-    return true;
-  }
-
   async handleUpdateSettings(ws: WebSocket, data: UpdateSettingsMessage): Promise<void> {
     const session = this.roomManager.getUserSession(ws);
     if (!session) {
@@ -172,7 +165,7 @@ export class RoomHandler {
       return;
     }
 
-    if (!this.validateHost(ws, session)) return;
+    if (!validateHost(ws, session)) return;
 
     const { rounds, timePerRound, audioTime } = data.payload || {};
     const updatedSettings = this.roomManager.updateSettings(rounds, timePerRound, audioTime);
@@ -189,7 +182,7 @@ export class RoomHandler {
       return;
     }
 
-    if (!this.validateHost(ws, session)) return;
+    if (!validateHost(ws, session)) return;
 
     const { playlist } = data.payload || {};
     if (!playlist) return;
