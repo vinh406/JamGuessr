@@ -10,6 +10,7 @@ import { GameView } from "../components/game/GameView";
 import { RoundEndView } from "../components/game/RoundEndView";
 import { useAuth } from "../hooks/useAuth";
 import LoadingSpinner from "../components/common/LoadingSpinner";
+import FullScreenLoader from "../components/common/FullScreenLoader";
 import ConfirmDialog from "../components/common/ConfirmDialog";
 import { Button } from "../components/ui";
 import Header from "../components/Header";
@@ -81,14 +82,7 @@ export default function RoomPage() {
   const isGameActive = gamePhase === "playing" || gamePhase === "roundEnd";
 
   if (authLoading) {
-    return (
-      <div className="h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center p-4">
-        <div className="text-center">
-          <LoadingSpinner size="xl" className="text-green-500 mx-auto" />
-          <p className="mt-4 text-gray-400">Loading...</p>
-        </div>
-      </div>
-    );
+    return <FullScreenLoader showIcon={false} spinnerSize="xl" className="h-screen p-4" />;
   }
 
   if (showUsernamePrompt || !currentUser) {
