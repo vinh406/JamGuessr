@@ -1,9 +1,8 @@
 import { DurableObject } from "cloudflare:workers";
-import { MessageRouter } from "./handlers";
-import { RoomManager } from "./lib/websocket";
-import { IncomingMessage, UserSession } from "../shared/types";
+import { MessageRouter } from "../handlers";
+import { RoomManager } from "../lib/websocket";
+import { IncomingMessage, UserSession } from "../../shared/types";
 
-// Durable Object that manages WebSocket connections and room state for a single game instance
 export class WebSocketHibernationServer extends DurableObject {
   private roomManager: RoomManager;
   private messageRouter: MessageRouter;
@@ -14,7 +13,6 @@ export class WebSocketHibernationServer extends DurableObject {
     this.roomManager = new RoomManager(env);
     this.messageRouter = new MessageRouter(this.roomManager);
 
-    // Restore existing sessions from hibernated WebSocket connections
     const existingSessions = new Map<WebSocket, UserSession>();
     ctx.getWebSockets().forEach((webSocket) => {
       const meta = webSocket.deserializeAttachment() as UserSession | null;
@@ -24,10 +22,6 @@ export class WebSocketHibernationServer extends DurableObject {
     });
     this.roomManager.setSessions(existingSessions);
   }
-
-  // ============================================================================
-  // WebSocket Connection Handling
-  // ============================================================================
 
   async fetch(): Promise<Response> {
     const webSocketPair = new WebSocketPair();
@@ -53,7 +47,6 @@ export class WebSocketHibernationServer extends DurableObject {
     try {
       parsedMessage = JSON.parse(messageString);
     } catch {
-      // Handle non-JSON messages as chat messages
       parsedMessage = {
         type: "message",
         content: messageString,
@@ -67,10 +60,6 @@ export class WebSocketHibernationServer extends DurableObject {
   async webSocketClose(ws: WebSocket): Promise<void> {
     await this.messageRouter.handleClose(ws);
   }
-
-  // ============================================================================
-  // Message Router
-  // ============================================================================
 
   private async handleMessage(ws: WebSocket, message: IncomingMessage): Promise<void> {
     await this.messageRouter.handleMessage(ws, message);

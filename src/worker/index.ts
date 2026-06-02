@@ -4,8 +4,8 @@ import { cors } from "hono/cors";
 import { auth } from "./lib/better-auth";
 import { libraryHandlers } from "./lib/library/libraryHandlers";
 import { getCurrentUserPlaylists } from "./lib/spotify/playlists";
-export { WebSocketHibernationServer } from "./websocketDurableObject";
-export { PlaylistImportDO } from "./playlistImportDO";
+export { WebSocketHibernationServer } from "./durable-objects/websocketDurableObject";
+export { PlaylistImportDO } from "./durable-objects/playlistImportDO";
 
 const app = new OpenAPIHono<{ Bindings: Env }>();
 
