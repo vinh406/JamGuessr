@@ -187,6 +187,12 @@ export class GameEngine {
   endRound(): { correctAnswer: SongChoice; scores: PlayerScore[] } {
     this.phase = "roundEnd";
 
+    for (const playerScore of this.scores.values()) {
+      if (!this.answers.has(playerScore.userId)) {
+        playerScore.streak = 0;
+      }
+    }
+
     const correctAnswer = this.choices.find((c) => c.isCorrect)!;
     const scores = Array.from(this.scores.values()).sort((a, b) => b.score - a.score);
 
