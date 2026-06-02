@@ -1,8 +1,8 @@
 import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
-import { auth } from "../better-auth";
-import { createLibraryService } from "./LibraryService";
-import { sseStream } from "../sse";
-import { parseSpotifyLink } from "../spotify/playlists";
+import { auth } from "../services/better-auth";
+import { createLibraryService } from "../services/library/LibraryService";
+import { sseStream } from "../services/sse";
+import { parseSpotifyLink } from "../services/spotify/playlists";
 
 // OpenAPI Schema Definitions
 
