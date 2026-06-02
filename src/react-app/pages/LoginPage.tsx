@@ -91,13 +91,6 @@ export default function LoginPage() {
             {isLoading ? "Signing in..." : "Continue with Google"}
           </Button>
 
-          {/* Divider */}
-          {/* <div className="flex items-center my-8">
-            <div className="flex-1 border-t border-gray-700"></div>
-            <span className="px-4 text-gray-500 text-sm">or</span>
-            <div className="flex-1 border-t border-gray-700"></div>
-          </div> */}
-
           {/* Features */}
           <div className="space-y-4">
             <FeatureItem
