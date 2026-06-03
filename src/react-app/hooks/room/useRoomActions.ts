@@ -293,6 +293,7 @@ export function useRoomActions({ state, dispatch }: UseRoomActionsParams) {
           dispatch({ type: "PLAYLIST_UPDATED", playlist });
           send({ type: "update_playlist", payload: { playlist } });
           dispatch({ type: "SET_SHOW_PLAYLIST_MODAL", show: false });
+          dispatch({ type: "SET_PLAYLISTS_LOADING", loading: false });
           return;
         }
         // Not in library — ask user
