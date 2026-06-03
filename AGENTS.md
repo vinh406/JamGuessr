@@ -4,20 +4,20 @@ Multiplayer Spotify song guessing game on Cloudflare Workers.
 
 ## Commands
 
-| Command | Purpose |
-|---------|---------|
-| `npm run dev` | Local dev server (Vite) |
-| `npm run build` | Type-check + build |
-| `npm run check` | Type-check + build + dry-run deploy |
-| `npm run deploy` | Deploy to Cloudflare |
-| `npm run preview` | Build + preview via `wrangler dev` |
-| `npm run lint` | oxlint lint |
-| `npm run fmt` | oxfmt format |
-| `npm run cf-typegen` | Regenerate `worker-configuration.d.ts` |
-| `npm run db:generate` | Drizzle schema → SQL migration |
-| `npm run db:migrate` | Apply pending migrations |
-| `npm run db:push` | Push schema (dev) |
-| `npx playwright test` | Run E2E tests |
+| Command               | Purpose                                |
+| --------------------- | -------------------------------------- |
+| `npm run dev`         | Local dev server (Vite)                |
+| `npm run build`       | Type-check + build                     |
+| `npm run check`       | Type-check + build + dry-run deploy    |
+| `npm run deploy`      | Deploy to Cloudflare                   |
+| `npm run preview`     | Build + preview via `wrangler dev`     |
+| `npm run lint`        | oxlint lint                            |
+| `npm run fmt`         | oxfmt format                           |
+| `npm run cf-typegen`  | Regenerate `worker-configuration.d.ts` |
+| `npm run db:generate` | Drizzle schema → SQL migration         |
+| `npm run db:migrate`  | Apply pending migrations               |
+| `npm run db:push`     | Push schema (dev)                      |
+| `npx playwright test` | Run E2E tests                          |
 
 Run `cf-typegen` after changing wrangler.json bindings.
 

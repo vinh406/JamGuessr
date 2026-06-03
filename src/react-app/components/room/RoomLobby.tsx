@@ -77,7 +77,11 @@ export function RoomLobby({
                 {selectedPlaylist ? selectedPlaylist.name : "Select Playlist"}
               </p>
               <p className="text-xs text-gray-400 truncate">
-                {selectedPlaylist ? (selectedPlaylist.id === "blend" ? "Blend from players" : `${selectedPlaylist.trackCount} tracks`) : "Choose a playlist"}
+                {selectedPlaylist
+                  ? selectedPlaylist.id === "blend"
+                    ? "Blend from players"
+                    : `${selectedPlaylist.trackCount} tracks`
+                  : "Choose a playlist"}
               </p>
             </div>
             <svg

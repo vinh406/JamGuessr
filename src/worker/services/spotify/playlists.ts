@@ -1,4 +1,3 @@
-import { getSpotifyClientForUser } from "./client";
 import type { Playlist, Song } from "../../../shared/types";
 import spotifyUrlInfo from "spotify-url-info";
 import {
@@ -235,35 +234,6 @@ export async function getPlaylistMetadata(playlistId: string): Promise<Playlist 
     console.error(`Failed to fetch playlist metadata for ${playlistId}:`, error);
     return null;
   }
-}
-
-export async function getCurrentUserPlaylists(userId: string, env: Env): Promise<Playlist[]> {
-  const playlists: Playlist[] = [];
-  const api = await getSpotifyClientForUser(userId, env);
-
-  if (!api) {
-    console.error("Failed to get Spotify client for user:", userId);
-    return playlists;
-  }
-
-  try {
-    const result = await api.currentUser.playlists.playlists();
-
-    for (const playlist of result.items ?? []) {
-      if (!playlist) continue;
-      playlists.push({
-        id: playlist.id,
-        name: playlist.name,
-        description: playlist.description ?? undefined,
-        trackCount: (playlist as { items?: { total?: number } }).items?.total ?? 0,
-        imageUrl: playlist.images[0]?.url ?? undefined,
-      });
-    }
-  } catch (error) {
-    console.error("Failed to fetch current user's playlists:", error);
-  }
-
-  return playlists;
 }
 
 export async function getPlaylistTracks(

@@ -96,7 +96,7 @@ export function PlaylistModal({
         <div className="space-y-3">
           {availablePlaylists.length === 0 ? (
             <p className="text-center text-gray-400 py-8">
-              No playlist found. Import a public Spotify playlist to get started!
+              No playlists in your library yet. Import a public Spotify playlist to get started!
             </p>
           ) : (
             availablePlaylists.map((playlist) => (

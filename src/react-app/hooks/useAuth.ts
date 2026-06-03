@@ -11,7 +11,7 @@ interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  login: (provider?: "spotify" | "google") => Promise<void>;
+  login: (provider?: "google") => Promise<void>;
   logout: () => Promise<void>;
   checkSession: () => Promise<void>;
 }

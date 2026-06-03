@@ -36,8 +36,6 @@
    */
   // "vars": {
   // 	"BETTER_AUTH_URL": "http://127.0.0.1:8787",
-  // 	"SPOTIFY_CLIENT_ID": "your-spotify-client-id",
-  // 	"SPOTIFY_CLIENT_SECRET": "your-spotify-client-secret",
   // 	"GOOGLE_CLIENT_ID": "your-google-client-id",
   // 	"GOOGLE_CLIENT_SECRET": "your-google-client-secret",
   // 	"LAST_FM_API_KEY": "your-lastfm-api-key"

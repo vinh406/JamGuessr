@@ -1,5 +1,10 @@
 import { DurableObject } from "cloudflare:workers";
-import { BATCH_SIZE, CONCURRENCY, fetchPartnerPage, paginateFetch } from "../services/spotify/partner-api";
+import {
+  BATCH_SIZE,
+  CONCURRENCY,
+  fetchPartnerPage,
+  paginateFetch,
+} from "../services/spotify/partner-api";
 
 const MAX_PAGES_PER_INVOCATION = 45;
 

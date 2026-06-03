@@ -24,7 +24,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const login = async (provider: "spotify" | "google" = "spotify") => {
+  const login = async (provider: "google" = "google") => {
     try {
       await authClient.signIn.social({
         provider,

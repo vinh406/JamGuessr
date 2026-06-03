@@ -8,8 +8,6 @@ declare namespace Cloudflare {
   }
   interface Env {
     DATABASE_URL: string;
-    SPOTIFY_CLIENT_ID: string;
-    SPOTIFY_CLIENT_SECRET: string;
     GOOGLE_CLIENT_ID: string;
     GOOGLE_CLIENT_SECRET: string;
     BETTER_AUTH_SECRET: string;
@@ -30,8 +28,6 @@ declare namespace NodeJS {
     Pick<
       Cloudflare.Env,
       | "DATABASE_URL"
-      | "SPOTIFY_CLIENT_ID"
-      | "SPOTIFY_CLIENT_SECRET"
       | "GOOGLE_CLIENT_ID"
       | "GOOGLE_CLIENT_SECRET"
       | "BETTER_AUTH_SECRET"

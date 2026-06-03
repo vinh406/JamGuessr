@@ -2,10 +2,7 @@ import { MessageBuilders, sendToSocket } from ".";
 import type { RoomManager } from ".";
 import type { UserSession } from "../../shared/types";
 
-export function getSessionOrError(
-  roomManager: RoomManager,
-  ws: WebSocket,
-): UserSession | null {
+export function getSessionOrError(roomManager: RoomManager, ws: WebSocket): UserSession | null {
   const session = roomManager.getUserSession(ws);
   if (!session) {
     sendToSocket(ws, MessageBuilders.error("You must join a room first"));

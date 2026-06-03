@@ -74,13 +74,25 @@ export class RoomManager {
 
   updateSettings(rounds?: number, timePerRound?: number, audioTime?: number): RoomSettings {
     if (rounds !== undefined) {
-      this.roomSettings.rounds = clamp(rounds, SETTINGS_LIMITS.rounds.min, SETTINGS_LIMITS.rounds.max);
+      this.roomSettings.rounds = clamp(
+        rounds,
+        SETTINGS_LIMITS.rounds.min,
+        SETTINGS_LIMITS.rounds.max,
+      );
     }
     if (timePerRound !== undefined) {
-      this.roomSettings.timePerRound = clamp(timePerRound, SETTINGS_LIMITS.timePerRound.min, SETTINGS_LIMITS.timePerRound.max);
+      this.roomSettings.timePerRound = clamp(
+        timePerRound,
+        SETTINGS_LIMITS.timePerRound.min,
+        SETTINGS_LIMITS.timePerRound.max,
+      );
     }
     if (audioTime !== undefined) {
-      this.roomSettings.audioTime = clamp(audioTime, SETTINGS_LIMITS.audioTime.min, SETTINGS_LIMITS.audioTime.max);
+      this.roomSettings.audioTime = clamp(
+        audioTime,
+        SETTINGS_LIMITS.audioTime.min,
+        SETTINGS_LIMITS.audioTime.max,
+      );
     }
     if (this.roomSettings.audioTime > this.roomSettings.timePerRound) {
       this.roomSettings.audioTime = this.roomSettings.timePerRound;

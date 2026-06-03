@@ -5,7 +5,11 @@ import type {
   PlayerScore,
   GameStateSnapshot,
 } from "../../../shared/types";
-import { getSimilarTracks, getArtistTopTracks, type LastFMSimilarTrack } from "../../services/lastfm/client";
+import {
+  getSimilarTracks,
+  getArtistTopTracks,
+  type LastFMSimilarTrack,
+} from "../../services/lastfm/client";
 import { calculateScore, generateChoices, generateChoicesWithLastFM } from "./GameUtils";
 
 export class GameEngine {

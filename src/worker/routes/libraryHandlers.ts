@@ -603,7 +603,9 @@ export function createLibraryHandlers() {
   // Song schema for blend response
   const SongSchema = z
     .object({
-      id: z.string().openapi({ description: "Spotify track ID", example: "4cOdK2wGLETKBW3PvgRsqC" }),
+      id: z
+        .string()
+        .openapi({ description: "Spotify track ID", example: "4cOdK2wGLETKBW3PvgRsqC" }),
       title: z.string().openapi({ description: "Song title", example: "Anti-Hero" }),
       artist: z.string().openapi({ description: "Artist name(s)", example: "Taylor Swift" }),
       album: z.string().openapi({ description: "Album name", example: "Midnights" }),
@@ -615,13 +617,11 @@ export function createLibraryHandlers() {
 
   // Blend query schema
   const BlendQuerySchema = z.object({
-    userIds: z
-      .string()
-      .openapi({
-        param: { name: "userIds", in: "query" },
-        description: "Comma-separated list of user IDs to blend",
-        example: "user1,user2,user3",
-      }),
+    userIds: z.string().openapi({
+      param: { name: "userIds", in: "query" },
+      description: "Comma-separated list of user IDs to blend",
+      example: "user1,user2,user3",
+    }),
     targetTrackCount: z.coerce
       .number()
       .optional()

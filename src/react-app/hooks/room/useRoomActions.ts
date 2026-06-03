@@ -119,8 +119,7 @@ export function useRoomActions({ state, dispatch }: UseRoomActionsParams) {
       const handleUserUpdate = (msg: OutgoingMessage) => {
         dispatch({
           type: "UPDATE_PLAYERS",
-          users:
-            (msg as UserJoinedMessage | UserLeftMessage | UsersUpdatedMessage).users || [],
+          users: (msg as UserJoinedMessage | UserLeftMessage | UsersUpdatedMessage).users || [],
           currentUserId,
         });
         if (msg.type === "user_joined" || msg.type === "user_left") {
@@ -367,14 +366,32 @@ export function useRoomActions({ state, dispatch }: UseRoomActionsParams) {
     if (state.ui.availablePlaylists.length === 0 && !fetchedPlaylistsRef.current) {
       fetchedPlaylistsRef.current = true;
       dispatch({ type: "SET_PLAYLISTS_LOADING", loading: true });
-      fetch("/api/playlists")
+      fetch("/api/library/items")
         .then((res) => res.json())
         .then((data) => {
-          if (data.playlists)
-            dispatch({ type: "SET_AVAILABLE_PLAYLISTS", playlists: data.playlists });
+          const playlists: Playlist[] = (data.items ?? [])
+            .filter((item: { type: string }) => item.type === "playlist")
+            .map(
+              (item: {
+                id: string;
+                spotifyId?: string;
+                name: string;
+                trackCount: number;
+                imageUrl?: string;
+              }) => ({
+                id: item.spotifyId ?? item.id,
+                name: item.name,
+                trackCount: item.trackCount,
+                imageUrl: item.imageUrl,
+              }),
+            );
+          dispatch({ type: "SET_AVAILABLE_PLAYLISTS", playlists });
           dispatch({ type: "SET_PLAYLISTS_LOADING", loading: false });
         })
-        .catch(() => dispatch({ type: "SET_PLAYLISTS_LOADING", loading: false }));
+        .catch((err) => {
+          console.error("Failed to fetch library items:", err);
+          dispatch({ type: "SET_PLAYLISTS_LOADING", loading: false });
+        });
     }
     dispatch({ type: "SET_SHOW_PLAYLIST_MODAL", show: true });
   }, [state.ui.availablePlaylists.length, dispatch]);
