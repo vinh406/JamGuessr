@@ -62,6 +62,12 @@
       "tag": "v2",
       "new_sqlite_classes": ["PlaylistImportDO"]
     }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "AVATAR_BUCKET",
+      "bucket_name": "spotiguess-avatars"
+    }
   ]
   /**
    * Service Bindings (communicate between multiple Workers)

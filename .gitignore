@@ -202,3 +202,5 @@ dist
 /test-results
 
 /.agents
+# Superpowers brainstorming artifacts
+.superpowers

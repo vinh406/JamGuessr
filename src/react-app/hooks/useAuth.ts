@@ -14,6 +14,7 @@ interface AuthContextType {
   login: (provider?: "google") => Promise<void>;
   logout: () => Promise<void>;
   checkSession: () => Promise<void>;
+  updateUser: (updates: Partial<User>) => void;
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);

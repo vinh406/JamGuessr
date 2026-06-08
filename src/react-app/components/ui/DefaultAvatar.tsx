@@ -13,7 +13,7 @@ export function DefaultAvatar({ name, src, size = 40, className = "" }: DefaultA
 
   return (
     <Avatar.Root
-      className={`rounded-full overflow-hidden shrink-0 ${className}`}
+      className={`inline-flex rounded-full overflow-hidden shrink-0 ${className}`}
       style={{ width: size, height: size }}
     >
       {src && <Avatar.Image src={src} alt={name ?? ""} className="w-full h-full object-cover" />}

@@ -43,6 +43,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const updateUser = (updates: Partial<User>) => {
+    setUser((prev) => (prev ? { ...prev, ...updates } : null));
+  };
+
   useEffect(() => {
     checkSession();
   }, []);
@@ -54,6 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     login,
     logout,
     checkSession,
+    updateUser,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

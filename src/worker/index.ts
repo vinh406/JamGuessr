@@ -3,6 +3,7 @@ import { Scalar } from "@scalar/hono-api-reference";
 import { cors } from "hono/cors";
 import { auth } from "./services/better-auth";
 import { libraryHandlers } from "./routes/libraryHandlers";
+import { userSettingsHandlers } from "./routes/userSettings";
 export { WebSocketHibernationServer } from "./durable-objects/websocketDurableObject";
 export { PlaylistImportDO } from "./durable-objects/playlistImportDO";
 
@@ -12,7 +13,7 @@ app.use("*", (c, next) => {
   return cors({
     origin: [c.env.BETTER_AUTH_URL],
     allowHeaders: ["Content-Type", "Authorization"],
-    allowMethods: ["POST", "GET", "OPTIONS"],
+    allowMethods: ["POST", "GET", "PUT", "OPTIONS"],
     exposeHeaders: ["Content-Length"],
     maxAge: 600,
     credentials: true,
@@ -45,6 +46,9 @@ app.openapi(healthRoute, (c) => c.json({ status: "ok" }));
 // Library API endpoints
 app.route("/api/library", libraryHandlers);
 
+// User settings endpoints
+app.route("/api/user", userSettingsHandlers);
+
 // Better Auth handler
 app.on(["GET", "POST"], "/api/auth/*", (c) => {
   return auth(c.env).handler(c.req.raw);
@@ -63,6 +67,7 @@ app.doc("/api/doc", {
     { name: "Health", description: "Health check endpoints" },
     { name: "Library", description: "User library management" },
     { name: "Room", description: "Room-based features" },
+    { name: "User", description: "User profile and settings" },
   ],
 });
 
