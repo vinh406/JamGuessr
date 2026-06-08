@@ -1,0 +1,185 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-06-08T00:00:00.000Z",
+  "title": "Design System: Spotiguess",
+  "extensions": {
+    "colorMeta": {
+      "verdant-glow": {
+        "role": "primary",
+        "displayName": "Verdant Glow",
+        "canonical": "oklch(79.2% 0.209 151.71)",
+        "tonalRamp": ["oklch(25% 0.209 151.71)", "oklch(35% 0.209 151.71)", "oklch(45% 0.209 151.71)", "oklch(55% 0.209 151.71)", "oklch(65% 0.209 151.71)", "oklch(75% 0.209 151.71)", "oklch(85% 0.209 151.71)", "oklch(95% 0.209 151.71)"]
+      },
+      "verdant-deep": {
+        "role": "primary",
+        "displayName": "Verdant Deep",
+        "canonical": "oklch(62.7% 0.194 149.21)",
+        "tonalRamp": ["oklch(20% 0.194 149.21)", "oklch(30% 0.194 149.21)", "oklch(40% 0.194 149.21)", "oklch(50% 0.194 149.21)", "oklch(60% 0.194 149.21)", "oklch(70% 0.194 149.21)", "oklch(80% 0.194 149.21)", "oklch(90% 0.194 149.21)"]
+      },
+      "ink-primary": {
+        "role": "neutral",
+        "displayName": "Ink Primary",
+        "canonical": "oklch(100% 0 0)",
+        "tonalRamp": ["oklch(20% 0 0)", "oklch(35% 0 0)", "oklch(50% 0 0)", "oklch(60% 0 0)", "oklch(70% 0 0)", "oklch(80% 0 0)", "oklch(90% 0 0)", "oklch(100% 0 0)"]
+      },
+      "ink-secondary": {
+        "role": "neutral",
+        "displayName": "Ink Secondary",
+        "canonical": "oklch(70.7% 0.013 260)",
+        "tonalRamp": ["oklch(20% 0.013 260)", "oklch(30% 0.013 260)", "oklch(40% 0.013 260)", "oklch(50% 0.013 260)", "oklch(60% 0.013 260)", "oklch(70% 0.013 260)", "oklch(80% 0.013 260)", "oklch(90% 0.013 260)"]
+      },
+      "ink-muted": {
+        "role": "neutral",
+        "displayName": "Ink Muted",
+        "canonical": "oklch(55.2% 0.013 260)",
+        "tonalRamp": ["oklch(15% 0.013 260)", "oklch(25% 0.013 260)", "oklch(35% 0.013 260)", "oklch(45% 0.013 260)", "oklch(55% 0.013 260)", "oklch(65% 0.013 260)", "oklch(75% 0.013 260)", "oklch(85% 0.013 260)"]
+      },
+      "body-bg": {
+        "role": "neutral",
+        "displayName": "Body BG",
+        "canonical": "oklch(20.9% 0.013 260)",
+        "tonalRamp": ["oklch(10% 0.013 260)", "oklch(15% 0.013 260)", "oklch(20% 0.013 260)", "oklch(25% 0.013 260)", "oklch(30% 0.013 260)", "oklch(35% 0.013 260)", "oklch(40% 0.013 260)", "oklch(50% 0.013 260)"]
+      },
+      "amber-accent": {
+        "role": "secondary",
+        "displayName": "Amber Accent",
+        "canonical": "oklch(82.8% 0.175 86.4)",
+        "tonalRamp": ["oklch(25% 0.175 86.4)", "oklch(35% 0.175 86.4)", "oklch(45% 0.175 86.4)", "oklch(55% 0.175 86.4)", "oklch(65% 0.175 86.4)", "oklch(75% 0.175 86.4)", "oklch(85% 0.175 86.4)", "oklch(95% 0.175 86.4)"]
+      },
+      "blue-accent": {
+        "role": "secondary",
+        "displayName": "Blue Accent",
+        "canonical": "oklch(74.7% 0.16 241.6)",
+        "tonalRamp": ["oklch(20% 0.16 241.6)", "oklch(30% 0.16 241.6)", "oklch(40% 0.16 241.6)", "oklch(50% 0.16 241.6)", "oklch(60% 0.16 241.6)", "oklch(70% 0.16 241.6)", "oklch(80% 0.16 241.6)", "oklch(90% 0.16 241.6)"]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Hero headings on login and home pages only."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Page titles and section headers within cards."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Card titles, modal headers, playlist names."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Primary reading text."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Timestamps, counters, metadata, tabular data."
+      }
+    },
+    "shadows": [
+      {
+        "name": "ambient",
+        "value": "0 4px 6px rgba(0,0,0,0.1)",
+        "purpose": "Modal overlay depth (backdrop-blur-sm is preferred for surface separation). Used minimally."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-out",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Default easing for state transitions."
+      }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" },
+      { "name": "xl", "value": "1280px" },
+      { "name": "2xl", "value": "1536px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Primary call-to-action. Green gradient background, white text.",
+      "html": "<button class=\"ds-btn-primary\">Start Game</button>",
+      "css": ".ds-btn-primary { background: linear-gradient(to right, #4ade80, #16a34a); color: #fff; border: none; border-radius: 12px; padding: 12px 24px; font-size: 1rem; font-weight: 600; font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; cursor: pointer; transition: background 0.2s ease, opacity 0.2s ease; line-height: 1.5; display: inline-flex; align-items: center; justify-content: center; } .ds-btn-primary:hover { background: linear-gradient(to right, #22c55e, #15803d); } .ds-btn-primary:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(74,222,128,0.3); } .ds-btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Secondary action. Ghost-like with subtle border.",
+      "html": "<button class=\"ds-btn-secondary\">Cancel</button>",
+      "css": ".ds-btn-secondary { background: rgba(31,41,55,0.5); color: #9ca3af; border: 1px solid rgba(75,85,99,0.5); border-radius: 12px; padding: 12px 24px; font-size: 1rem; font-weight: 600; font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; cursor: pointer; transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease; line-height: 1.5; display: inline-flex; align-items: center; justify-content: center; } .ds-btn-secondary:hover { background: rgba(55,65,81,0.5); color: #e5e7eb; border-color: rgba(107,114,128,0.5); } .ds-btn-secondary:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(107,114,128,0.3); } .ds-btn-secondary:disabled { opacity: 0.5; cursor: not-allowed; }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Lowest emphasis button — used for game answer choices.",
+      "html": "<button class=\"ds-btn-ghost\"><span class=\"ds-badge\">1</span><span class=\"ds-label\">Song Title</span></button>",
+      "css": ".ds-btn-ghost { background: transparent; color: #d1d5db; border: 2px solid rgba(75,85,99,0.5); border-radius: 12px; padding: 12px 16px; font-size: 0.875rem; font-weight: 600; font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; cursor: pointer; transition: background 0.2s ease, border-color 0.2s ease; line-height: 1.5; display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; } .ds-btn-ghost:hover { border-color: rgba(74,222,128,0.5); background: rgba(55,65,81,0.5); } .ds-btn-ghost:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(74,222,128,0.3); } .ds-btn-ghost:disabled { opacity: 0.5; cursor: not-allowed; } .ds-badge { width: 28px; height: 28px; background: rgba(75,85,99,0.5); border-radius: 9999px; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; color: #d1d5db; flex-shrink: 0; } .ds-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input-default",
+      "description": "Default text field. Dark surface with subtle border.",
+      "html": "<input class=\"ds-input\" type=\"text\" placeholder=\"Enter room code\" />",
+      "css": ".ds-input { width: 100%; background: rgba(55,65,81,0.5); color: #fff; border: 1px solid rgba(75,85,99,0.8); border-radius: 12px; padding: 12px 16px; font-size: 1rem; font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; line-height: 1.5; transition: border-color 0.2s ease, box-shadow 0.2s ease; outline: none; } .ds-input::placeholder { color: #6b7280; } .ds-input:focus { border-color: #4ade80; box-shadow: 0 0 0 3px rgba(74,222,128,0.2); } .ds-input:disabled { opacity: 0.5; cursor: not-allowed; }"
+    },
+    {
+      "name": "Modal",
+      "kind": "custom",
+      "refersTo": "card-default",
+      "description": "Dialog overlay with backdrop blur.",
+      "html": "<div class=\"ds-modal-backdrop\"><div class=\"ds-modal\"><div class=\"ds-modal-header\"><h2 class=\"ds-modal-title\">Settings</h2><button class=\"ds-modal-close\">&times;</button></div><div class=\"ds-modal-body\"><p class=\"ds-modal-text\">Modal content here.</p></div></div></div>",
+      "css": ".ds-modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center; z-index: 40; } .ds-modal { background: rgba(31,41,55,0.95); border: 1px solid rgba(55,65,81,0.5); border-radius: 16px; width: 100%; max-width: 448px; box-shadow: 0 25px 50px rgba(0,0,0,0.25); animation: ds-modal-in 0.15s ease-out; } @keyframes ds-modal-in { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } } .ds-modal-header { display: flex; align-items: center; justify-content: space-between; padding: 24px; border-bottom: 1px solid rgba(55,65,81,0.5); } .ds-modal-title { margin: 0; font-size: 1.25rem; font-weight: 700; color: #fff; font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; } .ds-modal-close { background: none; border: none; color: #9ca3af; font-size: 1.5rem; cursor: pointer; padding: 0; line-height: 1; } .ds-modal-close:hover { color: #fff; } .ds-modal-body { padding: 24px; } .ds-modal-text { color: #9ca3af; font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 1rem; line-height: 1.5; margin: 0; }"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card-default",
+      "description": "Surface container. Semi-transparent with border.",
+      "html": "<div class=\"ds-card\"><div class=\"ds-card-icon\"><svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\"><path d=\"M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3\"/></svg></div><div class=\"ds-card-body\"><h3 class=\"ds-card-title\">Playlist Name</h3><p class=\"ds-card-desc\">42 tracks</p></div></div>",
+      "css": ".ds-card { background: rgba(31,41,55,0.5); border: 1px solid rgba(55,65,81,0.5); border-radius: 16px; padding: 24px; display: flex; align-items: center; gap: 16px; transition: border-color 0.2s ease; font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; } .ds-card:hover { border-color: rgba(107,114,128,0.5); } .ds-card-icon { width: 56px; height: 56px; background: linear-gradient(to bottom right, #fbbf24, #ea580c); border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; color: #fff; } .ds-card-body { flex: 1; min-width: 0; } .ds-card-title { margin: 0; font-size: 1rem; font-weight: 600; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } .ds-card-desc { margin: 4px 0 0; font-size: 0.875rem; color: #9ca3af; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Jam Session",
+    "overview": "A shared room with dimmed lights, a good sound system, and friends gathered around music. The interface is a dark stage where the music preview is the spotlight and everything else recedes into the background. Surfaces are tonal layers rather than physical cards — depth comes from opacity and borders, not shadows — so nothing competes with the listening experience.\n\nThis system explicitly rejects cluttered, noisy game UIs. Every element answers one question: does it help players focus on the music and the guess? If it doesn't, it doesn't belong.",
+    "keyCharacteristics": [
+      "Dark stage background (deep charcoal gradient) as a canvas for the music spotlight",
+      "Verdant glow accent — a lively, energized green inspired by Spotify's identity",
+      "Tonal layering instead of physical shadows — depth through opacity and borders",
+      "Clean rounded shapes (12–16px corners) that feel approachable, not aggressive",
+      "System sans-serif typography throughout — familiar, fast-loading, no friction"
+    ],
+    "rules": [
+      { "name": "The Stage Rule", "body": "The body gradient is a dark room, not a decorative canvas. Every surface overlay is semi-transparent so the stage gradient stays visible. No solid gray-800 fills — always with transparency.", "section": "colors" },
+      { "name": "The Accent Share Rule", "body": "Verdant glow appears on at most 15% of any viewport. Its scarcity is what makes it read as interactive and alive. If a screen has two green elements that aren't the same interactive group, one of them is wrong.", "section": "colors" },
+      { "name": "The System Stack Rule", "body": "No custom webfonts. The system stack loads with the OS, needs no network request, and can't flash or flicker. Custom type would add latency and visual weight that contradicts the Jam Session's focus-forward ethos.", "section": "typography" },
+      { "name": "The Flat-Confidence Rule", "body": "No box shadows on surfaces at rest. A subtle backdrop blur is the ceiling for separation. Shadows imply physicality; this interface is a stage, not a desktop.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do use Verdant Glow sparingly — it's the accent, not the background.",
+      "Do use tonal layering (transparent surfaces + borders) instead of box shadows to create depth.",
+      "Do keep the body gradient visible through semi-transparent surface fills.",
+      "Do use system sans-serif stack for zero-loading typography.",
+      "Do use text-wrap: balance on headings, text-wrap: pretty on long prose.",
+      "Do let the music preview be the focal point — the UI should recede during gameplay."
+    ],
+    "donts": [
+      "Don't use cluttered, noisy game UIs — the interface should never compete with the music.",
+      "Don't use box shadows on cards or containers at rest — depth comes from tonal layering.",
+      "Don't use decorative gradient text (background-clip: text on headings) — the one text-transparent on the home page greeting is a personalized flourish, not a pattern.",
+      "Don't use custom webfonts that add load time — the system stack is fast enough.",
+      "Don't use glassmorphism or backdrop blurs beyond the subtle modal overlay treatment.",
+      "Don't use side-stripe borders on cards — use full borders or nothing.",
+      "Don't stack multiple accent colors in a single view — one accent per surface.",
+      "Don't let placeholder text fall below 4.5:1 contrast against its background."
+    ]
+  }
+}

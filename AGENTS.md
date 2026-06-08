@@ -43,3 +43,7 @@ Run `cf-typegen` after changing wrangler.json bindings.
 - oxfmt for formatting (run `npm run fmt` before committing)
 - No test runner in package.json — E2E via Playwright (`e2e/spotiguess.spec.ts`)
 - `.env` required for local dev; copy `.env.example` for reference
+
+## Design Context
+
+See `PRODUCT.md` (strategic register, users, brand personality) and `DESIGN.md` (visual system, colors, components). North star: **"The Jam Session"** — dark stage, music as spotlight, clean not cluttered. Primary accent: **Verdant Glow** green. Depth via tonal layering, not shadows. System sans-serif stack only.

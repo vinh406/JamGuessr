@@ -200,3 +200,5 @@ dist
 
 /backend
 /test-results
+
+/.agents
