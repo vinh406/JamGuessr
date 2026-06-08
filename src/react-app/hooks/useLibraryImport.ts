@@ -5,7 +5,7 @@ import { toast } from "sonner";
 export function useLibraryImport() {
   const importToastId = useRef<string | number | null>(null);
 
-  const { start, state } = useSSE({
+  const { start, close, state } = useSSE({
     onEvent: (event) => {
       if (event.event === "phase") {
         const d = event.data as { phase: string; label: string };
@@ -41,5 +41,13 @@ export function useLibraryImport() {
     [start],
   );
 
-  return { startImport, state };
+  const cancelImport = useCallback(() => {
+    if (importToastId.current) {
+      toast.dismiss(importToastId.current);
+      importToastId.current = null;
+    }
+    close();
+  }, [close]);
+
+  return { startImport, cancelImport, state };
 }
