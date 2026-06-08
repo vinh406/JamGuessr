@@ -49,19 +49,7 @@ export default function Header({ children }: HeaderProps) {
               onClick={() => setDropdownOpen(!dropdownOpen)}
               className="flex items-center gap-2 cursor-pointer rounded-full border border-gray-700/30 bg-gray-800/50 pr-3 pl-1 py-1 hover:bg-gray-700/50 transition-colors"
             >
-              <span className="relative inline-block w-8 h-8">
-                <DefaultAvatar name={user.name} size={32} />
-                {user.image && (
-                  <img
-                    src={user.image}
-                    alt={user.name}
-                    className="absolute inset-0 w-full h-full rounded-full object-cover"
-                    style={{ opacity: 0 }}
-                    onLoad={(e) => { e.currentTarget.style.opacity = "1"; }}
-                    onError={(e) => { e.currentTarget.style.display = "none"; }}
-                  />
-                )}
-              </span>
+              <DefaultAvatar name={user.name} src={user.image} size={32} />
               <span className="text-gray-300 font-medium hidden md:block">{user.name}</span>
             </button>
 

@@ -169,19 +169,7 @@ export function RoomLobby({
               }`}
             >
               <div className="flex items-center gap-3">
-                <span className="relative inline-block w-10 h-10">
-                  <DefaultAvatar name={player.username} size={40} />
-                  {player.userImage && (
-                    <img
-                      src={player.userImage}
-                      alt={player.username}
-                      className="absolute inset-0 w-full h-full rounded-full object-cover"
-                      style={{ opacity: 0 }}
-                      onLoad={(e) => { e.currentTarget.style.opacity = "1"; }}
-                      onError={(e) => { e.currentTarget.style.display = "none"; }}
-                    />
-                  )}
-                </span>
+                <DefaultAvatar name={player.username} src={player.userImage} size={40} />
                 <div>
                   <p className="text-white font-medium">
                     {player.username}
