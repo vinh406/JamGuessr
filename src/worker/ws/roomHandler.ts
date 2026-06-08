@@ -101,9 +101,7 @@ export class RoomHandler {
 
     // Get remaining users BEFORE deletion (need to find new host from these)
     const sessions = this.roomManager.getSessions();
-    const remainingUserEntries = Array.from(sessions.entries()).filter(
-      ([s]) => s !== ws,
-    );
+    const remainingUserEntries = Array.from(sessions.entries()).filter(([s]) => s !== ws);
 
     // Remove user session FIRST
     this.roomManager.removeUserSession(ws);

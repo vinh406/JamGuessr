@@ -123,7 +123,8 @@ export function RoomLobby({
             <div className="flex-1 min-w-0 text-left">
               <p className="text-white font-medium">Game Settings</p>
               <p className="text-xs text-gray-400">
-                {gameSettings.rounds} rounds · {gameSettings.timePerRound}s · {gameSettings.audioTime}s audio
+                {gameSettings.rounds} rounds · {gameSettings.timePerRound}s ·{" "}
+                {gameSettings.audioTime}s audio
               </p>
             </div>
             <svg

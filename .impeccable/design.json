@@ -8,49 +8,121 @@
         "role": "primary",
         "displayName": "Verdant Glow",
         "canonical": "oklch(79.2% 0.209 151.71)",
-        "tonalRamp": ["oklch(25% 0.209 151.71)", "oklch(35% 0.209 151.71)", "oklch(45% 0.209 151.71)", "oklch(55% 0.209 151.71)", "oklch(65% 0.209 151.71)", "oklch(75% 0.209 151.71)", "oklch(85% 0.209 151.71)", "oklch(95% 0.209 151.71)"]
+        "tonalRamp": [
+          "oklch(25% 0.209 151.71)",
+          "oklch(35% 0.209 151.71)",
+          "oklch(45% 0.209 151.71)",
+          "oklch(55% 0.209 151.71)",
+          "oklch(65% 0.209 151.71)",
+          "oklch(75% 0.209 151.71)",
+          "oklch(85% 0.209 151.71)",
+          "oklch(95% 0.209 151.71)"
+        ]
       },
       "verdant-deep": {
         "role": "primary",
         "displayName": "Verdant Deep",
         "canonical": "oklch(62.7% 0.194 149.21)",
-        "tonalRamp": ["oklch(20% 0.194 149.21)", "oklch(30% 0.194 149.21)", "oklch(40% 0.194 149.21)", "oklch(50% 0.194 149.21)", "oklch(60% 0.194 149.21)", "oklch(70% 0.194 149.21)", "oklch(80% 0.194 149.21)", "oklch(90% 0.194 149.21)"]
+        "tonalRamp": [
+          "oklch(20% 0.194 149.21)",
+          "oklch(30% 0.194 149.21)",
+          "oklch(40% 0.194 149.21)",
+          "oklch(50% 0.194 149.21)",
+          "oklch(60% 0.194 149.21)",
+          "oklch(70% 0.194 149.21)",
+          "oklch(80% 0.194 149.21)",
+          "oklch(90% 0.194 149.21)"
+        ]
       },
       "ink-primary": {
         "role": "neutral",
         "displayName": "Ink Primary",
         "canonical": "oklch(100% 0 0)",
-        "tonalRamp": ["oklch(20% 0 0)", "oklch(35% 0 0)", "oklch(50% 0 0)", "oklch(60% 0 0)", "oklch(70% 0 0)", "oklch(80% 0 0)", "oklch(90% 0 0)", "oklch(100% 0 0)"]
+        "tonalRamp": [
+          "oklch(20% 0 0)",
+          "oklch(35% 0 0)",
+          "oklch(50% 0 0)",
+          "oklch(60% 0 0)",
+          "oklch(70% 0 0)",
+          "oklch(80% 0 0)",
+          "oklch(90% 0 0)",
+          "oklch(100% 0 0)"
+        ]
       },
       "ink-secondary": {
         "role": "neutral",
         "displayName": "Ink Secondary",
         "canonical": "oklch(70.7% 0.013 260)",
-        "tonalRamp": ["oklch(20% 0.013 260)", "oklch(30% 0.013 260)", "oklch(40% 0.013 260)", "oklch(50% 0.013 260)", "oklch(60% 0.013 260)", "oklch(70% 0.013 260)", "oklch(80% 0.013 260)", "oklch(90% 0.013 260)"]
+        "tonalRamp": [
+          "oklch(20% 0.013 260)",
+          "oklch(30% 0.013 260)",
+          "oklch(40% 0.013 260)",
+          "oklch(50% 0.013 260)",
+          "oklch(60% 0.013 260)",
+          "oklch(70% 0.013 260)",
+          "oklch(80% 0.013 260)",
+          "oklch(90% 0.013 260)"
+        ]
       },
       "ink-muted": {
         "role": "neutral",
         "displayName": "Ink Muted",
         "canonical": "oklch(55.2% 0.013 260)",
-        "tonalRamp": ["oklch(15% 0.013 260)", "oklch(25% 0.013 260)", "oklch(35% 0.013 260)", "oklch(45% 0.013 260)", "oklch(55% 0.013 260)", "oklch(65% 0.013 260)", "oklch(75% 0.013 260)", "oklch(85% 0.013 260)"]
+        "tonalRamp": [
+          "oklch(15% 0.013 260)",
+          "oklch(25% 0.013 260)",
+          "oklch(35% 0.013 260)",
+          "oklch(45% 0.013 260)",
+          "oklch(55% 0.013 260)",
+          "oklch(65% 0.013 260)",
+          "oklch(75% 0.013 260)",
+          "oklch(85% 0.013 260)"
+        ]
       },
       "body-bg": {
         "role": "neutral",
         "displayName": "Body BG",
         "canonical": "oklch(20.9% 0.013 260)",
-        "tonalRamp": ["oklch(10% 0.013 260)", "oklch(15% 0.013 260)", "oklch(20% 0.013 260)", "oklch(25% 0.013 260)", "oklch(30% 0.013 260)", "oklch(35% 0.013 260)", "oklch(40% 0.013 260)", "oklch(50% 0.013 260)"]
+        "tonalRamp": [
+          "oklch(10% 0.013 260)",
+          "oklch(15% 0.013 260)",
+          "oklch(20% 0.013 260)",
+          "oklch(25% 0.013 260)",
+          "oklch(30% 0.013 260)",
+          "oklch(35% 0.013 260)",
+          "oklch(40% 0.013 260)",
+          "oklch(50% 0.013 260)"
+        ]
       },
       "amber-accent": {
         "role": "secondary",
         "displayName": "Amber Accent",
         "canonical": "oklch(82.8% 0.175 86.4)",
-        "tonalRamp": ["oklch(25% 0.175 86.4)", "oklch(35% 0.175 86.4)", "oklch(45% 0.175 86.4)", "oklch(55% 0.175 86.4)", "oklch(65% 0.175 86.4)", "oklch(75% 0.175 86.4)", "oklch(85% 0.175 86.4)", "oklch(95% 0.175 86.4)"]
+        "tonalRamp": [
+          "oklch(25% 0.175 86.4)",
+          "oklch(35% 0.175 86.4)",
+          "oklch(45% 0.175 86.4)",
+          "oklch(55% 0.175 86.4)",
+          "oklch(65% 0.175 86.4)",
+          "oklch(75% 0.175 86.4)",
+          "oklch(85% 0.175 86.4)",
+          "oklch(95% 0.175 86.4)"
+        ]
       },
       "blue-accent": {
         "role": "secondary",
         "displayName": "Blue Accent",
         "canonical": "oklch(74.7% 0.16 241.6)",
-        "tonalRamp": ["oklch(20% 0.16 241.6)", "oklch(30% 0.16 241.6)", "oklch(40% 0.16 241.6)", "oklch(50% 0.16 241.6)", "oklch(60% 0.16 241.6)", "oklch(70% 0.16 241.6)", "oklch(80% 0.16 241.6)", "oklch(90% 0.16 241.6)"]
+        "tonalRamp": [
+          "oklch(20% 0.16 241.6)",
+          "oklch(30% 0.16 241.6)",
+          "oklch(40% 0.16 241.6)",
+          "oklch(50% 0.16 241.6)",
+          "oklch(60% 0.16 241.6)",
+          "oklch(70% 0.16 241.6)",
+          "oklch(80% 0.16 241.6)",
+          "oklch(90% 0.16 241.6)"
+        ]
       }
     },
     "typographyMeta": {
@@ -158,10 +230,26 @@
       "System sans-serif typography throughout — familiar, fast-loading, no friction"
     ],
     "rules": [
-      { "name": "The Stage Rule", "body": "The body gradient is a dark room, not a decorative canvas. Every surface overlay is semi-transparent so the stage gradient stays visible. No solid gray-800 fills — always with transparency.", "section": "colors" },
-      { "name": "The Accent Share Rule", "body": "Verdant glow appears on at most 15% of any viewport. Its scarcity is what makes it read as interactive and alive. If a screen has two green elements that aren't the same interactive group, one of them is wrong.", "section": "colors" },
-      { "name": "The System Stack Rule", "body": "No custom webfonts. The system stack loads with the OS, needs no network request, and can't flash or flicker. Custom type would add latency and visual weight that contradicts the Jam Session's focus-forward ethos.", "section": "typography" },
-      { "name": "The Flat-Confidence Rule", "body": "No box shadows on surfaces at rest. A subtle backdrop blur is the ceiling for separation. Shadows imply physicality; this interface is a stage, not a desktop.", "section": "elevation" }
+      {
+        "name": "The Stage Rule",
+        "body": "The body gradient is a dark room, not a decorative canvas. Every surface overlay is semi-transparent so the stage gradient stays visible. No solid gray-800 fills — always with transparency.",
+        "section": "colors"
+      },
+      {
+        "name": "The Accent Share Rule",
+        "body": "Verdant glow appears on at most 15% of any viewport. Its scarcity is what makes it read as interactive and alive. If a screen has two green elements that aren't the same interactive group, one of them is wrong.",
+        "section": "colors"
+      },
+      {
+        "name": "The System Stack Rule",
+        "body": "No custom webfonts. The system stack loads with the OS, needs no network request, and can't flash or flicker. Custom type would add latency and visual weight that contradicts the Jam Session's focus-forward ethos.",
+        "section": "typography"
+      },
+      {
+        "name": "The Flat-Confidence Rule",
+        "body": "No box shadows on surfaces at rest. A subtle backdrop blur is the ceiling for separation. Shadows imply physicality; this interface is a stage, not a desktop.",
+        "section": "elevation"
+      }
     ],
     "dos": [
       "Do use Verdant Glow sparingly — it's the accent, not the background.",

@@ -197,7 +197,9 @@ export default function LibraryPage() {
       }
       setLoading(false);
     })();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [fetchItems, fetchStats]);
 
   const refetchItems = useCallback(async () => {
@@ -421,15 +423,35 @@ export default function LibraryPage() {
           </div>
           <div className="flex flex-wrap items-center gap-3 sm:ml-auto">
             <div className="bg-gray-800/50 rounded-xl px-4 py-2 border border-gray-700/30 flex items-center gap-2">
-              <svg className="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+              <svg
+                className="w-4 h-4 text-amber-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"
+                />
               </svg>
               <span className="text-white font-semibold text-sm">{stats?.totalSongs ?? 0}</span>
               <span className="text-amber-400/80 text-xs">tracks</span>
             </div>
             <div className="bg-gray-800/50 rounded-xl px-4 py-2 border border-gray-700/30 flex items-center gap-2">
-              <svg className="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+              <svg
+                className="w-4 h-4 text-amber-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M4 6h16M4 10h16M4 14h16M4 18h16"
+                />
               </svg>
               <span className="text-white font-semibold text-sm">{stats?.totalPlaylists ?? 0}</span>
               <span className="text-amber-400/80 text-xs">playlists</span>
@@ -452,7 +474,6 @@ export default function LibraryPage() {
 
         {!loading && (
           <>
-
             <div className="bg-gray-800/40 rounded-2xl border border-gray-700/50 p-6 mb-8">
               <h2 className="text-lg font-bold text-white mb-4">Add from Spotify</h2>
               <div className="flex gap-3">

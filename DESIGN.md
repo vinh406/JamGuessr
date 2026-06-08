@@ -107,6 +107,7 @@ A shared room with dimmed lights, a good sound system, and friends gathered arou
 This system explicitly rejects cluttered, noisy game UIs. Every element answers one question: does it help players focus on the music and the guess? If it doesn't, it doesn't belong.
 
 **Key Characteristics:**
+
 - Dark stage background (deep charcoal gradient) as a canvas for the music spotlight
 - Verdant glow accent — a lively, energized green inspired by Spotify's identity
 - Tonal layering instead of physical shadows — depth through opacity and borders
@@ -118,19 +119,23 @@ This system explicitly rejects cluttered, noisy game UIs. Every element answers 
 A restrained palette anchored by the dark stage and a single vibrant green accent. Secondary colors (amber, blue, purple) appear sparingly for specific functional contexts — library, blend creation, settings — never as decoration.
 
 ### Primary
+
 - **Verdant Glow** (`#4ade80`): The primary accent — buttons, active states, the music icon, timer bars when healthy. A lively, fresh green that pops against the dark background. Used on typically ≤15% of any screen.
 - **Verdant Deep** (`#16a34a`): Hover state anchor for verdant glow. Deeper, more grounded.
 
 ### Secondary
+
 - **Amber Accent** (`#fbbf24`): Library iconography and stats. Warmer, more editorial — signals "your collection" rather than "play now."
 - **Blue Accent** (`#60a5fa`): Alternative button variant and round-complete indicators. Used where green would create confusion with game state.
 
 ### Tertiary
+
 - **Purple Accent** (`#a855f7`): Blend creation only — a one-off gradient treat for a collaborative feature.
 - **Yellow Bright** (`#facc15`): Streak indicators and rank-1 winner highlights. Celebratory, sparing.
 - **Red Bright** (`#f87171`): Urgency (countdown under 5s), errors, destructive actions.
 
 ### Neutral
+
 - **Body BG** (`#111827`): The stage floor. Deep near-black charcoal.
 - **Body BG Mid** (`#1f2937`): The stage walls. One step lighter for backdrop surfaces.
 - **Surface Elevated** (`rgba(31,41,55,0.5)`): Card and container fills. Semi-transparent so the stage gradient breathes through.
@@ -154,6 +159,7 @@ A restrained palette anchored by the dark stage and a single vibrant green accen
 **Character:** Zero-friction, fast-loading, familiar. No custom fonts — the music is the personality, not the typeface. The system stack loads instantly, matches every OS's native feel, and keeps the interface snappy.
 
 ### Hierarchy
+
 - **Display** (700, `clamp(2.5rem, 5vw, 3.75rem)`, 1.2): Hero headings on the login and home pages. Use `text-wrap: balance`.
 - **Headline** (700, 1.875rem, 1.25): Page titles ("My Library", "Game Room"), section headers within cards. Use `text-wrap: balance`.
 - **Title** (600, 1.25rem, 1.4): Card titles, modal headers, playlist names.
@@ -220,6 +226,7 @@ Cards and containers use a semi-transparent surface fill (`surface-elevated`) wi
 ## 6. Do's and Don'ts
 
 ### Do:
+
 - **Do** use Verdant Glow sparingly — it's the accent, not the background.
 - **Do** use tonal layering (transparent surfaces + borders) instead of box shadows to create depth.
 - **Do** keep the body gradient visible through semi-transparent surface fills.
@@ -228,6 +235,7 @@ Cards and containers use a semi-transparent surface fill (`surface-elevated`) wi
 - **Do** let the music preview be the focal point — the UI should recede during gameplay.
 
 ### Don't:
+
 - **Don't** use cluttered, noisy game UIs — the interface should never compete with the music.
 - **Don't** use box shadows on cards or containers at rest — depth comes from tonal layering.
 - **Don't** use decorative gradient text (`background-clip: text` on headings) — the one `text-transparent` on the home page greeting is a personalized flourish, not a pattern.

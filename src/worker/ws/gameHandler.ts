@@ -271,10 +271,7 @@ export class GameHandler {
 
       if (result.warnings.length > 0) {
         for (const warning of result.warnings) {
-          broadcastToRoom(
-            this.roomManager.getSessions(),
-            MessageBuilders.error(warning),
-          );
+          broadcastToRoom(this.roomManager.getSessions(), MessageBuilders.error(warning));
         }
       }
 
@@ -367,17 +364,12 @@ export class GameHandler {
     const leaderboardMessage = MessageBuilders.leaderboardUpdate(scores);
     broadcastToRoom(this.roomManager.getSessions(), leaderboardMessage);
 
-    this.roomManager.checkAndEndRoundEarly(() =>
-      this.handleEndRoundInternal(session.room),
-    );
+    this.roomManager.checkAndEndRoundEarly(() => this.handleEndRoundInternal(session.room));
   }
 
   private returnToLobby(room: string): void {
     this.roomManager.resetGame();
     const unifiedState = this.roomManager.getUnifiedRoomState(room);
-    broadcastToRoom(
-      this.roomManager.getSessions(),
-      MessageBuilders.unifiedRoomState(unifiedState),
-    );
+    broadcastToRoom(this.roomManager.getSessions(), MessageBuilders.unifiedRoomState(unifiedState));
   }
 }
