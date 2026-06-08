@@ -189,10 +189,16 @@ function createUserSettingsHandlers() {
       return c.json({ error: "Avatar not found" }, 404);
     }
 
+    const etag = object.httpEtag;
+    const ifNoneMatch = c.req.raw.headers.get("If-None-Match");
+    if (etag && ifNoneMatch === etag) {
+      return new Response(null, { status: 304 });
+    }
+
     const headers = new Headers();
     headers.set("Content-Type", object.httpMetadata?.contentType ?? "application/octet-stream");
-    headers.set("Cache-Control", "public, max-age=3600");
-    headers.set("ETag", object.httpEtag);
+    headers.set("Cache-Control", "private, no-cache");
+    if (etag) headers.set("ETag", etag);
     headers.set("Content-Length", String(object.size));
 
     return new Response(object.body, { status: 200, headers });
