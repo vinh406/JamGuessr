@@ -5,7 +5,7 @@ interface RoomLobbyProps {
   roomName: string;
   players: Player[];
   selectedPlaylist: Playlist | null;
-  gameSettings: { rounds: number; timePerRound: number };
+  gameSettings: { rounds: number; timePerRound: number; audioTime: number };
   isHost: boolean;
   isReady: boolean;
   canStartGame: boolean;
@@ -123,7 +123,7 @@ export function RoomLobby({
             <div className="flex-1 min-w-0 text-left">
               <p className="text-white font-medium">Game Settings</p>
               <p className="text-xs text-gray-400">
-                {gameSettings.rounds} rounds, {gameSettings.timePerRound}s per round
+                {gameSettings.rounds} rounds · {gameSettings.timePerRound}s · {gameSettings.audioTime}s audio
               </p>
             </div>
             <svg
