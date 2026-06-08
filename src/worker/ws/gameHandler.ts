@@ -254,6 +254,63 @@ export class GameHandler {
 
   private async handleContinueGame(room: string): Promise<void> {
     const settings = this.roomManager.getRoomSettings();
+    const roomPlaylist = this.roomManager.getRoomPlaylist();
+
+    // For blend, regenerate fresh songs from the library each time
+    if (roomPlaylist?.id === "blend") {
+      const gameState = this.roomManager.getUnifiedRoomState(room).game;
+      const playedSpotifyIds = gameState.songs.map((s) => s.id);
+      const roomUsers = this.roomManager.getUsersInRoom(room);
+      const userIds = roomUsers.map((u) => u.userId);
+      const targetCount = Math.max(settings.rounds * 2, 20);
+      const dbUrl = this.roomManager.getDatabaseUrl();
+      const lib = createLibraryService(dbUrl);
+      const result = await lib.getRoomBlendedPlaylist(userIds, targetCount, {
+        minTracksPerUser: 5,
+        excludeSpotifyIds: playedSpotifyIds,
+      });
+      let songs = result.songs;
+
+      if (result.warnings.length > 0) {
+        for (const warning of result.warnings) {
+          broadcastToRoom(
+            this.roomManager.getSessions(),
+            room,
+            MessageBuilders.error(warning),
+          );
+        }
+      }
+
+      songs = shuffleArray(songs);
+      songs = await ensurePreviewsForGame(songs, settings.rounds);
+
+      const songsWithPreviews = songs.filter((s) => s.previewUrl);
+      if (songsWithPreviews.length < settings.rounds) {
+        broadcastToRoom(
+          this.roomManager.getSessions(),
+          room,
+          MessageBuilders.error(
+            "Not enough songs available. Please set a larger Spotify playlist.",
+          ),
+        );
+        return;
+      }
+
+      this.roomManager.initGame(songs, settings.rounds, room, false);
+
+      const gameStartedMessage = MessageBuilders.gameStarted(
+        settings.rounds,
+        settings.timePerRound,
+        settings.audioTime,
+      );
+      broadcastToRoom(this.roomManager.getSessions(), room, gameStartedMessage);
+
+      setTimeout(() => {
+        this.handleStartRoundInternal(room);
+      }, 2000);
+      return;
+    }
+
     const gameState = this.roomManager.getUnifiedRoomState(room).game;
     const remaining = gameState.songs.slice(gameState.currentSongIndex);
 

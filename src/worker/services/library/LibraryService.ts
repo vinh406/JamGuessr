@@ -1021,7 +1021,7 @@ export function createLibraryService(
     async getRoomBlendedPlaylist(
       userIds: string[],
       targetTrackCount: number = 30,
-      options?: { minTracksPerUser?: number },
+      options?: { minTracksPerUser?: number; excludeSpotifyIds?: string[] },
     ): Promise<BlendResult> {
       const warnings: string[] = [];
 
@@ -1029,7 +1029,11 @@ export function createLibraryService(
 
       const userLibraries: { userId: string; tracks: LibraryTrackRecord[] }[] = [];
       for (const userId of userIds) {
-        const tracks = userTracksMap.get(userId) || [];
+        let tracks = userTracksMap.get(userId) || [];
+        if (options?.excludeSpotifyIds?.length) {
+          const exclude = new Set(options.excludeSpotifyIds);
+          tracks = tracks.filter((t) => !exclude.has(t.spotifyId));
+        }
         userLibraries.push({ userId, tracks });
       }
 
