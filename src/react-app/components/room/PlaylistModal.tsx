@@ -1,5 +1,6 @@
 import type { Playlist } from "../../../shared/types";
 import { Modal } from "../common/Modal";
+import LoadingSpinner from "../common/LoadingSpinner";
 import { Input, Button } from "../ui";
 
 interface PlaylistModalProps {
@@ -83,7 +84,7 @@ export function PlaylistModal({
       {/* Loading State */}
       {isLoading && (
         <div className="flex items-center justify-center py-12">
-          <div className="w-8 h-8 border-4 border-green-500 border-t-transparent rounded-full animate-spin"></div>
+          <LoadingSpinner size="lg" className="text-green-500" />
           <span className="ml-3 text-gray-400">Loading playlists...</span>
         </div>
       )}
