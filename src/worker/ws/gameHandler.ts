@@ -65,7 +65,7 @@ export class GameHandler {
       return;
     }
 
-    const roomUsers = this.roomManager.getUsersInRoom(session.room);
+    const roomUsers = this.roomManager.getAllUsers();
 
     if (roomUsers.length < 1) {
       this.roomManager.cancelStartGame();
@@ -79,7 +79,6 @@ export class GameHandler {
     // Broadcast game_started immediately so all clients see "Game starting..."
     broadcastToRoom(
       this.roomManager.getSessions(),
-      session.room,
       MessageBuilders.gameStarted(settings.rounds, settings.timePerRound, settings.audioTime),
     );
 
@@ -126,13 +125,12 @@ export class GameHandler {
       );
       broadcastToRoom(
         this.roomManager.getSessions(),
-        session.room,
         MessageBuilders.unifiedRoomState(this.roomManager.getUnifiedRoomState(session.room)),
       );
       return;
     }
 
-    this.roomManager.initGame(songs, settings.rounds, session.room);
+    this.roomManager.initGame(songs, settings.rounds);
 
     this.handleStartRoundInternal(session.room);
   }
@@ -154,7 +152,7 @@ export class GameHandler {
       roundData.endTime,
       roundData.duration,
     );
-    broadcastToRoom(this.roomManager.getSessions(), room, roundStartedMessage);
+    broadcastToRoom(this.roomManager.getSessions(), roundStartedMessage);
   }
 
   private handleEndRoundInternal(room: string): void {
@@ -173,10 +171,10 @@ export class GameHandler {
         scores,
         nextRoundAt,
       );
-      broadcastToRoom(this.roomManager.getSessions(), room, roundEndedMessage);
+      broadcastToRoom(this.roomManager.getSessions(), roundEndedMessage);
 
       const leaderboardMessage = MessageBuilders.leaderboardUpdate(scores);
-      broadcastToRoom(this.roomManager.getSessions(), room, leaderboardMessage);
+      broadcastToRoom(this.roomManager.getSessions(), leaderboardMessage);
 
       setTimeout(() => {
         this.handleStartRoundInternal(room);
@@ -194,10 +192,10 @@ export class GameHandler {
         true, // isFinal
         voteEndsAt,
       );
-      broadcastToRoom(this.roomManager.getSessions(), room, roundEndedMessage);
+      broadcastToRoom(this.roomManager.getSessions(), roundEndedMessage);
 
       const leaderboardMessage = MessageBuilders.leaderboardUpdate(scores);
-      broadcastToRoom(this.roomManager.getSessions(), room, leaderboardMessage);
+      broadcastToRoom(this.roomManager.getSessions(), leaderboardMessage);
 
       // Setup the timer to return to lobby
       if (this.voteTimer) clearTimeout(this.voteTimer);
@@ -224,7 +222,7 @@ export class GameHandler {
     const votes = this.roomManager.getVotes();
     const voteEndsAt = this.roomManager.getVoteEndsAt() || 0;
     const voteUpdateMessage = MessageBuilders.voteUpdate(votes, voteEndsAt);
-    broadcastToRoom(this.roomManager.getSessions(), session.room, voteUpdateMessage);
+    broadcastToRoom(this.roomManager.getSessions(), voteUpdateMessage);
 
     if (!data.vote) {
       // Someone voted NO, immediately return to lobby after a short delay
@@ -236,7 +234,7 @@ export class GameHandler {
       return;
     }
 
-    if (this.roomManager.allPlayersVoted(session.room)) {
+    if (this.roomManager.allPlayersVoted()) {
       if (this.roomManager.didAllPlayersVoteYes()) {
         if (this.voteTimer) clearTimeout(this.voteTimer);
         this.voteTimer = null;
@@ -260,7 +258,7 @@ export class GameHandler {
     if (roomPlaylist?.id === "blend") {
       const gameState = this.roomManager.getUnifiedRoomState(room).game;
       const playedSpotifyIds = gameState.songs.map((s) => s.id);
-      const roomUsers = this.roomManager.getUsersInRoom(room);
+      const roomUsers = this.roomManager.getAllUsers();
       const userIds = roomUsers.map((u) => u.userId);
       const targetCount = Math.max(settings.rounds * 2, 20);
       const dbUrl = this.roomManager.getDatabaseUrl();
@@ -275,7 +273,6 @@ export class GameHandler {
         for (const warning of result.warnings) {
           broadcastToRoom(
             this.roomManager.getSessions(),
-            room,
             MessageBuilders.error(warning),
           );
         }
@@ -288,7 +285,6 @@ export class GameHandler {
       if (songsWithPreviews.length < settings.rounds) {
         broadcastToRoom(
           this.roomManager.getSessions(),
-          room,
           MessageBuilders.error(
             "Not enough songs available. Please set a larger Spotify playlist.",
           ),
@@ -296,14 +292,14 @@ export class GameHandler {
         return;
       }
 
-      this.roomManager.initGame(songs, settings.rounds, room, false);
+      this.roomManager.initGame(songs, settings.rounds, false);
 
       const gameStartedMessage = MessageBuilders.gameStarted(
         settings.rounds,
         settings.timePerRound,
         settings.audioTime,
       );
-      broadcastToRoom(this.roomManager.getSessions(), room, gameStartedMessage);
+      broadcastToRoom(this.roomManager.getSessions(), gameStartedMessage);
 
       setTimeout(() => {
         this.handleStartRoundInternal(room);
@@ -318,7 +314,7 @@ export class GameHandler {
       const errorMessage = MessageBuilders.error(
         "Not enough songs available. Please set a larger Spotify playlist.",
       );
-      broadcastToRoom(this.roomManager.getSessions(), room, errorMessage);
+      broadcastToRoom(this.roomManager.getSessions(), errorMessage);
       return;
     }
 
@@ -328,7 +324,7 @@ export class GameHandler {
       const errorMessage = MessageBuilders.error(
         "Not enough songs available. Please set a larger Spotify playlist.",
       );
-      broadcastToRoom(this.roomManager.getSessions(), room, errorMessage);
+      broadcastToRoom(this.roomManager.getSessions(), errorMessage);
       return;
     }
 
@@ -336,14 +332,14 @@ export class GameHandler {
     const played = gameState.songs.slice(0, gameState.currentSongIndex);
     const allSongs = [...played, ...ensured];
 
-    this.roomManager.initGame(allSongs, settings.rounds, room, true);
+    this.roomManager.initGame(allSongs, settings.rounds, true);
 
     const gameStartedMessage = MessageBuilders.gameStarted(
       settings.rounds,
       settings.timePerRound,
       settings.audioTime,
     );
-    broadcastToRoom(this.roomManager.getSessions(), room, gameStartedMessage);
+    broadcastToRoom(this.roomManager.getSessions(), gameStartedMessage);
 
     setTimeout(() => {
       this.handleStartRoundInternal(room);
@@ -369,19 +365,18 @@ export class GameHandler {
 
     const scores = this.roomManager.getScores();
     const leaderboardMessage = MessageBuilders.leaderboardUpdate(scores);
-    broadcastToRoom(this.roomManager.getSessions(), session.room, leaderboardMessage);
+    broadcastToRoom(this.roomManager.getSessions(), leaderboardMessage);
 
-    this.roomManager.checkAndEndRoundEarly(session.room, () =>
+    this.roomManager.checkAndEndRoundEarly(() =>
       this.handleEndRoundInternal(session.room),
     );
   }
 
   private returnToLobby(room: string): void {
-    this.roomManager.resetGame(room);
+    this.roomManager.resetGame();
     const unifiedState = this.roomManager.getUnifiedRoomState(room);
     broadcastToRoom(
       this.roomManager.getSessions(),
-      room,
       MessageBuilders.unifiedRoomState(unifiedState),
     );
   }

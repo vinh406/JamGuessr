@@ -59,12 +59,12 @@ export class RoomManager {
     this.sessionManager.removeUserSession(ws);
   }
 
-  findSessionByUserId(userId: string, room: string): WebSocket | undefined {
-    return this.sessionManager.findSessionByUserId(userId, room);
+  findSessionByUserId(userId: string): WebSocket | undefined {
+    return this.sessionManager.findSessionByUserId(userId);
   }
 
-  getUsersInRoom(room: string): UserSession[] {
-    return this.sessionManager.getUsersInRoom(room);
+  getAllUsers(): UserSession[] {
+    return this.sessionManager.getAllUsers();
   }
 
   // Settings Management
@@ -122,8 +122,8 @@ export class RoomManager {
     return this.gameEngine.getGameState().currentRound;
   }
 
-  initGame(songs: Song[], rounds: number, room: string, isContinuing: boolean = false): void {
-    const players = this.getUsersInRoom(room).map((u) => ({
+  initGame(songs: Song[], rounds: number, isContinuing: boolean = false): void {
+    const players = this.getAllUsers().map((u) => ({
       userId: u.userId,
       username: u.username,
       userImage: u.userImage ?? undefined,
@@ -148,8 +148,8 @@ export class RoomManager {
     return roundData;
   }
 
-  checkAndEndRoundEarly(room: string, endRoundCallback: () => void): boolean {
-    const playersInRoom = this.getUsersInRoom(room).map((u) => u.userId);
+  checkAndEndRoundEarly(endRoundCallback: () => void): boolean {
+    const playersInRoom = this.getAllUsers().map((u) => u.userId);
     if (this.gameEngine.allPlayersAnswered(playersInRoom)) {
       const state = this.gameEngine.getGameState();
       const timeElapsed = Date.now() - state.roundStartTime;
@@ -189,13 +189,13 @@ export class RoomManager {
     return this.gameEngine.endGame(voteDurationMs);
   }
 
-  resetGame(room: string): void {
+  resetGame(): void {
     if (this.roundTimer) {
       clearTimeout(this.roundTimer);
       this.roundTimer = null;
     }
     this.gameEngine.reset();
-    this.sessionManager.resetReadyStates(room);
+    this.sessionManager.resetReadyStates();
   }
 
   recordVote(userId: string, vote: boolean): void {
@@ -210,8 +210,8 @@ export class RoomManager {
     return this.gameEngine.getVoteEndsAt();
   }
 
-  allPlayersVoted(room: string): boolean {
-    const playersInRoom = this.getUsersInRoom(room).map((u) => u.userId);
+  allPlayersVoted(): boolean {
+    const playersInRoom = this.getAllUsers().map((u) => u.userId);
     return this.gameEngine.allPlayersVoted(playersInRoom);
   }
 
@@ -219,8 +219,8 @@ export class RoomManager {
     return this.gameEngine.didAllPlayersVoteYes();
   }
 
-  resetReadyStates(room: string): void {
-    this.sessionManager.resetReadyStates(room);
+  resetReadyStates(): void {
+    this.sessionManager.resetReadyStates();
   }
 
   tryStartGame(): boolean {
@@ -246,7 +246,7 @@ export class RoomManager {
       room,
       settings: this.roomSettings,
       playlist: this.roomPlaylist,
-      users: this.getUsersInRoom(room),
+      users: this.getAllUsers(),
       game: this.gameEngine.getGameState(),
     };
   }

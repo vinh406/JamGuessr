@@ -28,6 +28,6 @@ export class ChatHandler {
       session.room,
     );
 
-    broadcastToRoom(this.roomManager.getSessions(), session.room, message);
+    broadcastToRoom(this.roomManager.getSessions(), message);
   }
 }

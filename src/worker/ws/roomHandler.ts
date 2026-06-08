@@ -42,7 +42,7 @@ export class RoomHandler {
     }
 
     // Check if user is already in this room - allow reconnection
-    const existingWs = this.roomManager.findSessionByUserId(userId, room);
+    const existingWs = this.roomManager.findSessionByUserId(userId);
     if (existingWs) {
       // Remove existing session - user is reconnecting
       this.roomManager.removeUserSession(existingWs);
@@ -54,7 +54,7 @@ export class RoomHandler {
     }
 
     // Check if this is the first player (becomes host)
-    const existingPlayers = this.roomManager.getUsersInRoom(room);
+    const existingPlayers = this.roomManager.getAllUsers();
     const isFirstPlayer = existingPlayers.length === 0;
 
     // Create user session
@@ -73,7 +73,7 @@ export class RoomHandler {
     ws.serializeAttachment(session);
 
     // Get all users in room (including the new one)
-    const roomUsers = this.roomManager.getUsersInRoom(room);
+    const roomUsers = this.roomManager.getAllUsers();
 
     // Notify all users in the room about the new player
     const joinMessage = MessageBuilders.userJoined(
@@ -83,7 +83,7 @@ export class RoomHandler {
       isFirstPlayer,
       roomUsers,
     );
-    broadcastToRoom(this.roomManager.getSessions(), room, joinMessage);
+    broadcastToRoom(this.roomManager.getSessions(), joinMessage);
 
     // Add player to scores if game is already in progress
     const gamePhase = this.roomManager.getCurrentGamePhase();
@@ -102,7 +102,7 @@ export class RoomHandler {
     // Get remaining users BEFORE deletion (need to find new host from these)
     const sessions = this.roomManager.getSessions();
     const remainingUserEntries = Array.from(sessions.entries()).filter(
-      ([s, sess]) => s !== ws && sess.room === room,
+      ([s]) => s !== ws,
     );
 
     // Remove user session FIRST
@@ -126,15 +126,15 @@ export class RoomHandler {
         `${newHostSession.username} is now the host`,
         { newHostId: newHostSession.userId, newHostName: newHostSession.username },
       );
-      broadcastToRoom(this.roomManager.getSessions(), room, hostChangedMessage);
+      broadcastToRoom(this.roomManager.getSessions(), hostChangedMessage);
     }
 
     // Get remaining users in the room (after host transfer)
-    const roomUsers = this.roomManager.getUsersInRoom(room);
+    const roomUsers = this.roomManager.getAllUsers();
 
     // Notify remaining users with updated user list
     const leaveMessage = MessageBuilders.userLeft(username, userId, room, roomUsers);
-    broadcastToRoom(this.roomManager.getSessions(), room, leaveMessage);
+    broadcastToRoom(this.roomManager.getSessions(), leaveMessage);
   }
 
   async handleReady(ws: WebSocket): Promise<void> {
@@ -146,9 +146,9 @@ export class RoomHandler {
     this.roomManager.setUserSession(ws, session);
 
     // Broadcast updated user list (includes ready state)
-    const users = this.roomManager.getUsersInRoom(session.room);
+    const users = this.roomManager.getAllUsers();
     const usersMessage = MessageBuilders.usersUpdated(users);
-    broadcastToRoom(this.roomManager.getSessions(), session.room, usersMessage);
+    broadcastToRoom(this.roomManager.getSessions(), usersMessage);
   }
 
   async handleLeave(ws: WebSocket): Promise<void> {
@@ -174,7 +174,7 @@ export class RoomHandler {
 
     // Broadcast settings update
     const settingsMessage = MessageBuilders.settingsUpdated(updatedSettings);
-    broadcastToRoom(this.roomManager.getSessions(), session.room, settingsMessage);
+    broadcastToRoom(this.roomManager.getSessions(), settingsMessage);
   }
 
   async handleUpdatePlaylist(ws: WebSocket, data: UpdatePlaylistMessage): Promise<void> {
@@ -195,6 +195,6 @@ export class RoomHandler {
 
     // Broadcast playlist update
     const playlistMessage = MessageBuilders.playlistUpdated(playlist);
-    broadcastToRoom(this.roomManager.getSessions(), session.room, playlistMessage);
+    broadcastToRoom(this.roomManager.getSessions(), playlistMessage);
   }
 }

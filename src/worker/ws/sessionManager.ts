@@ -27,31 +27,23 @@ export class SessionManager {
     this.sessions.delete(ws);
   }
 
-  findSessionByUserId(userId: string, room: string): WebSocket | undefined {
+  findSessionByUserId(userId: string): WebSocket | undefined {
     for (const [ws, session] of this.sessions.entries()) {
-      if (session.userId === userId && session.room === room) {
+      if (session.userId === userId) {
         return ws;
       }
     }
     return undefined;
   }
 
-  getUsersInRoom(room: string): UserSession[] {
-    const users: UserSession[] = [];
-    this.sessions.forEach((session) => {
-      if (session.room === room) {
-        users.push({ ...session });
-      }
-    });
-    return users;
+  getAllUsers(): UserSession[] {
+    return Array.from(this.sessions.values()).map((s) => ({ ...s }));
   }
 
-  resetReadyStates(room: string): void {
+  resetReadyStates(): void {
     this.sessions.forEach((session, ws) => {
-      if (session.room === room) {
-        session.isReady = false;
-        ws.serializeAttachment({ ...session });
-      }
+      session.isReady = false;
+      ws.serializeAttachment({ ...session });
     });
   }
 }

@@ -1,24 +1,22 @@
 import type { OutgoingMessage, BroadcastMessage, UserSession } from "../../shared/types";
 
 /**
- * Broadcasts a message to all WebSocket connections in a specific room
+ * Broadcasts a message to all WebSocket connections in the room.
+ * All sessions in this DO belong to the same room (DO is per-room).
  */
 export function broadcastToRoom(
   sessions: Map<WebSocket, UserSession>,
-  room: string,
   message: OutgoingMessage,
 ): void {
-  const roomUsers = Array.from(sessions.entries()).filter(([, session]) => session.room === room);
-
   const broadcastMessage: BroadcastMessage = {
     ...message,
-    connections: roomUsers.length,
+    connections: sessions.size,
     totalConnections: sessions.size,
   };
 
   const messageString = JSON.stringify(broadcastMessage);
 
-  roomUsers.forEach(([socket]) => {
+  sessions.forEach((_session, socket) => {
     try {
       socket.send(messageString);
     } catch (error) {
