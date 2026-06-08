@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { useAuth } from "../hooks/useAuth";
+import { AppIcon, DefaultAvatar } from "./ui";
 import type { ReactNode } from "react";
 
 interface HeaderProps {
@@ -36,11 +37,7 @@ export default function Header({ children }: HeaderProps) {
     <header className="border-b border-gray-700/50 bg-gray-900/50 backdrop-blur-sm">
       <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
         <button onClick={() => navigate("/")} className="flex items-center gap-3 cursor-pointer">
-          <div className="w-10 h-10 bg-gradient-to-br from-green-400 to-green-600 rounded-full flex items-center justify-center">
-            <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
-            </svg>
-          </div>
+          <AppIcon className="w-10 h-10" />
           <span className="text-2xl font-bold text-white">Spotiguess</span>
         </button>
 
@@ -52,9 +49,19 @@ export default function Header({ children }: HeaderProps) {
               onClick={() => setDropdownOpen(!dropdownOpen)}
               className="flex items-center gap-2 cursor-pointer rounded-full border border-gray-700/30 bg-gray-800/50 pr-3 pl-1 py-1 hover:bg-gray-700/50 transition-colors"
             >
-              {user.image && (
-                <img src={user.image} alt={user.name} className="w-8 h-8 rounded-full" />
-              )}
+              <span className="relative inline-block w-8 h-8">
+                <DefaultAvatar name={user.name} size={32} />
+                {user.image && (
+                  <img
+                    src={user.image}
+                    alt={user.name}
+                    className="absolute inset-0 w-full h-full rounded-full object-cover"
+                    style={{ opacity: 0 }}
+                    onLoad={(e) => { e.currentTarget.style.opacity = "1"; }}
+                    onError={(e) => { e.currentTarget.style.display = "none"; }}
+                  />
+                )}
+              </span>
               <span className="text-gray-300 font-medium hidden md:block">{user.name}</span>
             </button>
 
