@@ -99,17 +99,19 @@ export default function GameDetailPage() {
   if (loading) {
     return (
     <PageLayout>
-        <main className="max-w-3xl mx-auto px-6 py-8">
+        <main className="max-w-7xl mx-auto px-6 py-8">
           <div className="mb-6 w-32 h-4 bg-gray-700/50 rounded animate-pulse" />
           <div className="space-y-6">
             <SkeletonBlock />
-            <div>
-              <div className="mb-4 w-32 h-5 bg-gray-700/50 rounded animate-pulse" />
-              <SkeletonList rows={5} />
-            </div>
-            <div>
-              <div className="mb-4 w-24 h-5 bg-gray-700/50 rounded animate-pulse" />
-              <SkeletonList rows={4} />
+            <div className="lg:grid lg:grid-cols-2 lg:gap-6 space-y-6 lg:space-y-0">
+              <div>
+                <div className="mb-4 w-32 h-5 bg-gray-700/50 rounded animate-pulse" />
+                <SkeletonList rows={5} />
+              </div>
+              <div>
+                <div className="mb-4 w-24 h-5 bg-gray-700/50 rounded animate-pulse" />
+                <SkeletonList rows={4} />
+              </div>
             </div>
           </div>
         </main>
@@ -121,7 +123,7 @@ export default function GameDetailPage() {
 
   return (
     <PageLayout>
-      <main className="max-w-3xl mx-auto px-6 py-8">
+      <main className="max-w-7xl mx-auto px-6 py-8">
         <button
           onClick={() => navigate("/history")}
           className="text-gray-400 hover:text-white transition-colors mb-6 flex items-center gap-2 cursor-pointer group"
@@ -185,90 +187,96 @@ export default function GameDetailPage() {
           </div>
         </div>
 
-        <h2 className="text-lg font-bold text-white mb-4">Leaderboard</h2>
-        <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl overflow-hidden mb-8">
-          {game.players.length === 0 ? (
-            <p className="text-gray-400 text-sm px-6 py-6 text-center">
-              No players recorded for this game.
-            </p>
-          ) : (
-            game.players.map((player, i) => {
-              const medal = rankMedal[player.rank];
-              return (
-                <div
-                  key={player.userId ?? `player-${i}`}
-                  className={`flex items-center gap-4 px-6 py-4 ${
-                    i < game.players.length - 1 ? "border-b border-gray-700/50" : ""
-                  }`}
-                >
-                  <span
-                    className={`text-lg font-bold w-8 text-center shrink-0 ${
-                      medal?.color ?? "text-gray-500"
+        <div className="lg:grid lg:grid-cols-2 lg:gap-6">
+          <div>
+            <h2 className="text-lg font-bold text-white mb-4">
+              Songs <span className="text-gray-500 font-normal">({game.songs.length})</span>
+            </h2>
+            <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl overflow-hidden">
+              {game.songs.length === 0 ? (
+                <p className="text-gray-400 text-sm px-6 py-6 text-center">
+                  No songs recorded for this game.
+                </p>
+              ) : (
+                game.songs.map((song, i) => (
+                  <div
+                    key={song.id}
+                    className={`flex items-center gap-4 px-6 py-3 ${
+                      i < game.songs.length - 1 ? "border-b border-gray-700/50" : ""
                     }`}
                   >
-                    {player.rank}
-                  </span>
-                  <DefaultAvatar name={player.displayName} src={player.image} size={40} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-white font-medium truncate">{player.displayName}</p>
-                    <p className="text-gray-500 text-xs">Best streak: {player.streak}</p>
-                  </div>
-                  <span className="text-lg font-bold text-green-400 shrink-0">
-                    {player.score.toLocaleString()}
-                  </span>
-                </div>
-              );
-            })
-          )}
-        </div>
-
-        <h2 className="text-lg font-bold text-white mb-4">
-          Songs <span className="text-gray-500 font-normal">({game.songs.length})</span>
-        </h2>
-        <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl overflow-hidden">
-          {game.songs.length === 0 ? (
-            <p className="text-gray-400 text-sm px-6 py-6 text-center">
-              No songs recorded for this game.
-            </p>
-          ) : (
-            game.songs.map((song, i) => (
-              <div
-                key={song.id}
-                className={`flex items-center gap-4 px-6 py-3 ${
-                  i < game.songs.length - 1 ? "border-b border-gray-700/50" : ""
-                }`}
-              >
-                <span className="text-gray-500 text-sm w-6 text-right shrink-0">{i + 1}</span>
-                {song.albumImageUrl ? (
-                  <img
-                    src={song.albumImageUrl}
-                    alt=""
-                    className="w-10 h-10 rounded object-cover shrink-0"
-                  />
-                ) : (
-                  <div className="w-10 h-10 rounded bg-gray-700/50 shrink-0 flex items-center justify-center">
-                    <svg
-                      className="w-5 h-5 text-gray-500"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={1.5}
-                        d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2z"
+                    <span className="text-gray-500 text-sm w-6 text-right shrink-0">{i + 1}</span>
+                    {song.albumImageUrl ? (
+                      <img
+                        src={song.albumImageUrl}
+                        alt=""
+                        className="w-10 h-10 rounded object-cover shrink-0"
                       />
-                    </svg>
+                    ) : (
+                      <div className="w-10 h-10 rounded bg-gray-700/50 shrink-0 flex items-center justify-center">
+                        <svg
+                          className="w-5 h-5 text-gray-500"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={1.5}
+                            d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2z"
+                          />
+                        </svg>
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-white text-sm font-medium truncate">{song.title}</p>
+                      <p className="text-gray-400 text-xs truncate">{song.artist}</p>
+                    </div>
                   </div>
-                )}
-                <div className="flex-1 min-w-0">
-                  <p className="text-white text-sm font-medium truncate">{song.title}</p>
-                  <p className="text-gray-400 text-xs truncate">{song.artist}</p>
-                </div>
-              </div>
-            ))
-          )}
+                ))
+              )}
+            </div>
+          </div>
+
+          <div>
+            <h2 className="text-lg font-bold text-white mb-4">Leaderboard</h2>
+            <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl overflow-hidden mb-8 lg:mb-0">
+              {game.players.length === 0 ? (
+                <p className="text-gray-400 text-sm px-6 py-6 text-center">
+                  No players recorded for this game.
+                </p>
+              ) : (
+                game.players.map((player, i) => {
+                  const medal = rankMedal[player.rank];
+                  return (
+                    <div
+                      key={player.userId ?? `player-${i}`}
+                      className={`flex items-center gap-4 px-6 py-4 ${
+                        i < game.players.length - 1 ? "border-b border-gray-700/50" : ""
+                      }`}
+                    >
+                      <span
+                        className={`text-lg font-bold w-8 text-center shrink-0 ${
+                          medal?.color ?? "text-gray-500"
+                        }`}
+                      >
+                        {player.rank}
+                      </span>
+                      <DefaultAvatar name={player.displayName} src={player.image} size={40} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-white font-medium truncate">{player.displayName}</p>
+                        <p className="text-gray-500 text-xs">Best streak: {player.streak}</p>
+                      </div>
+                      <span className="text-lg font-bold text-green-400 shrink-0">
+                        {player.score.toLocaleString()}
+                      </span>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
         </div>
       </main>
     </PageLayout>
