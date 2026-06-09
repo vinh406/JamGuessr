@@ -1,4 +1,4 @@
-import { eq, and, desc, inArray } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { getDb, type DbInstance } from "../../db";
 import { gameResults, gamePlayers } from "../../db/schema";
 import type { GameResult, GamePlayerResult } from "../../shared/types";
