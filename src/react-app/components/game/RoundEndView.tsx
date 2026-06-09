@@ -122,6 +122,29 @@ export function RoundEndView({
                 {correctAnswer.artist}
               </p>
             </div>
+            {correctAnswer.submittedBy && (
+              <div className="flex items-center gap-2 shrink-0">
+                {correctAnswer.submittedBy.userImage ? (
+                  <img
+                    src={correctAnswer.submittedBy.userImage}
+                    alt={correctAnswer.submittedBy.username}
+                    className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover"
+                  />
+                ) : (
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gray-600 flex items-center justify-center">
+                    <span className="text-sm sm:text-base text-gray-300 font-semibold">
+                      {correctAnswer.submittedBy.username.charAt(0).toUpperCase()}
+                    </span>
+                  </div>
+                )}
+                <div>
+                  <p className="text-xs text-gray-500">submitted by</p>
+                  <p className="text-xs sm:text-sm font-semibold text-white">
+                    {correctAnswer.submittedBy.username}
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

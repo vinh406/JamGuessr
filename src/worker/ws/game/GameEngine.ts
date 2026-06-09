@@ -198,6 +198,11 @@ export class GameEngine {
     }
 
     const correctAnswer = this.choices.find((c) => c.isCorrect)!;
+    const currentSong = this.songs[this.currentSongIndex];
+    if (currentSong?.submittedBy) {
+      correctAnswer.submittedBy = currentSong.submittedBy;
+    }
+
     const scores = Array.from(this.scores.values()).sort((a, b) => b.score - a.score);
 
     this.currentSongIndex++;

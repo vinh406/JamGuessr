@@ -1021,7 +1021,11 @@ export function createLibraryService(
     async getRoomBlendedPlaylist(
       userIds: string[],
       targetTrackCount: number = 30,
-      options?: { minTracksPerUser?: number; excludeSpotifyIds?: string[] },
+      options?: {
+        minTracksPerUser?: number;
+        excludeSpotifyIds?: string[];
+        userInfoMap?: Record<string, { userId: string; username: string; userImage?: string }>;
+      },
     ): Promise<BlendResult> {
       const warnings: string[] = [];
 
@@ -1068,6 +1072,7 @@ export function createLibraryService(
         albumImageUrl: track.albumImageUrl ?? undefined,
         previewUrl: track.previewUrl ?? undefined,
         duration: track.durationMs || 0,
+        submittedBy: options?.userInfoMap?.[track.userId],
       }));
 
       return { songs, warnings };

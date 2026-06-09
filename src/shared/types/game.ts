@@ -8,6 +8,11 @@ export interface Song {
   albumImageUrl?: string;
   previewUrl?: string; // Spotify preview URL
   duration: number; // in milliseconds
+  submittedBy?: {
+    userId: string;
+    username: string;
+    userImage?: string;
+  };
 }
 
 export interface SongChoice {
@@ -16,6 +21,11 @@ export interface SongChoice {
   artist: string;
   albumImageUrl?: string;
   isCorrect: boolean;
+  submittedBy?: {
+    userId: string;
+    username: string;
+    userImage?: string;
+  };
 }
 
 export type GamePhase = "lobby" | "starting" | "playing" | "roundEnd";
