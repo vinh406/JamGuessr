@@ -16,14 +16,22 @@ interface GameDetail {
   roomName: string;
   playlist: { name: string; imageUrl?: string } | null;
   settings: { rounds: number; timePerRound: number; audioTime: number };
-  songs: Array<{ id: string; title: string; artist: string; album: string; albumImageUrl?: string }>;
+  songs: Array<{
+    id: string;
+    title: string;
+    artist: string;
+    album: string;
+    albumImageUrl?: string;
+  }>;
   players: PlayerResult[];
   playedAt: string;
 }
 
 function SkeletonBlock({ className = "" }: { className?: string }) {
   return (
-    <div className={`bg-gray-800/50 rounded-xl border border-gray-700/50 animate-pulse ${className}`}>
+    <div
+      className={`bg-gray-800/50 rounded-xl border border-gray-700/50 animate-pulse ${className}`}
+    >
       <div className="p-6 space-y-4">
         <div className="flex items-center gap-4">
           <div className="w-16 h-16 rounded-xl bg-gray-700 shrink-0" />
@@ -133,10 +141,19 @@ export default function GameDetailPage() {
         <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl p-6 mb-8">
           <div className="flex items-center gap-4">
             {game.playlist?.imageUrl ? (
-              <img src={game.playlist.imageUrl} alt="" className="w-16 h-16 rounded-xl object-cover shrink-0" />
+              <img
+                src={game.playlist.imageUrl}
+                alt=""
+                className="w-16 h-16 rounded-xl object-cover shrink-0"
+              />
             ) : (
               <div className="w-16 h-16 rounded-xl bg-gray-700/50 shrink-0 flex items-center justify-center">
-                <svg className="w-8 h-8 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg
+                  className="w-8 h-8 text-gray-500"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -172,7 +189,9 @@ export default function GameDetailPage() {
         <h2 className="text-lg font-bold text-white mb-4">Leaderboard</h2>
         <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl overflow-hidden mb-8">
           {game.players.length === 0 ? (
-            <p className="text-gray-400 text-sm px-6 py-6 text-center">No players recorded for this game.</p>
+            <p className="text-gray-400 text-sm px-6 py-6 text-center">
+              No players recorded for this game.
+            </p>
           ) : (
             game.players.map((player, i) => {
               const medal = rankMedal[player.rank];
@@ -203,7 +222,9 @@ export default function GameDetailPage() {
                     <p className="text-white font-medium truncate">{player.displayName}</p>
                     <p className="text-gray-500 text-xs">Best streak: {player.streak}</p>
                   </div>
-                  <span className="text-lg font-bold text-green-400 shrink-0">{player.score.toLocaleString()}</span>
+                  <span className="text-lg font-bold text-green-400 shrink-0">
+                    {player.score.toLocaleString()}
+                  </span>
                 </div>
               );
             })
@@ -215,7 +236,9 @@ export default function GameDetailPage() {
         </h2>
         <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl overflow-hidden">
           {game.songs.length === 0 ? (
-            <p className="text-gray-400 text-sm px-6 py-6 text-center">No songs recorded for this game.</p>
+            <p className="text-gray-400 text-sm px-6 py-6 text-center">
+              No songs recorded for this game.
+            </p>
           ) : (
             game.songs.map((song, i) => (
               <div
@@ -226,10 +249,19 @@ export default function GameDetailPage() {
               >
                 <span className="text-gray-500 text-sm w-6 text-right shrink-0">{i + 1}</span>
                 {song.albumImageUrl ? (
-                  <img src={song.albumImageUrl} alt="" className="w-10 h-10 rounded object-cover shrink-0" />
+                  <img
+                    src={song.albumImageUrl}
+                    alt=""
+                    className="w-10 h-10 rounded object-cover shrink-0"
+                  />
                 ) : (
                   <div className="w-10 h-10 rounded bg-gray-700/50 shrink-0 flex items-center justify-center">
-                    <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg
+                      className="w-5 h-5 text-gray-500"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
                       <path
                         strokeLinecap="round"
                         strokeLinejoin="round"

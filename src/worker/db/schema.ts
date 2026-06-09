@@ -250,7 +250,11 @@ export const gameResults = pgTable(
     hostUserId: text("host_user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
-    playlist: jsonb("playlist").$type<{ name: string; imageUrl?: string; trackCount: number } | null>(),
+    playlist: jsonb("playlist").$type<{
+      name: string;
+      imageUrl?: string;
+      trackCount: number;
+    } | null>(),
     settings: jsonb("settings")
       .notNull()
       .$type<{ rounds: number; timePerRound: number; audioTime: number }>(),

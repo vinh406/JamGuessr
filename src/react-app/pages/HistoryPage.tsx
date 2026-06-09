@@ -45,9 +45,7 @@ export default function HistoryPage() {
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-900 to-gray-800">
       <Header />
       <main className="max-w-3xl mx-auto px-6 py-8">
-        <h1 className="text-2xl font-bold text-white mb-6">
-          Game History
-        </h1>
+        <h1 className="text-2xl font-bold text-white mb-6">Game History</h1>
 
         {loading && (
           <div className="space-y-4" role="status" aria-label="Loading game history">
@@ -60,7 +58,12 @@ export default function HistoryPage() {
         {!loading && games.length === 0 && (
           <div className="text-center py-16">
             <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gray-800/50 border border-gray-700/50 flex items-center justify-center">
-              <svg className="w-10 h-10 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg
+                className="w-10 h-10 text-gray-500"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
                 <path
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -71,7 +74,8 @@ export default function HistoryPage() {
             </div>
             <p className="text-gray-300 font-semibold text-lg mb-2">No games yet</p>
             <p className="text-gray-500 max-w-sm mx-auto">
-              Your game history will appear here. Join a room from the home page and start guessing songs with friends.
+              Your game history will appear here. Join a room from the home page and start guessing
+              songs with friends.
             </p>
           </div>
         )}
@@ -93,7 +97,12 @@ export default function HistoryPage() {
                     />
                   ) : (
                     <div className="w-14 h-14 rounded-lg bg-gray-700/50 shrink-0 flex items-center justify-center">
-                      <svg className="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg
+                        className="w-6 h-6 text-gray-500"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
                         <path
                           strokeLinecap="round"
                           strokeLinejoin="round"

@@ -211,7 +211,11 @@ export class GameHandler {
               roomName: room,
               hostUserId,
               playlist: playlist
-                ? { name: playlist.name, imageUrl: playlist.imageUrl, trackCount: playlist.trackCount }
+                ? {
+                    name: playlist.name,
+                    imageUrl: playlist.imageUrl,
+                    trackCount: playlist.trackCount,
+                  }
                 : null,
               settings: {
                 rounds: pSettings.rounds,
