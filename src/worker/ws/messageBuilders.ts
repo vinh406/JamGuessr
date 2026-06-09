@@ -48,7 +48,13 @@ export const MessageBuilders = {
       type: "unified_room_state",
       state: {
         ...state,
-        game: serializedGame as unknown as GameStateSnapshot,
+        game: {
+          ...serializedGame,
+          choices:
+            state.game.phase === "roundEnd"
+              ? serializedGame.choices
+              : serializedGame.choices.map(({ isCorrect: _, ...rest }) => rest),
+        } as unknown as GameStateSnapshot,
       },
       timestamp: Date.now(),
     };
@@ -164,7 +170,7 @@ export const MessageBuilders = {
       round,
       totalRounds,
       song: { previewUrl: song.previewUrl, albumImageUrl: song.albumImageUrl },
-      choices,
+      choices: choices.map(({ isCorrect: _, ...rest }) => rest),
       startTime,
       endTime,
       duration,

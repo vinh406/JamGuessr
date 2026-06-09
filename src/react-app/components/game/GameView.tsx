@@ -3,6 +3,14 @@ import type { SongChoice } from "../../../shared/types";
 import { CountdownTimer } from "./CountdownTimer";
 import { Slider, Button } from "../ui";
 
+function usePrevious<T>(value: T): T | undefined {
+  const ref = useRef<T>(undefined);
+  useEffect(() => {
+    ref.current = value;
+  }, [value]);
+  return ref.current;
+}
+
 const STORAGE_KEY = "spotiguess-volume";
 
 // Get initial volume from localStorage or default to 50
@@ -26,6 +34,8 @@ interface GameViewProps {
   audioTime: number; // in milliseconds
   hasAnswered: boolean;
   selectedChoice: number | null;
+  lastAnswerCorrect: boolean | null;
+  lastAnswerPoints: number;
   myScore: number;
   myStreak: number;
   onAnswer: (choiceIndex: number) => void;
@@ -41,6 +51,8 @@ export function GameView({
   audioTime,
   hasAnswered,
   selectedChoice,
+  lastAnswerCorrect,
+  lastAnswerPoints,
   myScore,
   myStreak,
   onAnswer,
@@ -90,6 +102,44 @@ export function GameView({
     };
   }, []);
 
+  const [resultPulse, setResultPulse] = useState(false);
+  const [scorePulse, setScorePulse] = useState(false);
+  const prevCorrect = usePrevious(lastAnswerCorrect);
+  const prevScore = usePrevious(myScore);
+  const prefersReducedMotion =
+    typeof window !== "undefined"
+      ? window.matchMedia("(prefers-reduced-motion: reduce)").matches
+      : false;
+
+  useEffect(() => {
+    if (prevCorrect === null && lastAnswerCorrect !== null && !prefersReducedMotion) {
+      setResultPulse(true);
+      const timer = setTimeout(() => setResultPulse(false), 500);
+      return () => clearTimeout(timer);
+    }
+    return;
+  }, [lastAnswerCorrect, prevCorrect, prefersReducedMotion]);
+
+  const [showPointsEarned, setShowPointsEarned] = useState(false);
+
+  useEffect(() => {
+    if (prevScore !== undefined && myScore > prevScore && !prefersReducedMotion) {
+      setScorePulse(true);
+      const timer = setTimeout(() => setScorePulse(false), 400);
+      return () => clearTimeout(timer);
+    }
+    return;
+  }, [myScore, prevScore, prefersReducedMotion]);
+
+  useEffect(() => {
+    if (prevCorrect === null && lastAnswerCorrect !== null && !prefersReducedMotion) {
+      setShowPointsEarned(true);
+      const timer = setTimeout(() => setShowPointsEarned(false), 4000);
+      return () => clearTimeout(timer);
+    }
+    return;
+  }, [lastAnswerCorrect, prevCorrect, prefersReducedMotion]);
+
   const handleVolumeChange = useCallback((newVolume: number) => {
     setVolume(newVolume);
     localStorage.setItem(STORAGE_KEY, String(newVolume));
@@ -128,8 +178,19 @@ export function GameView({
                 <span className="text-xs font-semibold text-yellow-400">🔥 {myStreak}</span>
               </div>
             )}
-            <div className="px-2 py-0.5 bg-green-500/20 rounded-full">
-              <span className="text-xs font-semibold text-green-400">{myScore} pts</span>
+            <div className="relative">
+              <div
+                className={`px-2 py-0.5 bg-green-500/20 rounded-full ${scorePulse ? "animate-score-pop" : ""}`}
+              >
+                <span className="text-xs font-semibold text-green-400">{myScore} pts</span>
+              </div>
+              {showPointsEarned && (
+                <span
+                  className={`absolute -bottom-1 left-1/2 -translate-x-1/2 text-xs font-bold pointer-events-none animate-points-fade ${lastAnswerCorrect ? "text-green-400" : "text-red-400"}`}
+                >
+                  {lastAnswerCorrect ? `+${lastAnswerPoints}` : "+0"}
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -176,21 +237,33 @@ export function GameView({
                 key={choice.index}
                 onClick={() => handleChoice(choice.index)}
                 disabled={hasAnswered}
-                className={`w-full text-left ${
+                className={`w-full text-left transition-all duration-200 ease-out ${
                   hasAnswered
                     ? isSelected
-                      ? "bg-green-500/30 border-2 border-green-500"
+                      ? lastAnswerCorrect
+                        ? "bg-green-500/30 border-2 border-green-500"
+                        : "bg-red-500/30 border-2 border-red-500"
                       : "bg-gray-700/30 border-2 border-gray-600 opacity-50"
                     : isSelected
                       ? "bg-green-500/40 border-2 border-green-400"
                       : "bg-gray-700/50 border-2 border-gray-600 hover:border-green-500/50 hover:bg-gray-700/70"
+                } ${isSelected && resultPulse ? "animate-result-pulse" : ""} ${
+                  isSelected && resultPulse
+                    ? lastAnswerCorrect
+                      ? "shadow-[0_0_20px_-4px_rgba(74,222,128,0.4)]"
+                      : "shadow-[0_0_20px_-4px_rgba(248,113,113,0.4)]"
+                    : ""
                 }`}
               >
                 <div className="flex items-center gap-2 sm:gap-3">
                   <div
-                    className={`shrink-0 w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs font-bold ${
-                      isSelected ? "bg-green-500 text-white" : "bg-gray-600 text-gray-300"
-                    }`}
+                    className={`shrink-0 w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-200 ease-out ${
+                      isSelected
+                        ? lastAnswerCorrect === false
+                          ? "bg-red-500 text-white"
+                          : "bg-green-500 text-white"
+                        : "bg-gray-600 text-gray-300"
+                    } ${isSelected && resultPulse ? "animate-result-pulse" : ""}`}
                   >
                     {choice.index + 1}
                   </div>

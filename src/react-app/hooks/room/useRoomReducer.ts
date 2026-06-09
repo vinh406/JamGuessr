@@ -14,6 +14,8 @@ export const DEFAULT_GAME_STATE: RoomState["game"] = {
   myStreak: 0,
   hasAnswered: false,
   selectedChoice: null,
+  lastAnswerCorrect: null,
+  lastAnswerPoints: 0,
   endStateData: null,
   votes: {},
   voteEndsAt: null,
@@ -175,6 +177,8 @@ export function roomReducer(state: RoomState, action: RoomAction): RoomState {
           roundDuration: action.duration,
           hasAnswered: false,
           selectedChoice: null,
+          lastAnswerCorrect: null,
+          lastAnswerPoints: 0,
           endStateData: null,
         },
       };
@@ -214,6 +218,8 @@ export function roomReducer(state: RoomState, action: RoomAction): RoomState {
           ...state.game,
           myScore: action.isCorrect ? state.game.myScore + action.points : state.game.myScore,
           myStreak: action.streak,
+          lastAnswerCorrect: action.isCorrect,
+          lastAnswerPoints: action.points,
         },
       };
 

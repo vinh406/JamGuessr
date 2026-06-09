@@ -88,9 +88,16 @@ export class GameHandler {
     if (roomPlaylist?.id) {
       if (roomPlaylist.id === "blend") {
         const userIds = roomUsers.map((u) => u.userId);
-        const userInfoMap: Record<string, { userId: string; username: string; userImage?: string }> = {};
+        const userInfoMap: Record<
+          string,
+          { userId: string; username: string; userImage?: string }
+        > = {};
         for (const u of roomUsers) {
-          userInfoMap[u.userId] = { userId: u.userId, username: u.username, userImage: u.userImage ?? undefined };
+          userInfoMap[u.userId] = {
+            userId: u.userId,
+            username: u.username,
+            userImage: u.userImage ?? undefined,
+          };
         }
         const targetCount = Math.max(settings.rounds * 2, 20);
         const result = await lib.getRoomBlendedPlaylist(userIds, targetCount, {
@@ -265,9 +272,14 @@ export class GameHandler {
       const playedSpotifyIds = gameState.songs.map((s) => s.id);
       const roomUsers = this.roomManager.getAllUsers();
       const userIds = roomUsers.map((u) => u.userId);
-      const userInfoMap: Record<string, { userId: string; username: string; userImage?: string }> = {};
+      const userInfoMap: Record<string, { userId: string; username: string; userImage?: string }> =
+        {};
       for (const u of roomUsers) {
-        userInfoMap[u.userId] = { userId: u.userId, username: u.username, userImage: u.userImage ?? undefined };
+        userInfoMap[u.userId] = {
+          userId: u.userId,
+          username: u.username,
+          userImage: u.userImage ?? undefined,
+        };
       }
       const targetCount = Math.max(settings.rounds * 2, 20);
       const dbUrl = this.roomManager.getDatabaseUrl();

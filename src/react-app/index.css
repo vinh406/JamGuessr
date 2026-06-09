@@ -1,1 +1,56 @@
 @import "tailwindcss";
+
+@keyframes result-pulse {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.04);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes score-pop {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.25);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@utility animate-result-pulse {
+  animation: result-pulse 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@utility animate-score-pop {
+  animation: score-pop 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes points-fade {
+  0% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(24px);
+  }
+}
+
+@utility animate-points-fade {
+  animation: points-fade 4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-result-pulse,
+  .animate-score-pop,
+  .animate-points-fade {
+    animation: none;
+  }
+}

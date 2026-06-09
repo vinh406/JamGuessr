@@ -50,6 +50,8 @@ export default function RoomPage() {
     myStreak,
     hasAnswered,
     selectedChoice,
+    lastAnswerCorrect,
+    lastAnswerPoints,
     endStateData,
     votes,
     voteEndsAt,
@@ -143,6 +145,8 @@ export default function RoomPage() {
                   audioTime={gameSettings.audioTime * 1000}
                   hasAnswered={hasAnswered}
                   selectedChoice={selectedChoice}
+                  lastAnswerCorrect={lastAnswerCorrect}
+                  lastAnswerPoints={lastAnswerPoints}
                   myScore={myScore}
                   myStreak={myStreak}
                   onAnswer={handleAnswer}

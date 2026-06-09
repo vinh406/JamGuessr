@@ -20,7 +20,7 @@ export interface SongChoice {
   title: string;
   artist: string;
   albumImageUrl?: string;
-  isCorrect: boolean;
+  isCorrect?: boolean;
   submittedBy?: {
     userId: string;
     username: string;

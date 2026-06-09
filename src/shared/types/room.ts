@@ -90,6 +90,8 @@ export interface RoomState {
     myStreak: number;
     hasAnswered: boolean;
     selectedChoice: number | null;
+    lastAnswerCorrect: boolean | null;
+    lastAnswerPoints: number;
     endStateData: {
       correctAnswer?: SongChoice;
       scores: PlayerScore[];
