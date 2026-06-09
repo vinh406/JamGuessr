@@ -5,6 +5,7 @@ import { SCORING } from "../../shared/constants";
 import { getPlaylistTracks, getTrackPreviewUrl } from "../services/spotify/playlists";
 import { shuffleArray } from "../../shared/utils";
 import { createLibraryService } from "../services/library/LibraryService";
+import { createGameHistoryService } from "../services/gameHistory/GameHistoryService";
 import { getSessionOrError, validateHost } from "./utils";
 
 const PREVIEW_CONCURRENCY = 10;
@@ -167,7 +168,7 @@ export class GameHandler {
     broadcastToRoom(this.roomManager.getSessions(), roundStartedMessage);
   }
 
-  private handleEndRoundInternal(room: string): void {
+  private async handleEndRoundInternal(room: string): Promise<void> {
     const roundThatJustEnded = this.roomManager.getCurrentRound();
     const { correctAnswer, scores } = this.roomManager.endRound();
 
@@ -192,6 +193,46 @@ export class GameHandler {
         this.handleStartRoundInternal(room);
       }, SCORING.ROUND_END_DELAY);
     } else {
+      // Persist game history (skip solo games)
+      const roomUsers = this.roomManager.getAllUsers();
+      if (roomUsers.length >= 2) {
+        try {
+          const dbUrl = this.roomManager.getDatabaseUrl();
+          const history = createGameHistoryService(dbUrl);
+          const pSettings = this.roomManager.getRoomSettings();
+          const playlist = this.roomManager.getRoomPlaylist();
+          const songs = this.roomManager.getSongs();
+          const pScores = this.roomManager.getScores();
+          const hostUserId = this.roomManager.getHostUserId();
+
+          if (hostUserId) {
+            await history.saveGame({
+              id: crypto.randomUUID(),
+              roomName: room,
+              hostUserId,
+              playlist: playlist
+                ? { name: playlist.name, imageUrl: playlist.imageUrl, trackCount: playlist.trackCount }
+                : null,
+              settings: {
+                rounds: pSettings.rounds,
+                timePerRound: pSettings.timePerRound,
+                audioTime: pSettings.audioTime,
+              },
+              songs: songs.slice(0, settings.rounds),
+              scores: pScores.map((s) => ({
+                userId: s.userId,
+                username: s.username,
+                score: s.score,
+                streak: s.streak,
+              })),
+              playedAt: new Date(),
+            });
+          }
+        } catch (err) {
+          console.error("Failed to persist game history:", err);
+        }
+      }
+
       // For the last round, transition to game end phase first to get final state
       const { voteEndsAt } = this.roomManager.endGame(SCORING.VOTE_DURATION);
 
