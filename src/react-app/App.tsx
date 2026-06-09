@@ -6,6 +6,8 @@ import LoginPage from "./pages/LoginPage";
 import RoomPage from "./pages/RoomPage";
 import LibraryPage from "./pages/LibraryPage";
 import SettingsPage from "./pages/SettingsPage";
+import HistoryPage from "./pages/HistoryPage";
+import GameDetailPage from "./pages/GameDetailPage";
 import { Toaster } from "sonner";
 import FullScreenLoader from "./components/common/FullScreenLoader";
 
@@ -31,6 +33,14 @@ function AppContent() {
       <Route
         path="/settings"
         element={isAuthenticated ? <SettingsPage /> : <Navigate to="/login" replace />}
+      />
+      <Route
+        path="/history"
+        element={isAuthenticated ? <HistoryPage /> : <Navigate to="/login" replace />}
+      />
+      <Route
+        path="/history/:id"
+        element={isAuthenticated ? <GameDetailPage /> : <Navigate to="/login" replace />}
       />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
