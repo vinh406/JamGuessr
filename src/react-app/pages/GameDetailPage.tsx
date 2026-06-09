@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router";
 import PageLayout from "../components/common/PageLayout";
-import { DefaultAvatar } from "../components/ui";
+import { useAuth } from "../hooks/useAuth";
+import { Leaderboard } from "../components/common/Leaderboard";
+import type { LeaderboardEntry } from "../components/common/Leaderboard";
 
 interface PlayerResult {
   userId: string | null;
@@ -72,15 +74,10 @@ function SkeletonList({ rows = 5 }: { rows?: number }) {
   );
 }
 
-const rankMedal: Record<number, { color: string; label: string }> = {
-  1: { color: "text-yellow-400", label: "1st" },
-  2: { color: "text-gray-300", label: "2nd" },
-  3: { color: "text-amber-600", label: "3rd" },
-};
-
 export default function GameDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [game, setGame] = useState<GameDetail | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -242,39 +239,19 @@ export default function GameDetailPage() {
           <div>
             <h2 className="text-lg font-bold text-white mb-4">Leaderboard</h2>
             <div className="bg-gray-800/50 border border-gray-700/50 rounded-xl overflow-hidden mb-8 lg:mb-0">
-              {game.players.length === 0 ? (
-                <p className="text-gray-400 text-sm px-6 py-6 text-center">
-                  No players recorded for this game.
-                </p>
-              ) : (
-                game.players.map((player, i) => {
-                  const medal = rankMedal[player.rank];
-                  return (
-                    <div
-                      key={player.userId ?? `player-${i}`}
-                      className={`flex items-center gap-4 px-6 py-4 ${
-                        i < game.players.length - 1 ? "border-b border-gray-700/50" : ""
-                      }`}
-                    >
-                      <span
-                        className={`text-lg font-bold w-8 text-center shrink-0 ${
-                          medal?.color ?? "text-gray-500"
-                        }`}
-                      >
-                        {player.rank}
-                      </span>
-                      <DefaultAvatar name={player.displayName} src={player.image} size={40} />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-white font-medium truncate">{player.displayName}</p>
-                        <p className="text-gray-500 text-xs">Best streak: {player.streak}</p>
-                      </div>
-                      <span className="text-lg font-bold text-green-400 shrink-0">
-                        {player.score.toLocaleString()}
-                      </span>
-                    </div>
-                  );
-                })
-              )}
+              <Leaderboard
+                entries={game.players.map<LeaderboardEntry>((p) => ({
+                  userId: p.userId,
+                  displayName: p.displayName,
+                  image: p.image,
+                  score: p.score,
+                  streak: p.streak,
+                }))}
+                currentUserId={user?.id}
+                title=""
+                streakLabel="Best streak"
+                emptyMessage="No players recorded for this game."
+              />
             </div>
           </div>
         </div>

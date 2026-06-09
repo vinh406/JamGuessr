@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import type { SongChoice, PlayerScore } from "../../../shared/types";
 import { Button } from "../ui";
+import { Leaderboard } from "../common/Leaderboard";
+import type { LeaderboardEntry } from "../common/Leaderboard";
 
 interface RoundEndViewProps {
   round: number;
@@ -174,55 +176,18 @@ export function RoundEndView({
 
         {/* Leaderboard */}
         <div className="px-3 sm:px-4 py-3">
-          <p className="text-xs text-gray-400 uppercase tracking-wider mb-2">
-            {isGameEnd ? "Final Standings" : "Leaderboard"}
-          </p>
-          <div className="space-y-1.5">
-            {sortedScores.map((score, index) => {
-              const isMe = score.userId === myUserId;
-              const rank = index + 1;
-              return (
-                <div
-                  key={score.userId}
-                  className={`flex items-center gap-2 p-2 sm:p-2.5 rounded-lg ${
-                    rank === 1 && isGameEnd
-                      ? "bg-gradient-to-r from-yellow-500/20 to-yellow-600/10 border border-yellow-500/30"
-                      : isMe
-                        ? "bg-green-500/20 border border-green-500/30"
-                        : "bg-gray-700/30"
-                  }`}
-                >
-                  <div
-                    className={`shrink-0 w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-xs font-bold ${
-                      rank === 1
-                        ? "bg-yellow-500 text-white"
-                        : rank === 2
-                          ? "bg-gray-400 text-white"
-                          : rank === 3
-                            ? "bg-amber-600 text-white"
-                            : "bg-gray-600 text-gray-300"
-                    }`}
-                  >
-                    {rank}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs sm:text-sm font-semibold text-white truncate">
-                      {score.username}
-                      {isMe && <span className="ml-1.5 text-xs text-green-400">(You)</span>}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {score.streak > 1 && (
-                      <span className="text-xs text-yellow-400">🔥 {score.streak}</span>
-                    )}
-                    <span className="text-xs sm:text-sm font-bold text-green-400">
-                      {score.score}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          <Leaderboard
+            entries={sortedScores.map<LeaderboardEntry>((s) => ({
+              userId: s.userId,
+              displayName: s.username,
+              image: s.userImage,
+              score: s.score,
+              streak: s.streak,
+            }))}
+            currentUserId={myUserId}
+            title={isGameEnd ? "Final Standings" : "Leaderboard"}
+            highlightWinner={isGameEnd}
+          />
         </div>
       </div>
 
