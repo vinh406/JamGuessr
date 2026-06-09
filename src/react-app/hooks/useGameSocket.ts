@@ -44,6 +44,12 @@ export function useGameSocket({
   }, []);
 
   useEffect(() => {
+    // Don't connect until we have valid credentials
+    if (!username || !userId || !room) {
+      setIsConnected(false);
+      return;
+    }
+
     // readyState: CONNECTING=0, OPEN=1, CLOSING=2, CLOSED=3
     if (wsRef.current && wsRef.current.readyState < WebSocket.CLOSING) {
       return;
