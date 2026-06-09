@@ -1,9 +1,10 @@
-import { useState, useRef } from "react";
+import { useState, useRef, lazy, Suspense } from "react";
 import Header from "../components/Header";
 import { Button, Input, DefaultAvatar } from "../components/ui";
-import AvatarCropModal from "../components/common/AvatarCropModal";
 import { useAuth } from "../hooks/useAuth";
 import { toast } from "sonner";
+
+const AvatarCropModal = lazy(() => import("../components/common/AvatarCropModal"));
 
 export default function SettingsPage() {
   const { user, updateUser } = useAuth();
@@ -210,11 +211,13 @@ export default function SettingsPage() {
       </main>
 
       {cropImageUrl && (
-        <AvatarCropModal
-          imageUrl={cropImageUrl}
-          onConfirm={handleCropConfirm}
-          onCancel={() => setCropImageUrl(null)}
-        />
+        <Suspense fallback={null}>
+          <AvatarCropModal
+            imageUrl={cropImageUrl}
+            onConfirm={handleCropConfirm}
+            onCancel={() => setCropImageUrl(null)}
+          />
+        </Suspense>
       )}
     </div>
   );
