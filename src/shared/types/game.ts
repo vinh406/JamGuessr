@@ -46,3 +46,27 @@ export interface GameStateSnapshot {
   votes: Record<string, boolean>; // userId -> vote
   voteEndsAt: number | null;
 }
+
+export interface GamePlayerResult {
+  userId: string | null;
+  username: string | null;
+  score: number;
+  streak: number;
+  rank: number;
+}
+
+export interface GameResult {
+  id: string;
+  roomName: string;
+  hostUserId: string;
+  playlist: { name: string; imageUrl?: string; trackCount: number } | null;
+  settings: { rounds: number; timePerRound: number; audioTime: number };
+  songs: Song[];
+  players: GamePlayerResult[];
+  playedAt: string; // ISO string
+}
+
+// For the API response with resolved user info (auth user's name resolved from user table)
+export interface GameResultWithPlayers extends GameResult {
+  playerUsers: Array<GamePlayerResult & { displayName: string; image: string | null }>;
+}
