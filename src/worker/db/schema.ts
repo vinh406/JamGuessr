@@ -1,5 +1,6 @@
 import { relations } from "drizzle-orm";
 import { pgTable, text, timestamp, boolean, index, jsonb, integer } from "drizzle-orm/pg-core";
+import type { Song } from "../../shared/types";
 
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
@@ -236,6 +237,69 @@ export const libraryAlbumsRelations = relations(libraryAlbums, ({ one, many }) =
 export const userLibraryStatsRelations = relations(userLibraryStats, ({ one }) => ({
   user: one(user, {
     fields: [userLibraryStats.userId],
+    references: [user.id],
+  }),
+}));
+
+// Game results tables
+export const gameResults = pgTable(
+  "game_results",
+  {
+    id: text("id").primaryKey(),
+    roomName: text("room_name").notNull(),
+    hostUserId: text("host_user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    playlist: jsonb("playlist").$type<{ name: string; imageUrl?: string; trackCount: number } | null>(),
+    settings: jsonb("settings")
+      .notNull()
+      .$type<{ rounds: number; timePerRound: number; audioTime: number }>(),
+    songs: jsonb("songs").notNull().$type<Song[]>(),
+    playedAt: timestamp("played_at").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [index("game_results_host_user_id_idx").on(table.hostUserId)],
+);
+
+export const gamePlayers = pgTable(
+  "game_players",
+  {
+    id: text("id").primaryKey(),
+    gameId: text("game_id")
+      .notNull()
+      .references(() => gameResults.id, { onDelete: "cascade" }),
+    userId: text("user_id").references(() => user.id, { onDelete: "cascade" }),
+    username: text("username"),
+    score: integer("score").notNull(),
+    streak: integer("streak").default(0).notNull(),
+    rank: integer("rank").notNull(),
+  },
+  (table) => [
+    index("game_players_game_id_idx").on(table.gameId),
+    index("game_players_user_id_idx").on(table.userId),
+    {
+      name: "game_players_game_user_unique",
+      columns: [table.gameId, table.userId],
+      isUnique: true,
+    },
+  ],
+);
+
+export const gameResultsRelations = relations(gameResults, ({ one, many }) => ({
+  host: one(user, {
+    fields: [gameResults.hostUserId],
+    references: [user.id],
+  }),
+  players: many(gamePlayers),
+}));
+
+export const gamePlayersRelations = relations(gamePlayers, ({ one }) => ({
+  game: one(gameResults, {
+    fields: [gamePlayers.gameId],
+    references: [gameResults.id],
+  }),
+  user: one(user, {
+    fields: [gamePlayers.userId],
     references: [user.id],
   }),
 }));
