@@ -1,5 +1,5 @@
 import { useState, useRef, lazy, Suspense } from "react";
-import Header from "../components/Header";
+import PageLayout from "../components/common/PageLayout";
 import { Button, Input, DefaultAvatar } from "../components/ui";
 import { useAuth } from "../hooks/useAuth";
 import { toast } from "sonner";
@@ -89,8 +89,7 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
-      <Header />
+    <PageLayout>
 
       <main className="max-w-2xl mx-auto px-6 py-8">
         <div className="flex items-center gap-3 mb-8">
@@ -219,6 +218,6 @@ export default function SettingsPage() {
           />
         </Suspense>
       )}
-    </div>
+    </PageLayout>
   );
 }

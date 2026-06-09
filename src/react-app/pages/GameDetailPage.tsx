@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router";
-import Header from "../components/Header";
+import PageLayout from "../components/common/PageLayout";
 
 interface PlayerResult {
   userId: string | null;
@@ -97,8 +97,7 @@ export default function GameDetailPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-900 to-gray-800">
-        <Header />
+    <PageLayout>
         <main className="max-w-3xl mx-auto px-6 py-8">
           <div className="mb-6 w-32 h-4 bg-gray-700/50 rounded animate-pulse" />
           <div className="space-y-6">
@@ -113,15 +112,14 @@ export default function GameDetailPage() {
             </div>
           </div>
         </main>
-      </div>
+    </PageLayout>
     );
   }
 
   if (!game) return null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-900 to-gray-800">
-      <Header />
+    <PageLayout>
       <main className="max-w-3xl mx-auto px-6 py-8">
         <button
           onClick={() => navigate("/history")}
@@ -280,6 +278,6 @@ export default function GameDetailPage() {
           )}
         </div>
       </main>
-    </div>
+    </PageLayout>
   );
 }

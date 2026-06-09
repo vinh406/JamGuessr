@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 import { useAuth } from "../hooks/useAuth";
-import Header from "../components/Header";
+import PageLayout from "../components/common/PageLayout";
 
 import { Button, Input } from "../components/ui";
 import { generateRoomCode, ROOM_CODE_LENGTH } from "../../shared/constants";
@@ -52,8 +52,7 @@ export default function HomePage() {
     stats && (stats.totalSongs > 0 || stats.totalPlaylists > 0 || stats.totalAlbums > 0);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
-      <Header />
+    <PageLayout>
 
       <main className="max-w-4xl mx-auto px-6 py-12">
         <div className="text-center mb-12">
@@ -166,6 +165,6 @@ export default function HomePage() {
           </div>
         </div>
       </main>
-    </div>
+    </PageLayout>
   );
 }

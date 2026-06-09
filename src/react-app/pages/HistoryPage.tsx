@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
-import Header from "../components/Header";
+import PageLayout from "../components/common/PageLayout";
 
 interface GameListItem {
   id: string;
@@ -42,8 +42,7 @@ export default function HistoryPage() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-900 to-gray-800">
-      <Header />
+    <PageLayout>
       <main className="max-w-3xl mx-auto px-6 py-8">
         <h1 className="text-2xl font-bold text-white mb-6">Game History</h1>
 
@@ -149,6 +148,6 @@ export default function HistoryPage() {
           </div>
         )}
       </main>
-    </div>
+    </PageLayout>
   );
 }

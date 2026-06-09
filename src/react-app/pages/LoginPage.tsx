@@ -1,4 +1,5 @@
 import { useAuth } from "../hooks/useAuth";
+import PageLayout from "../components/common/PageLayout";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import FeatureItem from "../components/common/FeatureItem";
 import { AppIcon, Button } from "../components/ui";
@@ -15,7 +16,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center pt-6">
+    <PageLayout showHeader={false} className="flex items-center justify-center pt-6">
       <div className="w-full max-w-md">
         {/* Logo and Title */}
         <div className="text-center mb-8">
@@ -130,6 +131,6 @@ export default function LoginPage() {
           By signing in, you agree to our Terms of Service and Privacy Policy
         </p>
       </div>
-    </div>
+    </PageLayout>
   );
 }

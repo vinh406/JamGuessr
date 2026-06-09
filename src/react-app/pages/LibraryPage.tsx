@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import Header from "../components/Header";
+import PageLayout from "../components/common/PageLayout";
 import { Button, Input } from "../components/ui";
 import { Modal } from "../components/common/Modal";
 import ConfirmDialog from "../components/common/ConfirmDialog";
@@ -413,8 +413,7 @@ export default function LibraryPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
-      <Header />
+    <PageLayout>
 
       <main className="max-w-4xl mx-auto px-6 py-8">
         <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-8">
@@ -788,6 +787,6 @@ export default function LibraryPage() {
           onCancel={() => setDeleteTarget(null)}
         />
       )}
-    </div>
+    </PageLayout>
   );
 }
