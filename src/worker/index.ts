@@ -4,6 +4,7 @@ import { cors } from "hono/cors";
 import { auth } from "./services/better-auth";
 import { libraryHandlers } from "./routes/libraryHandlers";
 import { userSettingsHandlers } from "./routes/userSettings";
+import { gameHistoryHandlers } from "./routes/gameHistory";
 export { WebSocketHibernationServer } from "./durable-objects/websocketDurableObject";
 export { PlaylistImportDO } from "./durable-objects/playlistImportDO";
 
@@ -49,6 +50,9 @@ app.route("/api/library", libraryHandlers);
 // User settings endpoints
 app.route("/api/user", userSettingsHandlers);
 
+// Game history endpoints
+app.route("/api/games", gameHistoryHandlers);
+
 // Better Auth handler
 app.on(["GET", "POST"], "/api/auth/*", (c) => {
   return auth(c.env).handler(c.req.raw);
@@ -68,6 +72,7 @@ app.doc("/api/doc", {
     { name: "Library", description: "User library management" },
     { name: "Room", description: "Room-based features" },
     { name: "User", description: "User profile and settings" },
+    { name: "Game History", description: "Past game results" },
   ],
 });
 
