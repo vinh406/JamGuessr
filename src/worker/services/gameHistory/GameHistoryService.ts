@@ -1,8 +1,8 @@
 import { eq, and } from "drizzle-orm";
 import { getDb, type DbInstance } from "../../db";
 import { gameResults, gamePlayers } from "../../db/schema";
-import type { GameResult, GamePlayerResult } from "../../shared/types";
-import type { Song } from "../../shared/types";
+import type { GameResult, GamePlayerResult } from "../../../shared/types";
+import type { Song } from "../../../shared/types";
 
 export function createGameHistoryService(connectionString: string) {
   let _db: DbInstance | null = null;

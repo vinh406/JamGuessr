@@ -94,18 +94,21 @@ function createGameHistoryHandlers() {
     const games = await history.getGamesListForUser(user.id, limit, offset);
     const hasMore = games.length === limit;
 
-    return c.json({
-      games: games.map((g) => ({
-        id: g.id,
-        roomName: g.roomName,
-        hostUserId: g.hostUserId,
-        playlist: g.playlist,
-        settings: g.settings,
-        playedAt: g.playedAt,
-        playerCount: g.playerCount,
-      })),
-      hasMore,
-    });
+    return c.json(
+      {
+        games: games.map((g) => ({
+          id: g.id,
+          roomName: g.roomName,
+          hostUserId: g.hostUserId,
+          playlist: g.playlist,
+          settings: g.settings,
+          playedAt: g.playedAt,
+          playerCount: g.playerCount,
+        })),
+        hasMore,
+      },
+      200,
+    );
   });
 
   // GET /:id - single game detail
@@ -144,7 +147,7 @@ function createGameHistoryHandlers() {
     const game = await history.getGameById(id, user.id);
     if (!game) return c.json({ error: "Game not found" }, 404);
 
-    return c.json(game);
+    return c.json(game, 200);
   });
 
   return app;
