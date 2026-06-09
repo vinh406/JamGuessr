@@ -656,7 +656,7 @@ export default function LibraryPage() {
                     type: drawer.type === "tracks" ? "track" : drawer.type,
                     id: drawer.id,
                     name,
-                    cascadeCount: drawerTracks.length,
+                    cascadeCount: drawer.trackCount,
                   });
                 }}
               >
