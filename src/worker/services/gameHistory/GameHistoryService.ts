@@ -22,10 +22,11 @@ export function createGameHistoryService(connectionString: string) {
     playedAt: Date;
   }): Promise<void> {
     const sorted = [...params.scores].sort((a, b) => b.score - a.score);
+
     const players = sorted.map((s, i) => ({
       id: crypto.randomUUID(),
       gameId: params.id,
-      userId: s.userId || null,
+      userId: s.userId && !s.userId.startsWith("guest-") ? s.userId : null,
       username: s.username || null,
       score: s.score,
       streak: s.streak,
@@ -88,7 +89,12 @@ export function createGameHistoryService(connectionString: string) {
   async function getGameById(
     gameId: string,
     userId: string,
-  ): Promise<GameResult & { players: Array<GamePlayerResult & { displayName: string; image: string | null }> } | null> {
+  ): Promise<
+    | (GameResult & {
+        players: Array<GamePlayerResult & { displayName: string; image: string | null }>;
+      })
+    | null
+  > {
     // Verify participant
     const participant = await db().query.gamePlayers.findFirst({
       where: and(eq(gamePlayers.gameId, gameId), eq(gamePlayers.userId, userId)),

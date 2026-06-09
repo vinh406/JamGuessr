@@ -96,7 +96,7 @@ export function useRoomActions({ state, dispatch }: UseRoomActionsParams) {
       const storedUsername = sessionStorage.getItem("chat-username");
       const storedUserId = sessionStorage.getItem("chat-userId");
       if (storedUsername) {
-        const userId = storedUserId || `user-${Math.random().toString(36).substr(2, 9)}`;
+        const userId = storedUserId || `guest-${Math.random().toString(36).substr(2, 9)}`;
         if (!storedUserId) sessionStorage.setItem("chat-userId", userId);
         dispatch({ type: "SET_USER", user: { username: storedUsername, userId } });
         dispatch({ type: "SET_SHOW_USERNAME_PROMPT", show: false });
@@ -239,7 +239,7 @@ export function useRoomActions({ state, dispatch }: UseRoomActionsParams) {
       sessionStorage.setItem("chat-username", username);
       let userId = sessionStorage.getItem("chat-userId");
       if (!userId) {
-        userId = `user-${Math.random().toString(36).substr(2, 9)}`;
+        userId = `guest-${Math.random().toString(36).substr(2, 9)}`;
         sessionStorage.setItem("chat-userId", userId);
       }
       dispatch({ type: "SET_USER", user: { username, userId } });
