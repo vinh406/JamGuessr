@@ -237,6 +237,15 @@ export class RoomManager {
     return this.gameEngine.getScores();
   }
 
+  getSongs(): Song[] {
+    return this.gameEngine.getSongs();
+  }
+
+  getHostUserId(): string | undefined {
+    const users = this.getAllUsers();
+    return users.find((u) => u.isHost)?.userId;
+  }
+
   addPlayerToScores(userId: string, username: string, userImage?: string): void {
     this.gameEngine.addPlayer(userId, username, userImage);
   }

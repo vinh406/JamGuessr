@@ -262,6 +262,10 @@ export class GameEngine {
     return Array.from(this.scores.values()).sort((a, b) => b.score - a.score);
   }
 
+  getSongs(): Song[] {
+    return this.songs;
+  }
+
   getGameState(): GameStateSnapshot {
     return {
       phase: this.phase,
