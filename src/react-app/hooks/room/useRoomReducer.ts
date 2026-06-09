@@ -180,6 +180,10 @@ export function roomReducer(state: RoomState, action: RoomAction): RoomState {
           lastAnswerCorrect: null,
           lastAnswerPoints: 0,
           endStateData: null,
+          myStreak:
+            state.game.lastAnswerCorrect === null && !state.game.hasAnswered
+              ? 0
+              : state.game.myStreak,
         },
       };
 

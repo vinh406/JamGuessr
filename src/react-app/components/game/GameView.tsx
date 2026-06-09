@@ -173,7 +173,7 @@ export function GameView({
             </div>
           </div>
           <div className="flex items-center gap-2 sm:gap-3">
-            {myStreak > 1 && (
+            {myStreak > 0 && (
               <div className="px-2 py-0.5 bg-yellow-500/20 rounded-full">
                 <span className="text-xs font-semibold text-yellow-400">🔥 {myStreak}</span>
               </div>
