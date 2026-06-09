@@ -333,9 +333,20 @@ export function createLibraryService(
 
     /** Get all tracks for multiple users (for blend algorithm) */
     async getTracksForUsers(userIds: string[]): Promise<Map<string, LibraryTrack[]>> {
-      const tracks = await db().query.libraryTracks.findMany({
-        where: inArray(libraryTracks.userId, userIds),
-      });
+      const tracks = await db()
+        .select()
+        .from(libraryTracks)
+        .where(
+          and(
+            inArray(libraryTracks.userId, userIds),
+            exists(
+              db()
+                .select({ id: libraryTrackSources.id })
+                .from(libraryTrackSources)
+                .where(eq(libraryTrackSources.trackId, libraryTracks.id)),
+            ),
+          ),
+        );
 
       const trackMap = new Map<string, LibraryTrack[]>();
       for (const track of tracks) {
