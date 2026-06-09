@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router";
 import PageLayout from "../components/common/PageLayout";
+import { DefaultAvatar } from "../components/ui";
 
 interface PlayerResult {
   userId: string | null;
@@ -207,15 +208,7 @@ export default function GameDetailPage() {
                   >
                     {player.rank}
                   </span>
-                  <div className="w-10 h-10 rounded-full bg-gray-700 overflow-hidden shrink-0">
-                    {player.image ? (
-                      <img src={player.image} alt="" className="w-full h-full object-cover" />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center text-gray-400 text-sm font-bold">
-                        {player.displayName.charAt(0).toUpperCase()}
-                      </div>
-                    )}
-                  </div>
+                  <DefaultAvatar name={player.displayName} src={player.image} size={40} />
                   <div className="flex-1 min-w-0">
                     <p className="text-white font-medium truncate">{player.displayName}</p>
                     <p className="text-gray-500 text-xs">Best streak: {player.streak}</p>
