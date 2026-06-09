@@ -1,6 +1,5 @@
 import type { Playlist } from "../../../shared/types";
 import { Modal } from "../common/Modal";
-import LoadingSpinner from "../common/LoadingSpinner";
 import { Input, Button } from "../ui";
 
 interface PlaylistModalProps {
@@ -83,9 +82,20 @@ export function PlaylistModal({
 
       {/* Loading State */}
       {isLoading && (
-        <div className="flex items-center justify-center py-12">
-          <LoadingSpinner size="lg" className="text-green-500" />
-          <span className="ml-3 text-gray-400">Loading playlists...</span>
+        <div className="space-y-3" role="status" aria-label="Loading playlists">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div
+              key={i}
+              className="flex items-center gap-4 p-4 rounded-xl bg-gray-700/30 border-2 border-transparent animate-pulse"
+            >
+              <div className="w-14 h-14 rounded-lg bg-gray-600 shrink-0" />
+              <div className="flex-1 min-w-0 space-y-2.5">
+                <div className="h-4 bg-gray-600 rounded w-3/4" />
+                <div className="h-3 bg-gray-600/50 rounded w-1/2" />
+                <div className="h-2.5 bg-gray-600/30 rounded w-1/4" />
+              </div>
+            </div>
+          ))}
         </div>
       )}
 

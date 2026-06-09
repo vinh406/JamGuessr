@@ -98,7 +98,7 @@ export default function GameDetailPage() {
 
   if (loading) {
     return (
-    <PageLayout>
+      <PageLayout>
         <main className="max-w-7xl mx-auto px-6 py-8">
           <div className="mb-6 w-32 h-4 bg-gray-700/50 rounded animate-pulse" />
           <div className="space-y-6">
@@ -115,7 +115,7 @@ export default function GameDetailPage() {
             </div>
           </div>
         </main>
-    </PageLayout>
+      </PageLayout>
     );
   }
 

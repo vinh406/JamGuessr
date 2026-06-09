@@ -414,7 +414,6 @@ export default function LibraryPage() {
 
   return (
     <PageLayout>
-
       <main className="max-w-4xl mx-auto px-6 py-8">
         <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-8">
           <div className="flex items-center gap-3">
@@ -480,173 +479,182 @@ export default function LibraryPage() {
           </div>
         </div>
 
+        <div className="bg-gray-800/40 rounded-2xl border border-gray-700/50 p-6 mb-8">
+          <h2 className="text-lg font-bold text-white mb-4">Add from Spotify</h2>
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <Input
+                placeholder="Paste any Spotify link (song, playlist, or album)"
+                value={link}
+                onChange={(e) => {
+                  setLink(e.target.value);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && detectedType) handleImport();
+                }}
+              />
+            </div>
+            <div className="flex gap-2">
+              {(importState === "connecting" || importState === "streaming") && (
+                <Button variant="secondary" onClick={cancelImport}>
+                  Cancel
+                </Button>
+              )}
+              <Button
+                variant="primary"
+                onClick={handleImport}
+                disabled={
+                  !detectedType || importState === "connecting" || importState === "streaming"
+                }
+              >
+                {importState === "idle" ? (
+                  detectedType === "track" ? (
+                    "Add Track"
+                  ) : detectedType === "playlist" ? (
+                    "Import Playlist"
+                  ) : detectedType === "album" ? (
+                    "Import Album"
+                  ) : (
+                    "Import"
+                  )
+                ) : importState === "connecting" ? (
+                  <span className="flex items-center gap-2">
+                    <LoadingSpinner size="sm" />
+                    Connecting
+                  </span>
+                ) : importState === "streaming" ? (
+                  <span className="flex items-center gap-2">
+                    <LoadingSpinner size="sm" />
+                    Importing
+                  </span>
+                ) : importState === "complete" ? (
+                  "Done"
+                ) : (
+                  "Failed"
+                )}
+              </Button>
+            </div>
+          </div>
+
+          {detectedType && (
+            <div className="mt-3 flex items-center gap-2 text-sm text-gray-400">
+              <svg
+                className="w-4 h-4 text-amber-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+              Detected as{" "}
+              <span className="font-medium text-amber-400 capitalize">{detectedType}</span>
+            </div>
+          )}
+        </div>
+
         {loading && (
-          <div className="flex justify-center py-20">
-            <LoadingSpinner size="xl" className="text-amber-500" />
+          <div className="space-y-3" role="status" aria-label="Loading library">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div
+                key={i}
+                className="w-full bg-gray-800/40 rounded-2xl p-6 border border-gray-700/30 flex items-center gap-4 animate-pulse"
+              >
+                <div className="w-14 h-14 rounded-xl bg-gray-700 shrink-0" />
+                <div className="flex-1 space-y-2.5">
+                  <div className="h-4 bg-gray-700 rounded w-3/5" />
+                  <div className="h-3 bg-gray-700/50 rounded w-2/5" />
+                </div>
+                <div className="w-5 h-5 bg-gray-700/50 rounded shrink-0" />
+              </div>
+            ))}
           </div>
         )}
 
-        {!loading && (
-          <>
-            <div className="bg-gray-800/40 rounded-2xl border border-gray-700/50 p-6 mb-8">
-              <h2 className="text-lg font-bold text-white mb-4">Add from Spotify</h2>
-              <div className="flex gap-3">
-                <div className="flex-1">
-                  <Input
-                    placeholder="Paste any Spotify link (song, playlist, or album)"
-                    value={link}
-                    onChange={(e) => {
-                      setLink(e.target.value);
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && detectedType) handleImport();
-                    }}
-                  />
-                </div>
-                <div className="flex gap-2">
-                  {(importState === "connecting" || importState === "streaming") && (
-                    <Button variant="secondary" onClick={cancelImport}>
-                      Cancel
-                    </Button>
-                  )}
-                  <Button
-                    variant="primary"
-                    onClick={handleImport}
-                    disabled={
-                      !detectedType || importState === "connecting" || importState === "streaming"
-                    }
+        {!loading &&
+          (hasItems ? (
+            <div className="space-y-3">
+              {items.map((item) => (
+                <button
+                  key={`${item.type}-${item.id}`}
+                  onClick={() => openDrawer(item)}
+                  className="w-full bg-gray-800/40 rounded-2xl p-6 border border-gray-700/30 flex items-center gap-4 hover:border-gray-600/50 transition-colors text-left group"
+                >
+                  <div
+                    className={`w-14 h-14 rounded-xl bg-gradient-to-br ${gradientForType(item.type)} flex items-center justify-center flex-shrink-0 overflow-hidden`}
                   >
-                    {importState === "idle" ? (
-                      detectedType === "track" ? (
-                        "Add Track"
-                      ) : detectedType === "playlist" ? (
-                        "Import Playlist"
-                      ) : detectedType === "album" ? (
-                        "Import Album"
-                      ) : (
-                        "Import"
-                      )
-                    ) : importState === "connecting" ? (
-                      <span className="flex items-center gap-2">
-                        <LoadingSpinner size="sm" />
-                        Connecting
-                      </span>
-                    ) : importState === "streaming" ? (
-                      <span className="flex items-center gap-2">
-                        <LoadingSpinner size="sm" />
-                        Importing
-                      </span>
-                    ) : importState === "complete" ? (
-                      "Done"
+                    {item.imageUrl ? (
+                      <img
+                        src={item.imageUrl}
+                        alt={item.name}
+                        className="w-full h-full object-cover"
+                      />
                     ) : (
-                      "Failed"
+                      itemIcon(item.type)
                     )}
-                  </Button>
-                </div>
-              </div>
+                  </div>
+                  <div className="flex-1 min-w-0 text-left">
+                    <div className="text-white font-semibold truncate">{item.name}</div>
+                    <div className="text-gray-400 text-sm">
+                      {item.type === "album" && item.artists
+                        ? `${item.artists.map((a) => a.name).join(", ")} · `
+                        : ""}
+                      {item.trackCount} track{item.trackCount !== 1 ? "s" : ""}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <span className="text-gray-500 text-sm">View tracks</span>
+                    <svg
+                      className="w-5 h-5 text-gray-500 group-hover:text-gray-300 transition-colors"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 5l7 7-7 7"
+                      />
+                    </svg>
+                  </div>
+                </button>
+              ))}
 
-              {detectedType && (
-                <div className="mt-3 flex items-center gap-2 text-sm text-gray-400">
-                  <svg
-                    className="w-4 h-4 text-amber-400"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
-                  Detected as{" "}
-                  <span className="font-medium text-amber-400 capitalize">{detectedType}</span>
+              <div ref={sentinelRef} className="h-4" />
+              {loadingMore && (
+                <div className="flex justify-center py-4">
+                  <LoadingSpinner size="md" className="text-amber-500" />
                 </div>
               )}
             </div>
-
-            {hasItems ? (
-              <div className="space-y-3">
-                {items.map((item) => (
-                  <button
-                    key={`${item.type}-${item.id}`}
-                    onClick={() => openDrawer(item)}
-                    className="w-full bg-gray-800/40 rounded-2xl p-6 border border-gray-700/30 flex items-center gap-4 hover:border-gray-600/50 transition-colors text-left group"
-                  >
-                    <div
-                      className={`w-14 h-14 rounded-xl bg-gradient-to-br ${gradientForType(item.type)} flex items-center justify-center flex-shrink-0 overflow-hidden`}
-                    >
-                      {item.imageUrl ? (
-                        <img
-                          src={item.imageUrl}
-                          alt={item.name}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        itemIcon(item.type)
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0 text-left">
-                      <div className="text-white font-semibold truncate">{item.name}</div>
-                      <div className="text-gray-400 text-sm">
-                        {item.type === "album" && item.artists
-                          ? `${item.artists.map((a) => a.name).join(", ")} · `
-                          : ""}
-                        {item.trackCount} track{item.trackCount !== 1 ? "s" : ""}
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <span className="text-gray-500 text-sm">View tracks</span>
-                      <svg
-                        className="w-5 h-5 text-gray-500 group-hover:text-gray-300 transition-colors"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M9 5l7 7-7 7"
-                        />
-                      </svg>
-                    </div>
-                  </button>
-                ))}
-
-                <div ref={sentinelRef} className="h-4" />
-                {loadingMore && (
-                  <div className="flex justify-center py-4">
-                    <LoadingSpinner size="md" className="text-amber-500" />
-                  </div>
-                )}
+          ) : (
+            <div className="text-center py-16">
+              <div className="w-20 h-20 bg-gray-800/50 rounded-full flex items-center justify-center mx-auto mb-6">
+                <svg
+                  className="w-10 h-10 text-gray-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"
+                  />
+                </svg>
               </div>
-            ) : (
-              <div className="text-center py-16">
-                <div className="w-20 h-20 bg-gray-800/50 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <svg
-                    className="w-10 h-10 text-gray-600"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"
-                    />
-                  </svg>
-                </div>
-                <h3 className="text-xl font-bold text-white mb-2">Your library is empty</h3>
-                <p className="text-gray-400">
-                  Paste a Spotify link above to add your first track, playlist, or album.
-                </p>
-              </div>
-            )}
-          </>
-        )}
+              <h3 className="text-xl font-bold text-white mb-2">Your library is empty</h3>
+              <p className="text-gray-400">
+                Paste a Spotify link above to add your first track, playlist, or album.
+              </p>
+            </div>
+          ))}
       </main>
 
       {drawer && (
@@ -680,8 +688,17 @@ export default function LibraryPage() {
           }
         >
           {drawerLoading && drawerTracks.length === 0 ? (
-            <div className="flex justify-center py-8">
-              <LoadingSpinner size="md" className="text-amber-500" />
+            <div className="space-y-2" role="status" aria-label="Loading tracks">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="flex items-center gap-3 py-3 animate-pulse">
+                  <div className="w-8 h-8 rounded bg-gray-700 shrink-0" />
+                  <div className="flex-1 min-w-0 space-y-2">
+                    <div className="h-3.5 bg-gray-700 rounded w-3/5" />
+                    <div className="h-3 bg-gray-700/50 rounded w-2/5" />
+                  </div>
+                  <div className="w-10 h-3 bg-gray-700/30 rounded shrink-0" />
+                </div>
+              ))}
             </div>
           ) : drawerTracks.length === 0 ? (
             <p className="text-gray-400 text-center py-8">No tracks found.</p>
