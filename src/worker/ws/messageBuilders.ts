@@ -54,6 +54,13 @@ export const MessageBuilders = {
             state.game.phase === "roundEnd"
               ? serializedGame.choices
               : serializedGame.choices.map(({ isCorrect: _, ...rest }) => rest),
+          songs: [],
+          currentSong: serializedGame.songs[serializedGame.currentSongIndex]
+            ? {
+                previewUrl: serializedGame.songs[serializedGame.currentSongIndex]?.previewUrl,
+                albumImageUrl: serializedGame.songs[serializedGame.currentSongIndex]?.albumImageUrl,
+              }
+            : null,
         } as unknown as GameStateSnapshot,
       },
       timestamp: Date.now(),

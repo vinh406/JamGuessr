@@ -56,13 +56,7 @@ export function roomReducer(state: RoomState, action: RoomAction): RoomState {
           gamePhase: unified.game.phase,
           currentRound: unified.game.currentRound,
           totalRounds: unified.game.totalRounds,
-          currentSong:
-            unified.game.choices.length > 0
-              ? {
-                  previewUrl: unified.game.songs[unified.game.currentSongIndex]?.previewUrl,
-                  albumImageUrl: unified.game.songs[unified.game.currentSongIndex]?.albumImageUrl,
-                }
-              : null,
+          currentSong: unified.game.currentSong ?? null,
           choices: unified.game.choices,
           roundStartTime: unified.game.roundStartTime,
           roundEndTime: unified.game.roundEndTime,

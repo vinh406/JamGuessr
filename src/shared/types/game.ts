@@ -42,6 +42,7 @@ export interface GameStateSnapshot {
   roundStartTime: number;
   roundEndTime: number;
   roundDuration: number;
+  currentSong?: { previewUrl?: string; albumImageUrl?: string } | null;
   // Voting for next game
   votes: Record<string, boolean>; // userId -> vote
   voteEndsAt: number | null;
