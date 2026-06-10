@@ -1,4 +1,59 @@
-import { DefaultAvatar } from "../ui/DefaultAvatar";
+import { UserPreview } from "../ui";
+
+function ClickableEntryRow({
+  entry,
+  rank,
+  isMe,
+  isWinner,
+  streakLabel,
+}: {
+  entry: LeaderboardEntry;
+  rank: number;
+  isMe: boolean;
+  isWinner: boolean;
+  streakLabel: string | undefined;
+}) {
+  const hasStreak = streakLabel && entry.streak != null && entry.streak > 0;
+
+  return (
+    <div
+      className={`flex items-center gap-3 p-3 rounded-lg ${
+        isWinner
+          ? "bg-gradient-to-r from-yellow-500/20 to-yellow-600/10 border border-yellow-500/30"
+          : isMe
+            ? "bg-green-500/20 border border-green-500/30"
+            : "bg-gray-700/20"
+      }`}
+    >
+      <span
+        className={`text-base font-bold w-7 text-center shrink-0 ${
+          rank === 1
+            ? "text-yellow-400"
+            : rank === 2
+              ? "text-gray-300"
+              : rank === 3
+                ? "text-amber-600"
+                : "text-gray-500"
+        }`}
+      >
+        {rank}
+      </span>
+      <div className="flex-1 min-w-0">
+        <UserPreview
+          userId={entry.userId}
+          displayName={entry.displayName}
+          image={entry.image}
+          isMe={isMe}
+          description={hasStreak ? `${streakLabel}: ${entry.streak}` : undefined}
+        />
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
+        {hasStreak && <span className="text-xs text-yellow-400">🔥 {entry.streak}</span>}
+        <span className="text-sm font-bold text-green-400">{entry.score.toLocaleString()}</span>
+      </div>
+    </div>
+  );
+}
 
 export interface LeaderboardEntry {
   userId: string | null;
@@ -44,50 +99,14 @@ export function Leaderboard({
           const isWinner = highlightWinner && rank === 1;
 
           return (
-            <div
+            <ClickableEntryRow
               key={entry.userId ?? `entry-${index}`}
-              className={`flex items-center gap-3 p-3 rounded-lg ${
-                isWinner
-                  ? "bg-gradient-to-r from-yellow-500/20 to-yellow-600/10 border border-yellow-500/30"
-                  : isMe
-                    ? "bg-green-500/20 border border-green-500/30"
-                    : "bg-gray-700/20"
-              }`}
-            >
-              <span
-                className={`text-base font-bold w-7 text-center shrink-0 ${
-                  rank === 1
-                    ? "text-yellow-400"
-                    : rank === 2
-                      ? "text-gray-300"
-                      : rank === 3
-                        ? "text-amber-600"
-                        : "text-gray-500"
-                }`}
-              >
-                {rank}
-              </span>
-              <DefaultAvatar name={entry.displayName} src={entry.image} size={36} />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-white truncate">
-                  {entry.displayName}
-                  {isMe && <span className="ml-1.5 text-xs text-green-400">(You)</span>}
-                </p>
-                {streakLabel && entry.streak != null && entry.streak > 0 && (
-                  <p className="text-xs text-gray-500">
-                    {streakLabel}: {entry.streak}
-                  </p>
-                )}
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
-                {entry.streak != null && entry.streak > 0 && (
-                  <span className="text-xs text-yellow-400">🔥 {entry.streak}</span>
-                )}
-                <span className="text-sm font-bold text-green-400">
-                  {entry.score.toLocaleString()}
-                </span>
-              </div>
-            </div>
+              entry={entry}
+              rank={rank}
+              isMe={isMe}
+              isWinner={isWinner}
+              streakLabel={streakLabel}
+            />
           );
         })}
       </div>

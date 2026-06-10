@@ -173,6 +173,53 @@ function createUserSettingsHandlers() {
     return c.json({ imageUrl }, 200);
   });
 
+  const PublicProfileSchema = z
+    .object({
+      id: z.string().openapi({ description: "User ID" }),
+      name: z.string().openapi({ description: "Display name" }),
+      image: z.string().nullable().openapi({ description: "Avatar image URL" }),
+      bio: z.string().nullable().openapi({ description: "User bio" }),
+    })
+    .openapi("PublicUserProfile");
+
+  // GET /profile/{userId} - Get any user's public profile (public, no auth)
+  const publicProfileRoute = createRoute({
+    method: "get",
+    path: "/profile/{userId}",
+    request: { params: UserIdParamSchema },
+    responses: {
+      200: {
+        content: { "application/json": { schema: PublicProfileSchema } },
+        description: "Public user profile",
+      },
+      404: {
+        content: { "application/json": { schema: ErrorSchema } },
+        description: "User not found",
+      },
+    },
+    tags: ["User"],
+    summary: "Get public profile",
+    description: "Get any user's public profile by user ID (no auth required)",
+  });
+  app.openapi(publicProfileRoute, async (c) => {
+    const { userId } = c.req.valid("param");
+    const db = getDb(c.env.DATABASE_URL);
+
+    const [found] = await db
+      .select({
+        id: user.id,
+        name: user.name,
+        image: user.image,
+        bio: user.bio,
+      })
+      .from(user)
+      .where(eq(user.id, userId));
+
+    if (!found) return c.json({ error: "User not found" }, 404);
+
+    return c.json(found, 200);
+  });
+
   // GET /avatar/{userId} - Serve any user's avatar (public, no auth)
   const avatarServeRoute = createRoute({
     method: "get",

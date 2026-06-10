@@ -4,3 +4,7 @@ export { DefaultAvatar } from "./DefaultAvatar";
 export { Input } from "./Input";
 export { Slider } from "./Slider";
 export { Textarea } from "./Textarea";
+export { PopupTrigger } from "./PopupTrigger";
+export { ProfilePopup } from "./ProfilePopup";
+export { useUserProfileCard } from "./useUserProfileCard";
+export { UserPreview } from "./UserPreview";

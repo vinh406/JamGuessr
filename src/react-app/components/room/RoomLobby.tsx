@@ -1,5 +1,40 @@
 import type { Player, Playlist } from "../../../shared/types";
-import { Button, DefaultAvatar } from "../ui";
+import { Button, UserPreview } from "../ui";
+
+function PlayerRow({
+  player,
+  currentUser,
+}: {
+  player: Player;
+  currentUser: { username: string; userId: string } | null;
+}) {
+  return (
+    <div
+      className={`flex items-center justify-between p-4 rounded-xl transition-all ${
+        player.isHost
+          ? "bg-yellow-500/10 border border-yellow-500/30"
+          : player.isReady
+            ? "bg-green-500/10 border border-green-500/30"
+            : "bg-gray-700/30 border border-gray-600/30"
+      }`}
+    >
+      <div className="flex items-center gap-3">
+        <UserPreview
+          userId={player.userId}
+          displayName={player.username}
+          image={player.userImage}
+          isMe={player.userId === currentUser?.userId}
+          description={player.isHost ? "Host" : player.isReady ? "Ready to play!" : "Not ready"}
+        />
+      </div>
+      <div
+        className={`w-3 h-3 rounded-full ${
+          player.isHost ? "bg-yellow-500" : player.isReady ? "bg-green-500" : "bg-gray-500"
+        }`}
+      />
+    </div>
+  );
+}
 
 interface RoomLobbyProps {
   roomName: string;
@@ -159,36 +194,7 @@ export function RoomLobby({
         </h3>
         <div className="space-y-3">
           {players.map((player) => (
-            <div
-              key={player.userId}
-              className={`flex items-center justify-between p-4 rounded-xl transition-all ${
-                player.isHost
-                  ? "bg-yellow-500/10 border border-yellow-500/30"
-                  : player.isReady
-                    ? "bg-green-500/10 border border-green-500/30"
-                    : "bg-gray-700/30 border border-gray-600/30"
-              }`}
-            >
-              <div className="flex items-center gap-3">
-                <DefaultAvatar name={player.username} src={player.userImage} size={40} />
-                <div>
-                  <p className="text-white font-medium">
-                    {player.username}
-                    {player.userId === currentUser?.userId && (
-                      <span className="ml-2 text-gray-400 text-sm">(You)</span>
-                    )}
-                  </p>
-                  <p className="text-sm text-gray-400">
-                    {player.isHost ? "Host" : player.isReady ? "Ready to play!" : "Not ready"}
-                  </p>
-                </div>
-              </div>
-              <div
-                className={`w-3 h-3 rounded-full ${
-                  player.isHost ? "bg-yellow-500" : player.isReady ? "bg-green-500" : "bg-gray-500"
-                }`}
-              />
-            </div>
+            <PlayerRow key={player.userId} player={player} currentUser={currentUser} />
           ))}
         </div>
       </div>
