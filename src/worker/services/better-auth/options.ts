@@ -40,6 +40,18 @@ export const betterAuthOptions: BetterAuthOptions = {
   },
 
   /**
+   * User configuration — custom fields
+   */
+  user: {
+    additionalFields: {
+      bio: {
+        type: "string",
+        required: false,
+      },
+    },
+  },
+
+  /**
    * Advanced options
    */
   advanced: {

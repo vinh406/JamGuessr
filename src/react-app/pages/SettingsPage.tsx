@@ -1,6 +1,6 @@
 import { useState, useRef, lazy, Suspense } from "react";
 import PageLayout from "../components/common/PageLayout";
-import { Button, Input, DefaultAvatar } from "../components/ui";
+import { Button, Input, DefaultAvatar, Textarea } from "../components/ui";
 import { useAuth } from "../hooks/useAuth";
 import { toast } from "sonner";
 
@@ -9,13 +9,16 @@ const AvatarCropModal = lazy(() => import("../components/common/AvatarCropModal"
 export default function SettingsPage() {
   const { user, updateUser } = useAuth();
   const [displayName, setDisplayName] = useState(user?.name ?? "");
+  const [bio, setBio] = useState(user?.bio ?? "");
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [cropImageUrl, setCropImageUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const nameChanged = displayName !== user?.name;
-  const canSave = !saving && displayName.trim().length > 0 && nameChanged;
+  const bioChanged = bio !== (user?.bio ?? "");
+  const hasChanges = nameChanged || bioChanged;
+  const canSave = !saving && displayName.trim().length > 0 && hasChanges;
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -72,15 +75,18 @@ export default function SettingsPage() {
       const res = await fetch("/api/user/profile", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: displayName.trim() }),
+        body: JSON.stringify({
+          name: displayName.trim(),
+          bio: bio.trim() || null,
+        }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => null);
         throw new Error(err?.error ?? "Failed to update profile");
       }
       const data = await res.json();
-      updateUser({ name: data.name });
-      toast.success("Display name updated!");
+      updateUser({ name: data.name, bio: data.bio ?? "" });
+      toast.success("Profile updated!");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to update profile");
     } finally {
@@ -198,6 +204,24 @@ export default function SettingsPage() {
             <p className="text-gray-400 text-sm mt-2">
               This is how other players see you in games.
             </p>
+          </div>
+
+          <div>
+            <h2 className="text-lg font-bold text-white mb-4">Bio</h2>
+            <Textarea
+              variant="primary"
+              size="md"
+              value={bio}
+              onChange={(e) => {
+                if (e.target.value.length <= 250) setBio(e.target.value);
+              }}
+              placeholder="Tell others about yourself..."
+              rows={3}
+            />
+            <div className="flex justify-between items-center mt-2">
+              <p className="text-gray-400 text-sm">Visible on your public profile.</p>
+              <span className="text-sm text-gray-400">{bio.length}/250</span>
+            </div>
           </div>
 
           <div className="flex justify-end">

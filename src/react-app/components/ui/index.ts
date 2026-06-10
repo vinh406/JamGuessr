@@ -3,3 +3,4 @@ export { Button } from "./Button";
 export { DefaultAvatar } from "./DefaultAvatar";
 export { Input } from "./Input";
 export { Slider } from "./Slider";
+export { Textarea } from "./Textarea";

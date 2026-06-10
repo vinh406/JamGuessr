@@ -14,6 +14,10 @@ const UpdateProfileRequestSchema = z
       description: "Display name (1–50 characters)",
       example: "John Doe",
     }),
+    bio: z.string().max(250).nullable().optional().openapi({
+      description: "User bio (markdown, max 250 characters)",
+      example: "Music lover and trivia enthusiast",
+    }),
   })
   .openapi("UpdateProfileRequest");
 
@@ -23,6 +27,7 @@ const UserProfileSchema = z
     name: z.string().openapi({ description: "Display name" }),
     email: z.string().openapi({ description: "Email address" }),
     image: z.string().nullable().openapi({ description: "Avatar image URL" }),
+    bio: z.string().nullable().openapi({ description: "User bio (markdown)" }),
   })
   .openapi("UserProfile");
 
@@ -79,20 +84,26 @@ function createUserSettingsHandlers() {
     },
     tags: ["User"],
     summary: "Update profile",
-    description: "Update the authenticated user's display name",
+    description: "Update the authenticated user's display name and bio",
   });
   app.openapi(updateProfileRoute, async (c) => {
     const currentUser = await getAuthenticatedUser(c);
     if (!currentUser) return c.json({ error: "Unauthorized" }, 401);
 
-    const { name } = c.req.valid("json");
+    const { name, bio } = c.req.valid("json");
     const db = getDb(c.env.DATABASE_URL);
 
     const [updated] = await db
       .update(user)
-      .set({ name })
+      .set({ name, ...(bio !== undefined && { bio }) })
       .where(eq(user.id, currentUser.id))
-      .returning({ id: user.id, name: user.name, email: user.email, image: user.image });
+      .returning({
+        id: user.id,
+        name: user.name,
+        email: user.email,
+        image: user.image,
+        bio: user.bio,
+      });
 
     if (!updated) return c.json({ error: "User not found" }, 404);
 
