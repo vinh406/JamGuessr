@@ -34,11 +34,9 @@ export default function ConfirmDialog({
           <Dialog.Title className="text-lg font-bold text-white m-0 mb-3">{title}</Dialog.Title>
           <p className="text-gray-300 text-sm mb-6">{message}</p>
           <div className="flex justify-end gap-3">
-            <Dialog.Close className="bg-transparent border-none p-0">
-              <Button variant="secondary" size="sm" onClick={handleClose}>
-                {cancelLabel}
-              </Button>
-            </Dialog.Close>
+            <Button variant="secondary" size="sm" onClick={handleClose}>
+              {cancelLabel}
+            </Button>
             <Button
               variant="primary"
               size="sm"
