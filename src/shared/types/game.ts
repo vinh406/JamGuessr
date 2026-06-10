@@ -38,7 +38,7 @@ export interface GameStateSnapshot {
   currentSongIndex: number;
   choices: SongChoice[];
   scores: PlayerScore[];
-  answers: Record<string, { choiceIndex: number; answeredAt: number }>;
+  answers: Record<string, { choiceIndex: number; answeredAt: number; isCorrect: boolean }>;
   roundStartTime: number;
   roundEndTime: number;
   roundDuration: number;

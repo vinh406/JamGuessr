@@ -72,6 +72,7 @@ export function roomReducer(state: RoomState, action: RoomAction): RoomState {
           myStreak: myScoreObj?.streak ?? 0,
           hasAnswered: !!myAnswer,
           selectedChoice: myAnswer?.choiceIndex ?? null,
+          lastAnswerCorrect: myAnswer?.isCorrect ?? null,
           endStateData:
             unified.game.phase === "roundEnd"
               ? {

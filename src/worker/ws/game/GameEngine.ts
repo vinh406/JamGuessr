@@ -20,7 +20,8 @@ export class GameEngine {
   private currentSongIndex: number = 0;
   private choices: SongChoice[] = [];
   private scores: Map<string, PlayerScore> = new Map();
-  private answers: Map<string, { choiceIndex: number; answeredAt: number }> = new Map();
+  private answers: Map<string, { choiceIndex: number; answeredAt: number; isCorrect: boolean }> =
+    new Map();
   private roundStartTime: number = 0;
   private roundEndTime: number = 0;
   private roundDuration: number = 0;
@@ -171,7 +172,7 @@ export class GameEngine {
 
     const timeTaken = Date.now() - this.roundStartTime;
     const isCorrect = this.choices[choiceIndex]?.isCorrect ?? false;
-    this.answers.set(userId, { choiceIndex, answeredAt: Date.now() });
+    this.answers.set(userId, { choiceIndex, answeredAt: Date.now(), isCorrect });
 
     const playerScore = this.scores.get(userId);
     if (!playerScore) {
