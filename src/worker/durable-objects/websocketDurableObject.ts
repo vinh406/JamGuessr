@@ -61,6 +61,11 @@ export class WebSocketHibernationServer extends DurableObject {
     await this.messageRouter.handleClose(ws);
   }
 
+  async webSocketError(ws: WebSocket, error: unknown): Promise<void> {
+    console.error("WebSocket error:", error);
+    await this.messageRouter.handleClose(ws);
+  }
+
   private async handleMessage(ws: WebSocket, message: IncomingMessage): Promise<void> {
     await this.messageRouter.handleMessage(ws, message);
   }

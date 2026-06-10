@@ -130,6 +130,9 @@ export class RoomHandler {
     // Get remaining users in the room (after host transfer)
     const roomUsers = this.roomManager.getAllUsers();
 
+    // Room is empty — no one to notify, game state persists for reconnection
+    if (roomUsers.length === 0) return;
+
     // Notify remaining users with updated user list
     const leaveMessage = MessageBuilders.userLeft(username, userId, room, roomUsers);
     broadcastToRoom(this.roomManager.getSessions(), leaveMessage);
