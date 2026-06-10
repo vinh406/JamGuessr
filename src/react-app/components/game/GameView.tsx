@@ -68,22 +68,39 @@ export function GameView({
       audioRef.current.currentTime = 0;
     }
     if (song.previewUrl) {
-      audioRef.current = new Audio(song.previewUrl);
-      audioRef.current.play().catch(() => {});
+      const elapsed = Date.now() - (endTime - duration);
+      const seekTime = Math.min(elapsed, audioTime);
+      const remainingTime = Math.max(0, audioTime - seekTime);
 
-      // Stop audio after audioTime
-      stopAudioTimeout = setTimeout(() => {
-        if (audioRef.current) {
-          audioRef.current.pause();
-          audioRef.current.currentTime = 0;
-        }
-      }, audioTime);
+      const audio = new Audio(song.previewUrl);
+      audioRef.current = audio;
+
+      if (seekTime > 500) {
+        audio.addEventListener(
+          "loadedmetadata",
+          () => {
+            audio.currentTime = seekTime / 1000;
+          },
+          { once: true },
+        );
+      }
+
+      if (remainingTime > 0) {
+        audio.play().catch(() => {});
+
+        stopAudioTimeout = setTimeout(() => {
+          if (audioRef.current) {
+            audioRef.current.pause();
+            audioRef.current.currentTime = 0;
+          }
+        }, remainingTime);
+      }
     }
 
     return () => {
       if (stopAudioTimeout) clearTimeout(stopAudioTimeout);
     };
-  }, [song.previewUrl, audioTime]);
+  }, [song.previewUrl, audioTime, endTime, duration]);
 
   useEffect(() => {
     if (audioRef.current) {
