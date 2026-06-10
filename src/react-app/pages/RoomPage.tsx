@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useParams } from "react-router";
+import { useState, useEffect, useRef } from "react";
+import { useParams, useBlocker } from "react-router";
 import { useRoomState } from "../hooks/room/useRoomState";
 import { ChatBox } from "../components/room/ChatBox";
 import { RoomLobby } from "../components/room/RoomLobby";
@@ -62,6 +62,7 @@ export default function RoomPage() {
   const {
     handleJoinRoom,
     handleLeaveRoom,
+    handleConfirmLeave,
     handleToggleReady,
     handleStartGame,
     handleSelectPlaylist,
@@ -82,6 +83,41 @@ export default function RoomPage() {
   const { pendingLibraryImport, libraryImporting } = state.ui;
 
   const isGameActive = gamePhase === "playing" || gamePhase === "roundEnd";
+  const shouldConfirmLeave = gamePhase !== "lobby" || players.length > 1;
+
+  const blocker = useBlocker(
+    ({ currentLocation, nextLocation }) =>
+      currentLocation.pathname !== nextLocation.pathname && shouldConfirmLeave,
+  );
+
+  const blockedRef = useRef(false);
+
+  useEffect(() => {
+    if (blocker.state !== "blocked" || blockedRef.current) return;
+    blockedRef.current = true;
+
+    const confirmed = window.confirm("Are you sure you want to leave?");
+
+    blockedRef.current = false;
+
+    if (confirmed) {
+      handleConfirmLeave();
+      blocker.proceed();
+    } else {
+      blocker.reset();
+    }
+  }, [blocker, blocker.state, handleConfirmLeave]);
+
+  useEffect(() => {
+    if (!shouldConfirmLeave) return;
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [shouldConfirmLeave]);
 
   if (authLoading) {
     return <FullScreenLoader showIcon={false} spinnerSize="xl" className="h-screen p-4" />;

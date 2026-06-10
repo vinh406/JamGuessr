@@ -253,10 +253,13 @@ export function useRoomActions({ state, dispatch }: UseRoomActionsParams) {
   );
 
   const handleLeaveRoom = useCallback(() => {
+    navigate("/");
+  }, [navigate]);
+
+  const handleConfirmLeave = useCallback(() => {
     sessionStorage.removeItem("chat-username");
     dispatch({ type: "SET_USER", user: null });
-    navigate("/");
-  }, [navigate, dispatch]);
+  }, [dispatch]);
 
   const handleToggleReady = useCallback(() => {
     dispatch({ type: "TOGGLE_READY" });
@@ -433,6 +436,7 @@ export function useRoomActions({ state, dispatch }: UseRoomActionsParams) {
   return {
     handleJoinRoom,
     handleLeaveRoom,
+    handleConfirmLeave,
     handleToggleReady,
     handleStartGame,
     handleSelectPlaylist,
