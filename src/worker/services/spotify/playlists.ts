@@ -249,10 +249,14 @@ export async function getPlaylistTracks(
       const tracks = entity.trackList.map(embedTrackToSong);
 
       if (quick) {
-        // Fetch first partner page for album art (1 subrequest, ~50 tracks)
+        // Fetch partner pages for album art (up to 100 tracks, minimum pages needed)
         try {
-          const page = await fetchPartnerPage(playlistId, accessToken, 0);
-          const imageMap = new Map(page.map((t) => [t.id, t.albumImageUrl]));
+          const numPages = Math.min(Math.ceil(tracks.length / BATCH_SIZE), 2);
+          const limit = numPages * BATCH_SIZE;
+          const partnerTracks = await paginateFetch(limit, 0, BATCH_SIZE, CONCURRENCY, (o) =>
+            fetchPartnerPage(playlistId, accessToken, o),
+          );
+          const imageMap = new Map(partnerTracks.map((t) => [t.id, t.albumImageUrl]));
           return tracks.map((t) => ({
             ...t,
             albumImageUrl: imageMap.get(t.id) ?? t.albumImageUrl,

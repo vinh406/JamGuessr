@@ -63,6 +63,7 @@ export type RoomAction =
   | { type: "SET_PLAYLISTS_LOADING"; loading: boolean }
   | { type: "SET_PENDING_LIBRARY_IMPORT"; playlist: Playlist | null }
   | { type: "SET_LIBRARY_IMPORTING"; importing: boolean }
+  | { type: "SET_PLAYLIST_IMPORT_ERROR"; error: string | null }
   | { type: "LOCAL_ANSWER"; choiceIndex: number }
   | { type: "TOGGLE_READY" }
   | { type: "RESET_TO_LOBBY" };
@@ -111,6 +112,7 @@ export interface RoomState {
     playlistsLoading: boolean;
     pendingLibraryImport: { playlist: Playlist } | null;
     libraryImporting: boolean;
+    playlistImportError: string | null;
     isStartingGame: boolean;
     chatMessages: ChatBoxMessage[];
     isConnected: boolean;

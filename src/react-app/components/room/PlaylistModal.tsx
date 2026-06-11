@@ -8,6 +8,7 @@ interface PlaylistModalProps {
   isLoading: boolean;
   error: string | null;
   spotifyLink: string;
+  isImporting: boolean;
   onSpotifyLinkChange: (link: string) => void;
   onSelectPlaylist: (playlist: Playlist) => void;
   onSubmitSpotifyLink: () => void;
@@ -21,6 +22,7 @@ export function PlaylistModal({
   isLoading,
   error,
   spotifyLink,
+  isImporting,
   onSpotifyLinkChange,
   onSelectPlaylist,
   onSubmitSpotifyLink,
@@ -50,10 +52,11 @@ export function PlaylistModal({
             placeholder="Paste Spotify playlist link..."
             className="flex-1"
           />
-          <Button onClick={onSubmitSpotifyLink} disabled={!spotifyLink.trim()}>
-            Import
+          <Button onClick={onSubmitSpotifyLink} disabled={!spotifyLink.trim() || isImporting}>
+            {isImporting ? "Importing..." : "Import"}
           </Button>
         </div>
+        {error && <p className="mt-2 text-sm text-red-400">{error}</p>}
       </div>
 
       {/* Create Blend Button */}
@@ -99,11 +102,8 @@ export function PlaylistModal({
         </div>
       )}
 
-      {/* Error State */}
-      {error && !isLoading && <div className="text-center py-8 text-red-400">{error}</div>}
-
       {/* Playlists List */}
-      {!isLoading && !error && (
+      {!isLoading && (
         <div className="space-y-3">
           {availablePlaylists.length === 0 ? (
             <p className="text-center text-gray-400 py-8">

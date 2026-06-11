@@ -80,7 +80,7 @@ export default function RoomPage() {
     handleSkipLibraryImport,
   } = actions;
 
-  const { pendingLibraryImport, libraryImporting } = state.ui;
+  const { pendingLibraryImport, libraryImporting, playlistImportError } = state.ui;
 
   const isGameActive = gamePhase === "playing" || gamePhase === "roundEnd";
   const shouldConfirmLeave = gamePhase !== "lobby" || players.length > 1;
@@ -273,8 +273,9 @@ export default function RoomPage() {
           selectedPlaylist={selectedPlaylist}
           availablePlaylists={availablePlaylists}
           isLoading={playlistsLoading}
-          error={null}
+          error={playlistImportError}
           spotifyLink={spotifyLink}
+          isImporting={libraryImporting}
           onSpotifyLinkChange={setSpotifyLink}
           onSelectPlaylist={handleSelectPlaylist}
           onSubmitSpotifyLink={handleSpotifyLinkSubmit}

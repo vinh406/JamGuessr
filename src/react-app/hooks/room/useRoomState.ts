@@ -29,6 +29,7 @@ const initialState: RoomState = {
     playlistsLoading: true,
     pendingLibraryImport: null,
     libraryImporting: false,
+    playlistImportError: null,
     isStartingGame: false,
     chatMessages: [],
     isConnected: false,

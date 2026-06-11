@@ -403,6 +403,8 @@ export function useRoomActions({ state, dispatch }: UseRoomActionsParams) {
   const handleSpotifyLinkSubmit = useCallback(async () => {
     if (!state.ui.spotifyLink.trim()) return;
 
+    dispatch({ type: "SET_LIBRARY_IMPORTING", importing: true });
+
     try {
       const response = await fetch("/api/playlists/import", {
         method: "POST",
@@ -412,14 +414,22 @@ export function useRoomActions({ state, dispatch }: UseRoomActionsParams) {
 
       const data = await response.json();
       if (response.ok && data.playlist) {
+        dispatch({ type: "SET_SPOTIFY_LINK", link: "" });
         handleSelectPlaylist(data.playlist);
+      } else {
+        dispatch({
+          type: "SET_PLAYLIST_IMPORT_ERROR",
+          error: data.error || "Failed to import playlist. Please check the link and try again.",
+        });
       }
-    } catch (error) {
-      console.error("Error importing playlist:", error);
+    } catch {
+      dispatch({
+        type: "SET_PLAYLIST_IMPORT_ERROR",
+        error: "Network error. Please try again.",
+      });
     }
 
-    dispatch({ type: "SET_SPOTIFY_LINK", link: "" });
-    dispatch({ type: "SET_SHOW_PLAYLIST_MODAL", show: false });
+    dispatch({ type: "SET_LIBRARY_IMPORTING", importing: false });
   }, [state.ui.spotifyLink, handleSelectPlaylist, dispatch]);
 
   const handleCreateBlend = useCallback(() => {
@@ -450,8 +460,17 @@ export function useRoomActions({ state, dispatch }: UseRoomActionsParams) {
     handleConfirmLibraryImport,
     handleSkipLibraryImport,
     setShowSettingsModal: (show: boolean) => dispatch({ type: "SET_SHOW_SETTINGS_MODAL", show }),
-    setShowPlaylistModal: (show: boolean) => dispatch({ type: "SET_SHOW_PLAYLIST_MODAL", show }),
-    setSpotifyLink: (link: string) => dispatch({ type: "SET_SPOTIFY_LINK", link }),
+    setShowPlaylistModal: (show: boolean) => {
+      dispatch({ type: "SET_SHOW_PLAYLIST_MODAL", show });
+      if (!show) {
+        dispatch({ type: "SET_SPOTIFY_LINK", link: "" });
+        dispatch({ type: "SET_PLAYLIST_IMPORT_ERROR", error: null });
+      }
+    },
+    setSpotifyLink: (link: string) => {
+      dispatch({ type: "SET_SPOTIFY_LINK", link });
+      dispatch({ type: "SET_PLAYLIST_IMPORT_ERROR", error: null });
+    },
     resetToLobby: () => dispatch({ type: "RESET_TO_LOBBY" }),
   };
 }

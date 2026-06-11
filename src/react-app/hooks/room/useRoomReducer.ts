@@ -264,6 +264,9 @@ export function roomReducer(state: RoomState, action: RoomAction): RoomState {
     case "SET_LIBRARY_IMPORTING":
       return { ...state, ui: { ...state.ui, libraryImporting: action.importing } };
 
+    case "SET_PLAYLIST_IMPORT_ERROR":
+      return { ...state, ui: { ...state.ui, playlistImportError: action.error } };
+
     case "LOCAL_ANSWER":
       return {
         ...state,
