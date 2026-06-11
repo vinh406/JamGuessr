@@ -1,11 +1,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useNavigate } from "react-router";
 import PageLayout from "../components/common/PageLayout";
 import { Button, Input } from "../components/ui";
-import { Modal } from "../components/common/Modal";
-import ConfirmDialog from "../components/common/ConfirmDialog";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import { useLibraryImport } from "../hooks/useLibraryImport";
-import { useSSE, type SSEState } from "../hooks/useSSE";
 import { toast } from "sonner";
 import {
   getStats as getCachedStats,
@@ -24,32 +22,6 @@ interface LibraryItem {
   addedAt: string;
 }
 
-interface DrawerTrack {
-  id: string;
-  spotifyId: string;
-  name: string;
-  artists: { name: string; id?: string }[];
-  albumName?: string;
-  albumId?: string;
-  albumImageUrl?: string;
-  durationMs?: number;
-  addedAt: string;
-}
-
-interface DrawerState {
-  type: "playlist" | "album" | "tracks";
-  spotifyId?: string;
-  id: string;
-  name: string;
-  trackCount: number;
-}
-
-function formatDuration(ms: number): string {
-  const minutes = Math.floor(ms / 60000);
-  const seconds = Math.floor((ms % 60000) / 1000);
-  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
-}
-
 function parseSpotifyLinkType(link: string): "track" | "playlist" | "album" | null {
   const clean = link.trim();
   const trackMatch = clean.match(/(?:track|spotify:track)[:/]([a-zA-Z0-9]{22})/);
@@ -63,34 +35,16 @@ function parseSpotifyLinkType(link: string): "track" | "playlist" | "album" | nu
 }
 
 export default function LibraryPage() {
+  const navigate = useNavigate();
   const [items, setItems] = useState<LibraryItem[]>([]);
   const [nextCursor, setNextCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [stats, setStats] = useState<LibraryStats | null>(null);
 
-  const [drawer, setDrawer] = useState<DrawerState | null>(null);
-  const [drawerTracks, setDrawerTracks] = useState<DrawerTrack[]>([]);
-  const [drawerCursor, setDrawerCursor] = useState<string | null>(null);
-  const [drawerLoading, setDrawerLoading] = useState(false);
-
   const [link, setLink] = useState("");
-  const [removeState, setRemoveState] = useState<SSEState>("idle");
-  const removeToastId = useRef<string | number | null>(null);
-  const [deleteTarget, setDeleteTarget] = useState<{
-    type: "track" | "playlist" | "album";
-    id: string;
-    name: string;
-    cascadeCount?: number;
-  } | null>(null);
-  const [isDeletingTrack, setIsDeletingTrack] = useState(false);
 
   const sentinelRef = useRef<HTMLDivElement>(null);
-  const drawerSentinelRef = useRef<HTMLDivElement>(null);
-  const drawerScrollRef = useRef<HTMLDivElement | null>(null);
-  const drawerCacheRef = useRef<Map<string, { tracks: DrawerTrack[]; cursor: string | null }>>(
-    new Map(),
-  );
 
   const fetchItems = useCallback(
     async (
@@ -134,37 +88,6 @@ export default function LibraryPage() {
     setLoadingMore(false);
   };
 
-  const loadDrawerMoreRef = useRef(async () => {});
-  loadDrawerMoreRef.current = async () => {
-    if (drawerLoading || !drawerCursor || !drawer) return;
-    setDrawerLoading(true);
-    try {
-      let url: string;
-      if (drawer.type === "tracks") {
-        url = `/api/library/items/tracks?cursor=${encodeURIComponent(drawerCursor)}&limit=50`;
-      } else {
-        url = `/api/library/items/${drawer.type}/${drawer.spotifyId}/tracks?cursor=${encodeURIComponent(drawerCursor)}&limit=50`;
-      }
-      const res = await fetch(url);
-      if (!res.ok) return;
-      const data = await res.json();
-      setDrawerTracks((prev) => {
-        const updated = [...prev, ...data.tracks];
-        if (drawer)
-          drawerCacheRef.current.set(`${drawer.type}-${drawer.id}`, {
-            tracks: updated,
-            cursor: data.nextCursor,
-          });
-        return updated;
-      });
-      setDrawerCursor(data.nextCursor);
-    } catch {
-      toast.error("Failed to load more tracks.");
-    } finally {
-      setDrawerLoading(false);
-    }
-  };
-
   useEffect(() => {
     if (!sentinelRef.current) return;
     const el = sentinelRef.current;
@@ -176,13 +99,6 @@ export default function LibraryPage() {
     );
     observer.observe(el);
     return () => observer.disconnect();
-  }, []);
-
-  const handleDrawerScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
-    const el = e.currentTarget;
-    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 200) {
-      loadDrawerMoreRef.current();
-    }
   }, []);
 
   useEffect(() => {
@@ -231,136 +147,15 @@ export default function LibraryPage() {
   useEffect(() => {
     if (importState === "complete") {
       setLink("");
-      drawerCacheRef.current.clear();
       refetchItems();
     }
   }, [importState, refetchItems]);
-
-  const removeSSE = useSSE({
-    onEvent: (event) => {
-      if (event.event === "phase") {
-        const d = event.data as { label: string };
-        if (removeToastId.current) {
-          toast.loading(d.label, { id: removeToastId.current });
-        }
-      }
-    },
-    onComplete: () => {
-      setRemoveState("complete");
-      if (removeToastId.current) {
-        toast.success("Removed!", { id: removeToastId.current });
-        removeToastId.current = null;
-      }
-      setDrawer(null);
-      refetchItems();
-      setTimeout(() => {
-        setRemoveState("idle");
-        setDeleteTarget(null);
-      }, 2000);
-    },
-    onError: (msg) => {
-      setRemoveState("error");
-      if (removeToastId.current) {
-        toast.error(msg, { id: removeToastId.current });
-        removeToastId.current = null;
-      }
-    },
-  });
 
   const detectedType = link.trim() ? parseSpotifyLinkType(link) : null;
 
   const handleImport = () => {
     if (!link.trim() || importState === "connecting" || importState === "streaming") return;
     startImport(link.trim());
-  };
-
-  const handleDelete = async () => {
-    if (!deleteTarget) return;
-    const { type, id } = deleteTarget;
-
-    if (type === "track") {
-      setIsDeletingTrack(true);
-      try {
-        const res = await fetch(`/api/library/track/${id}`, { method: "DELETE" });
-        if (res.ok) {
-          setDeleteTarget(null);
-          if (drawer) {
-            setDrawerTracks((prev) => {
-              const updated = prev.filter((t) => t.id !== id);
-              drawerCacheRef.current.set(`${drawer.type}-${drawer.id}`, {
-                tracks: updated,
-                cursor: drawerCursor,
-              });
-              return updated;
-            });
-          }
-          refetchItems();
-        } else {
-          toast.error("Failed to remove track.");
-        }
-      } catch {
-        toast.error("Failed to remove track. Please try again.");
-      } finally {
-        setIsDeletingTrack(false);
-      }
-    } else {
-      setRemoveState("connecting");
-      removeToastId.current = toast.loading("Removing...");
-      removeSSE.start("/api/library/remove", { type, id });
-    }
-  };
-
-  const openDrawer = async (item: LibraryItem) => {
-    const itemKey = `${item.type}-${item.id}`;
-    const cached = drawerCacheRef.current.get(itemKey);
-    if (cached) {
-      setDrawer({
-        type: item.type,
-        spotifyId: item.spotifyId,
-        id: item.id,
-        name: item.name,
-        trackCount: item.trackCount,
-      });
-      setDrawerTracks(cached.tracks);
-      setDrawerCursor(cached.cursor);
-      setDrawerLoading(false);
-      return;
-    }
-    setDrawer({
-      type: item.type,
-      spotifyId: item.spotifyId,
-      id: item.id,
-      name: item.name,
-      trackCount: item.trackCount,
-    });
-    setDrawerTracks([]);
-    setDrawerCursor(null);
-    setDrawerLoading(true);
-
-    try {
-      let url: string;
-      if (item.type === "tracks") {
-        url = "/api/library/items/tracks?limit=50";
-      } else {
-        url = `/api/library/items/${item.type}/${item.spotifyId}/tracks?limit=50`;
-      }
-      const res = await fetch(url);
-      if (!res.ok) return;
-      const data = await res.json();
-      const tracks = data.tracks;
-      const cursor = data.nextCursor;
-      drawerCacheRef.current.set(itemKey, { tracks, cursor });
-      setDrawerTracks(tracks);
-      setDrawerCursor(cursor);
-    } catch {
-      toast.error("Failed to load tracks. Please try again.");
-    } finally {
-      setDrawerLoading(false);
-    }
-  };
-
-  const closeDrawer = () => {
-    setDrawer(null);
   };
 
   const hasItems = items.length > 0;
@@ -557,41 +352,45 @@ export default function LibraryPage() {
           </div>
         )}
 
-        {!loading &&
-          (hasItems ? (
+        {!loading && hasItems && (
+          <>
             <div className="space-y-3">
-              {items.map((item) => (
-                <button
-                  key={`${item.type}-${item.id}`}
-                  onClick={() => openDrawer(item)}
-                  className="w-full bg-gray-800/40 rounded-2xl p-6 border border-gray-700/30 flex items-center gap-4 hover:border-gray-600/50 transition-colors text-left group"
-                >
-                  <div
-                    className={`w-14 h-14 rounded-xl bg-gradient-to-br ${gradientForType(item.type)} flex items-center justify-center flex-shrink-0 overflow-hidden`}
+              {items.map((item) => {
+                const itemValue = `${item.type}-${item.id}`;
+                return (
+                  <button
+                    key={itemValue}
+                    onClick={() =>
+                      navigate(`/library/${item.type}/${item.spotifyId ?? item.id}`, {
+                        state: { item },
+                      })
+                    }
+                    className="w-full flex items-center gap-4 p-6 text-left bg-gray-800/40 rounded-2xl border border-gray-700/30 transition-colors hover:bg-gray-800/60 focus-visible:outline-2 focus-visible:outline-amber-500/50 focus-visible:-outline-offset-2 cursor-pointer"
                   >
-                    {item.imageUrl ? (
-                      <img
-                        src={item.imageUrl}
-                        alt={item.name}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      itemIcon(item.type)
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0 text-left">
-                    <div className="text-white font-semibold truncate">{item.name}</div>
-                    <div className="text-gray-400 text-sm">
-                      {item.type === "album" && item.artists
-                        ? `${item.artists.map((a) => a.name).join(", ")} · `
-                        : ""}
-                      {item.trackCount} track{item.trackCount !== 1 ? "s" : ""}
+                    <div
+                      className={`w-14 h-14 rounded-xl bg-gradient-to-br ${gradientForType(item.type)} flex items-center justify-center flex-shrink-0 overflow-hidden`}
+                    >
+                      {item.imageUrl ? (
+                        <img
+                          src={item.imageUrl}
+                          alt={item.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        itemIcon(item.type)
+                      )}
                     </div>
-                  </div>
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <span className="text-gray-500 text-sm">View tracks</span>
+                    <div className="flex-1 min-w-0 text-left">
+                      <div className="text-white font-semibold truncate">{item.name}</div>
+                      <div className="text-gray-400 text-sm">
+                        {item.type === "album" && item.artists
+                          ? `${item.artists.map((a) => a.name).join(", ")} · `
+                          : ""}
+                        {item.trackCount} track{item.trackCount !== 1 ? "s" : ""}
+                      </div>
+                    </div>
                     <svg
-                      className="w-5 h-5 text-gray-500 group-hover:text-gray-300 transition-colors"
+                      className="w-5 h-5 text-gray-500 flex-shrink-0"
                       fill="none"
                       stroke="currentColor"
                       viewBox="0 0 24 24"
@@ -603,191 +402,43 @@ export default function LibraryPage() {
                         d="M9 5l7 7-7 7"
                       />
                     </svg>
-                  </div>
-                </button>
-              ))}
-
-              <div ref={sentinelRef} className="h-4" />
-              {loadingMore && (
-                <div className="flex justify-center py-4">
-                  <LoadingSpinner size="md" className="text-amber-500" />
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="text-center py-16">
-              <div className="w-20 h-20 bg-gray-800/50 rounded-full flex items-center justify-center mx-auto mb-6">
-                <svg
-                  className="w-10 h-10 text-gray-600"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"
-                  />
-                </svg>
-              </div>
-              <h3 className="text-xl font-bold text-white mb-2">Your library is empty</h3>
-              <p className="text-gray-400">
-                Paste a Spotify link above to add your first track, playlist, or album.
-              </p>
-            </div>
-          ))}
-      </main>
-
-      {drawer && (
-        <Modal
-          title={drawer.name}
-          onClose={closeDrawer}
-          maxWidth="lg"
-          scrollable
-          scrollContainerRef={drawerScrollRef}
-          onScroll={handleDrawerScroll}
-          footer={
-            <div className="flex justify-between items-center">
-              <span className="text-gray-400 text-sm">{drawerTracks.length} tracks loaded</span>
-              {drawer.type !== "tracks" && (
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={() => {
-                    const name = drawer.name;
-                    closeDrawer();
-                    setDeleteTarget({
-                      type: drawer.type as "playlist" | "album",
-                      id: drawer.id,
-                      name,
-                      cascadeCount: drawer.trackCount,
-                    });
-                  }}
-                >
-                  Remove
-                </Button>
-              )}
-            </div>
-          }
-        >
-          {drawerLoading && drawerTracks.length === 0 ? (
-            <div className="space-y-2" role="status" aria-label="Loading tracks">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} className="flex items-center gap-3 py-3 animate-pulse">
-                  <div className="w-8 h-8 rounded bg-gray-700 shrink-0" />
-                  <div className="flex-1 min-w-0 space-y-2">
-                    <div className="h-3.5 bg-gray-700 rounded w-3/5" />
-                    <div className="h-3 bg-gray-700/50 rounded w-2/5" />
-                  </div>
-                  <div className="w-10 h-3 bg-gray-700/30 rounded shrink-0" />
-                </div>
-              ))}
-            </div>
-          ) : drawerTracks.length === 0 ? (
-            <p className="text-gray-400 text-center py-8">No tracks found.</p>
-          ) : (
-            <div className="space-y-2">
-              {drawerTracks.map((track) => (
-                <div
-                  key={track.id}
-                  className="flex items-center gap-3 py-2 border-b border-gray-700/30 last:border-0 group"
-                >
-                  <div className="w-8 h-8 rounded flex-shrink-0 overflow-hidden">
-                    {track.albumImageUrl ? (
-                      <img
-                        src={track.albumImageUrl}
-                        alt=""
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full bg-gray-700/50 flex items-center justify-center">
-                        <svg
-                          className="w-4 h-4 text-gray-400"
-                          fill="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
-                        </svg>
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-white text-sm font-medium truncate">{track.name}</div>
-                    <div className="text-gray-400 text-xs truncate">
-                      {track.artists.map((a) => a.name).join(", ")}
-                      {track.albumName ? ` · ${track.albumName}` : ""}
-                    </div>
-                  </div>
-                  {track.durationMs ? (
-                    <div className="text-gray-500 text-xs tabular-nums flex-shrink-0">
-                      {formatDuration(track.durationMs)}
-                    </div>
-                  ) : null}
-                  <button
-                    onClick={() =>
-                      setDeleteTarget({
-                        type: "track",
-                        id: track.id,
-                        name: track.name,
-                      })
-                    }
-                    disabled={isDeletingTrack}
-                    className="text-gray-600 hover:text-red-400 transition-colors p-1 opacity-0 group-hover:opacity-100 disabled:opacity-50"
-                    aria-label={`Remove ${track.name}`}
-                  >
-                    {isDeletingTrack && deleteTarget?.id === track.id ? (
-                      <LoadingSpinner size="sm" />
-                    ) : (
-                      <svg
-                        className="w-3.5 h-3.5"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M6 18L18 6M6 6l12 12"
-                        />
-                      </svg>
-                    )}
                   </button>
-                </div>
-              ))}
-              {drawerLoading && (
-                <div className="flex justify-center py-2">
-                  <LoadingSpinner size="sm" className="text-amber-500" />
-                </div>
-              )}
+                );
+              })}
             </div>
-          )}
-          <div ref={drawerSentinelRef} className="h-4" />
-        </Modal>
-      )}
+            <div ref={sentinelRef} className="h-4" />
+            {loadingMore && (
+              <div className="flex justify-center py-4">
+                <LoadingSpinner size="md" className="text-amber-500" />
+              </div>
+            )}
+          </>
+        )}
 
-      {deleteTarget && removeState === "idle" && (
-        <ConfirmDialog
-          title={
-            deleteTarget.type === "track"
-              ? "Remove Track"
-              : deleteTarget.type === "playlist"
-                ? "Remove Playlist"
-                : "Remove Album"
-          }
-          message={
-            deleteTarget.type === "track"
-              ? `Remove "${deleteTarget.name}" from your library?`
-              : deleteTarget.cascadeCount
-                ? `Remove "${deleteTarget.name}" and all ${deleteTarget.cascadeCount} track(s) from your library?`
-                : `Remove "${deleteTarget.name}" from your library?`
-          }
-          confirmLabel={deleteTarget.type === "track" ? "Remove" : "Remove All"}
-          onConfirm={handleDelete}
-          onCancel={() => setDeleteTarget(null)}
-        />
-      )}
+        {!loading && !hasItems && (
+          <div className="text-center py-16">
+            <div className="w-20 h-20 bg-gray-800/50 rounded-full flex items-center justify-center mx-auto mb-6">
+              <svg
+                className="w-10 h-10 text-gray-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"
+                />
+              </svg>
+            </div>
+            <h3 className="text-xl font-bold text-white mb-2">Your library is empty</h3>
+            <p className="text-gray-400">
+              Paste a Spotify link above to add your first track, playlist, or album.
+            </p>
+          </div>
+        )}
+      </main>
     </PageLayout>
   );
 }

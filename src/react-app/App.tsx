@@ -5,6 +5,7 @@ import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
 import RoomPage from "./pages/RoomPage";
 import LibraryPage from "./pages/LibraryPage";
+import LibraryItemPage from "./pages/LibraryItemPage";
 import SettingsPage from "./pages/SettingsPage";
 import HistoryPage from "./pages/HistoryPage";
 import GameDetailPage from "./pages/GameDetailPage";
@@ -58,6 +59,14 @@ const router = createBrowserRouter([
         element: (
           <ProtectedRoute>
             <LibraryPage />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: "library/:type/:id",
+        element: (
+          <ProtectedRoute>
+            <LibraryItemPage />
           </ProtectedRoute>
         ),
       },
