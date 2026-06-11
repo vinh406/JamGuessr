@@ -226,11 +226,12 @@ export default function LibraryPage() {
     fetchStats();
   }, [fetchItems, fetchStats]);
 
-  const { startImport, cancelImport, state: importState } = useLibraryImport();
+  const { startImport, state: importState } = useLibraryImport();
 
   useEffect(() => {
     if (importState === "complete") {
       setLink("");
+      drawerCacheRef.current.clear();
       refetchItems();
     }
   }, [importState, refetchItems]);
@@ -495,11 +496,6 @@ export default function LibraryPage() {
               />
             </div>
             <div className="flex gap-2">
-              {(importState === "connecting" || importState === "streaming") && (
-                <Button variant="secondary" onClick={cancelImport}>
-                  Cancel
-                </Button>
-              )}
               <Button
                 variant="primary"
                 onClick={handleImport}
@@ -507,31 +503,17 @@ export default function LibraryPage() {
                   !detectedType || importState === "connecting" || importState === "streaming"
                 }
               >
-                {importState === "idle" ? (
-                  detectedType === "track" ? (
-                    "Add Track"
-                  ) : detectedType === "playlist" ? (
-                    "Import Playlist"
-                  ) : detectedType === "album" ? (
-                    "Import Album"
-                  ) : (
-                    "Import"
-                  )
-                ) : importState === "connecting" ? (
-                  <span className="flex items-center gap-2">
-                    <LoadingSpinner size="sm" />
-                    Connecting
-                  </span>
-                ) : importState === "streaming" ? (
-                  <span className="flex items-center gap-2">
-                    <LoadingSpinner size="sm" />
-                    Importing
-                  </span>
-                ) : importState === "complete" ? (
-                  "Done"
-                ) : (
-                  "Failed"
-                )}
+                {importState === "connecting"
+                  ? "Connecting"
+                  : importState === "streaming"
+                    ? "Importing"
+                    : detectedType === "track"
+                      ? "Add Track"
+                      : detectedType === "playlist"
+                        ? "Import Playlist"
+                        : detectedType === "album"
+                          ? "Import Album"
+                          : "Import"}
               </Button>
             </div>
           </div>
@@ -668,22 +650,24 @@ export default function LibraryPage() {
           footer={
             <div className="flex justify-between items-center">
               <span className="text-gray-400 text-sm">{drawerTracks.length} tracks loaded</span>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={() => {
-                  const name = drawer.name;
-                  closeDrawer();
-                  setDeleteTarget({
-                    type: drawer.type === "tracks" ? "track" : drawer.type,
-                    id: drawer.id,
-                    name,
-                    cascadeCount: drawer.trackCount,
-                  });
-                }}
-              >
-                Remove
-              </Button>
+              {drawer.type !== "tracks" && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={() => {
+                    const name = drawer.name;
+                    closeDrawer();
+                    setDeleteTarget({
+                      type: drawer.type as "playlist" | "album",
+                      id: drawer.id,
+                      name,
+                      cascadeCount: drawer.trackCount,
+                    });
+                  }}
+                >
+                  Remove
+                </Button>
+              )}
             </div>
           }
         >
