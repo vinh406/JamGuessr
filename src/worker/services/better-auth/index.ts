@@ -10,7 +10,7 @@ import * as schema from "../../db/schema";
  * Better Auth Instance
  */
 export const auth = (env: Env) => {
-  const sql = postgres(env.DATABASE_URL);
+  const sql = postgres(env.HYPERDRIVE.connectionString);
   const db = drizzle(sql);
 
   return betterAuth({

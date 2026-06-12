@@ -63,6 +63,12 @@
       "new_sqlite_classes": ["PlaylistImportDO"]
     }
   ],
+  "hyperdrive": [
+    {
+      "binding": "HYPERDRIVE",
+      "id": "e31d327b8bb24b828dcc8dc8698b222c"
+    }
+  ],
   "r2_buckets": [
     {
       "binding": "AVATAR_BUCKET",

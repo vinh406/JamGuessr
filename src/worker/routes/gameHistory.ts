@@ -90,7 +90,7 @@ function createGameHistoryHandlers() {
     if (!user) return c.json({ error: "Unauthorized" }, 401);
 
     const { limit, offset } = c.req.valid("query");
-    const history = createGameHistoryService(c.env.DATABASE_URL);
+    const history = createGameHistoryService(c.env.HYPERDRIVE.connectionString);
     const games = await history.getGamesListForUser(user.id, limit, offset);
     const hasMore = games.length === limit;
 
@@ -143,7 +143,7 @@ function createGameHistoryHandlers() {
     if (!user) return c.json({ error: "Unauthorized" }, 401);
 
     const { id } = c.req.valid("param");
-    const history = createGameHistoryService(c.env.DATABASE_URL);
+    const history = createGameHistoryService(c.env.HYPERDRIVE.connectionString);
     const game = await history.getGameById(id, user.id);
     if (!game) return c.json({ error: "Game not found" }, 404);
 

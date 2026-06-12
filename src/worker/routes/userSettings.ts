@@ -91,7 +91,7 @@ function createUserSettingsHandlers() {
     if (!currentUser) return c.json({ error: "Unauthorized" }, 401);
 
     const { name, bio } = c.req.valid("json");
-    const db = getDb(c.env.DATABASE_URL);
+    const db = getDb(c.env.HYPERDRIVE.connectionString);
 
     const [updated] = await db
       .update(user)
@@ -167,7 +167,7 @@ function createUserSettingsHandlers() {
     });
 
     const imageUrl = `/api/user/avatar/${currentUser.id}`;
-    const db = getDb(c.env.DATABASE_URL);
+    const db = getDb(c.env.HYPERDRIVE.connectionString);
     await db.update(user).set({ image: imageUrl }).where(eq(user.id, currentUser.id));
 
     return c.json({ imageUrl }, 200);
@@ -203,7 +203,7 @@ function createUserSettingsHandlers() {
   });
   app.openapi(publicProfileRoute, async (c) => {
     const { userId } = c.req.valid("param");
-    const db = getDb(c.env.DATABASE_URL);
+    const db = getDb(c.env.HYPERDRIVE.connectionString);
 
     const [found] = await db
       .select({

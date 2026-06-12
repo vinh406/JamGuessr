@@ -31,7 +31,7 @@ export class RoomManager {
   }
 
   getDatabaseUrl(): string {
-    return this.env.DATABASE_URL;
+    return this.env.HYPERDRIVE.connectionString;
   }
 
   getPlaylistImportDO(): DurableObjectNamespace {
