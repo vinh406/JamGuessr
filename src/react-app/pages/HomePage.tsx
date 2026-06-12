@@ -5,11 +5,11 @@ import PageLayout from "../components/common/PageLayout";
 
 import { Button, Input } from "../components/ui";
 import { generateRoomCode, ROOM_CODE_LENGTH } from "../../shared/constants";
-import {
-  getStats as getCachedStats,
-  setStats as setCachedStats,
-  type LibraryStats,
-} from "../lib/statsCache";
+interface LibraryStats {
+  totalSongs: number;
+  totalPlaylists: number;
+  totalAlbums: number;
+}
 
 export default function HomePage() {
   const { user } = useAuth();
@@ -19,18 +19,9 @@ export default function HomePage() {
   const [statsLoading, setStatsLoading] = useState(true);
 
   useEffect(() => {
-    const cached = getCachedStats();
-    if (cached !== undefined) {
-      setStats(cached);
-      setStatsLoading(false);
-      return;
-    }
     fetch("/api/library/stats")
       .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        setCachedStats(data);
-        setStats(data);
-      })
+      .then((data) => setStats(data))
       .catch(() => {})
       .finally(() => setStatsLoading(false));
   }, []);

@@ -5,11 +5,13 @@ import { Button, Input } from "../components/ui";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import { useLibraryImport } from "../hooks/useLibraryImport";
 import { toast } from "sonner";
-import {
-  getStats as getCachedStats,
-  setStats as setCachedStats,
-  type LibraryStats,
-} from "../lib/statsCache";
+
+interface LibraryStats {
+  totalSongs: number;
+  totalPlaylists: number;
+  totalAlbums: number;
+  lastUpdated: string;
+}
 
 interface LibraryItem {
   type: "playlist" | "album" | "tracks";
@@ -66,11 +68,7 @@ export default function LibraryPage() {
   const fetchStats = useCallback(async () => {
     try {
       const res = await fetch("/api/library/stats");
-      if (res.ok) {
-        const data = await res.json();
-        setCachedStats(data);
-        setStats(data);
-      }
+      if (res.ok) setStats(await res.json());
     } catch {
       // ignore
     }
@@ -105,26 +103,13 @@ export default function LibraryPage() {
     let cancelled = false;
     (async () => {
       setLoading(true);
-      const cached = getCachedStats();
-      if (cached !== undefined) {
-        setStats(cached);
-        const data = await fetchItems();
-        if (cancelled) return;
-        if (data) {
-          setItems(data.items);
-          setNextCursor(data.nextCursor);
-        } else {
-          toast.error("Failed to load your library.");
-        }
+      const [data] = await Promise.all([fetchItems(), fetchStats()]);
+      if (cancelled) return;
+      if (data) {
+        setItems(data.items);
+        setNextCursor(data.nextCursor);
       } else {
-        const [data] = await Promise.all([fetchItems(), fetchStats()]);
-        if (cancelled) return;
-        if (data) {
-          setItems(data.items);
-          setNextCursor(data.nextCursor);
-        } else {
-          toast.error("Failed to load your library.");
-        }
+        toast.error("Failed to load your library.");
       }
       setLoading(false);
     })();
