@@ -12,6 +12,6 @@ import * as schema from "../db/schema";
 export type DbInstance = ReturnType<typeof getDb>;
 
 export function getDb(connectionString: string) {
-  const client = postgres(connectionString, { prepare: false });
+  const client = postgres(connectionString, { prepare: true });
   return drizzle(client, { schema });
 }
