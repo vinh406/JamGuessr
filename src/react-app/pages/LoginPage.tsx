@@ -20,8 +20,8 @@ export default function LoginPage() {
       <div className="w-full max-w-md">
         {/* Logo and Title */}
         <div className="text-center mb-8">
-          <AppIcon className="w-20 h-20 mx-auto mb-6 shadow-lg shadow-green-500/20" />
-          <h1 className="text-4xl font-bold text-white mb-3">Spotiguess</h1>
+          <AppIcon className="w-20 h-20 mx-auto mb-6 drop-shadow-[0_4px_12px_rgba(34,197,94,0.3)]" />
+          <h1 className="text-4xl font-bold text-white mb-3">JamGuessr</h1>
           <p className="text-gray-400 text-lg">The ultimate music guessing game</p>
         </div>
 

@@ -1,4 +1,4 @@
-# Spotiguess
+# JamGuessr
 
 Multiplayer Spotify song guessing game on Cloudflare Workers.
 
@@ -41,7 +41,7 @@ Run `cf-typegen` after changing wrangler.json bindings.
 - TypeScript strict mode with `noUncheckedIndexedAccess`, `noImplicitReturns`, `noPropertyAccessFromIndexSignature` — access arrays/objects via optional chaining, not bare indexing
 - oxlint for linting (TS + React plugins, `no-explicit-any` is error)
 - oxfmt for formatting (run `npm run fmt` before committing)
-- No test runner in package.json — E2E via Playwright (`e2e/spotiguess.spec.ts`)
+- No test runner in package.json — E2E via Playwright (`e2e/jamguessr.spec.ts`)
 - `.env` required for local dev; copy `.env.example` for reference
 
 ## Design Context

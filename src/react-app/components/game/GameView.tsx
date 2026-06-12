@@ -11,7 +11,7 @@ function usePrevious<T>(value: T): T | undefined {
   return ref.current;
 }
 
-const STORAGE_KEY = "spotiguess-volume";
+const STORAGE_KEY = "jamguessr-volume";
 
 // Get initial volume from localStorage or default to 50
 function getInitialVolume(): number {

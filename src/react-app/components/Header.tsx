@@ -38,7 +38,7 @@ export default function Header({ children }: HeaderProps) {
       <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
         <button onClick={() => navigate("/")} className="flex items-center gap-3 cursor-pointer">
           <AppIcon className="w-10 h-10" />
-          <span className="text-2xl font-bold text-white">Spotiguess</span>
+          <span className="text-2xl font-bold text-white">JamGuessr</span>
         </button>
 
         {children ? (

@@ -1,4 +1,4 @@
-# Spotiguess Architecture
+# JamGuessr Architecture
 
 ## Technology Stack
 
@@ -339,7 +339,7 @@ gameResults: id, roomCode, totalRounds, playerCount, startedAt, completedAt,
 ## Project Structure
 
 ```
-spotiguess/
+  jamguessr/
 ├── src/
 │   ├── react-app/                    # Frontend
 │   │   ├── components/

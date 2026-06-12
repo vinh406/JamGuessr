@@ -1,10 +1,10 @@
-# Spotiguess
+# JamGuessr
 
-Spotiguess is a multiplayer Spotify song guessing game where players compete to identify songs from a playlist. Players earn points based on correctness and speed, with the fastest and most accurate players climbing the leaderboard.
+JamGuessr is a multiplayer Spotify song guessing game where players compete to identify songs from a playlist. Players earn points based on correctness and speed, with the fastest and most accurate players climbing the leaderboard.
 
 ## 🌐 Demo
 
-Check out the live demo: [Spotiguess Demo](https://spotigames.vinhnguyenthanh-dev.workers.dev/)
+Check out the live demo: [JamGuessr Demo](https://jamguessr.vinhnguyenthanh-dev.workers.dev/)
 
 ## 🚀 Quick Start
 

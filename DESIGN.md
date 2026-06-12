@@ -1,5 +1,5 @@
 ---
-name: Spotiguess
+name: JamGuessr
 description: Multiplayer Spotify song guessing game
 colors:
   verdant-glow: "#4ade80"
@@ -96,7 +96,7 @@ components:
     border: "1px solid {colors.border-default}"
 ---
 
-# Design System: Spotiguess
+# Design System: JamGuessr
 
 ## 1. Overview
 

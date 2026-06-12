@@ -4,7 +4,7 @@ interface AppIconProps {
 
 export function AppIcon({ className = "w-6 h-6" }: AppIconProps) {
   return (
-    <svg className={className} viewBox="0 0 30 30" aria-label="Spotiguess">
+    <svg className={className} viewBox="0 0 30 30" aria-label="JamGuessr">
       <defs>
         <linearGradient id="app-icon-bg" x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stopColor="#4ade80" />

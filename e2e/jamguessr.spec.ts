@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 
 const TEST_ROOM_CODE = "TEST123";
 
-test.describe("Spotiguess E2E", () => {
+test.describe("JamGuessr E2E", () => {
   test("complete game flow - join room, play two games in a row", async ({ page }) => {
     // 1. Go directly to room page (skip OAuth)
     await page.goto(`/room/${TEST_ROOM_CODE}`);
