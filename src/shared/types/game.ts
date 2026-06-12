@@ -53,6 +53,7 @@ export interface GamePlayerResult {
   username: string | null;
   score: number;
   streak: number;
+  bestStreak: number;
   rank: number;
 }
 

@@ -228,6 +228,7 @@ export class GameHandler {
                 username: s.username,
                 score: s.score,
                 streak: s.streak,
+                bestStreak: s.bestStreak,
               })),
               playedAt: new Date(),
             });

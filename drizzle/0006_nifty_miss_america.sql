@@ -1,0 +1,1 @@
+ALTER TABLE "game_players" ADD COLUMN "best_streak" integer DEFAULT 0 NOT NULL;

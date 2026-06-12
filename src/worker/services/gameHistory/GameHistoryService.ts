@@ -18,7 +18,13 @@ export function createGameHistoryService(connectionString: string) {
     playlist: { name: string; imageUrl?: string; trackCount: number } | null;
     settings: { rounds: number; timePerRound: number; audioTime: number };
     songs: Song[];
-    scores: { userId: string; username: string; score: number; streak: number }[];
+    scores: {
+      userId: string;
+      username: string;
+      score: number;
+      streak: number;
+      bestStreak: number;
+    }[];
     playedAt: Date;
   }): Promise<void> {
     const sorted = [...params.scores].sort((a, b) => b.score - a.score);
@@ -30,6 +36,7 @@ export function createGameHistoryService(connectionString: string) {
       username: s.username || null,
       score: s.score,
       streak: s.streak,
+      bestStreak: s.bestStreak,
       rank: i + 1,
     }));
 
@@ -128,6 +135,7 @@ export function createGameHistoryService(connectionString: string) {
           username: p.username,
           score: p.score,
           streak: p.streak,
+          bestStreak: p.bestStreak ?? p.streak,
           rank: p.rank,
           displayName,
           image: p.user?.image ?? null,

@@ -43,6 +43,13 @@
       "when": 1781095873251,
       "tag": "0005_new_robbie_robertson",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1781275493293,
+      "tag": "0006_nifty_miss_america",
+      "breakpoints": true
     }
   ]
 }

@@ -277,6 +277,7 @@ export const gamePlayers = pgTable(
     username: text("username"),
     score: integer("score").notNull(),
     streak: integer("streak").default(0).notNull(),
+    bestStreak: integer("best_streak").default(0).notNull(),
     rank: integer("rank").notNull(),
   },
   (table) => [

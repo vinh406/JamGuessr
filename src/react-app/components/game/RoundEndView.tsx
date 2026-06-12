@@ -162,11 +162,12 @@ export function RoundEndView({
                 <p className="text-xs text-gray-400">{isGameEnd ? "Total Score" : "Score"}</p>
                 <p className="text-lg sm:text-xl font-bold text-green-400">{myScore.score}</p>
               </div>
-              {myScore.streak > (isGameEnd ? 0 : 1) && (
+              {(isGameEnd ? (myScore.bestStreak ?? myScore.streak) : myScore.streak) >
+                (isGameEnd ? 0 : 1) && (
                 <div className="text-center">
                   <p className="text-xs text-gray-400">{isGameEnd ? "Best Streak" : "Streak"}</p>
                   <p className="text-lg sm:text-xl font-bold text-yellow-400">
-                    🔥 {myScore.streak}
+                    🔥 {isGameEnd ? (myScore.bestStreak ?? myScore.streak) : myScore.streak}
                   </p>
                 </div>
               )}
@@ -183,10 +184,13 @@ export function RoundEndView({
               image: s.userImage,
               score: s.score,
               streak: s.streak,
+              bestStreak: s.bestStreak,
             }))}
             currentUserId={myUserId}
             title={isGameEnd ? "Final Standings" : "Leaderboard"}
             highlightWinner={isGameEnd}
+            streakLabel="Streak"
+            bestStreakLabel={isGameEnd ? "Best streak" : undefined}
           />
         </div>
       </div>

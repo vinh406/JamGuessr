@@ -11,6 +11,7 @@ const GamePlayerResultSchema = z.object({
   username: z.string().nullable(),
   score: z.number(),
   streak: z.number(),
+  bestStreak: z.number(),
   rank: z.number(),
   displayName: z.string(),
   image: z.string().nullable(),

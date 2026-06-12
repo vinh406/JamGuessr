@@ -6,14 +6,17 @@ function ClickableEntryRow({
   isMe,
   isWinner,
   streakLabel,
+  bestStreakLabel,
 }: {
   entry: LeaderboardEntry;
   rank: number;
   isMe: boolean;
   isWinner: boolean;
   streakLabel: string | undefined;
+  bestStreakLabel: string | undefined;
 }) {
-  const hasStreak = streakLabel && entry.streak != null && entry.streak > 0;
+  const hasStreak = streakLabel && entry.streak != null && entry.streak > 1;
+  const hasBestStreak = bestStreakLabel && entry.bestStreak != null && entry.bestStreak > 1;
 
   return (
     <div
@@ -44,7 +47,7 @@ function ClickableEntryRow({
           displayName={entry.displayName}
           image={entry.image}
           isMe={isMe}
-          description={hasStreak ? `${streakLabel}: ${entry.streak}` : undefined}
+          description={hasBestStreak ? `${bestStreakLabel}: ${entry.bestStreak}` : undefined}
         />
       </div>
       <div className="flex items-center gap-2 shrink-0">
@@ -61,6 +64,7 @@ export interface LeaderboardEntry {
   image?: string | null;
   score: number;
   streak?: number;
+  bestStreak?: number;
 }
 
 interface LeaderboardProps {
@@ -70,6 +74,7 @@ interface LeaderboardProps {
   emptyMessage?: string;
   highlightWinner?: boolean;
   streakLabel?: string;
+  bestStreakLabel?: string;
 }
 
 export function Leaderboard({
@@ -79,6 +84,7 @@ export function Leaderboard({
   emptyMessage = "No entries yet.",
   highlightWinner = false,
   streakLabel,
+  bestStreakLabel,
 }: LeaderboardProps) {
   if (entries.length === 0) {
     return (
@@ -106,6 +112,7 @@ export function Leaderboard({
               isMe={isMe}
               isWinner={isWinner}
               streakLabel={streakLabel}
+              bestStreakLabel={bestStreakLabel}
             />
           );
         })}

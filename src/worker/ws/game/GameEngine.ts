@@ -73,6 +73,7 @@ export class GameEngine {
       const p = this.scores.get(userId)!;
       p.score = 0;
       p.streak = 0;
+      p.bestStreak = 0;
     }
 
     // Add new players or ensure existing players have scores reset
@@ -83,6 +84,7 @@ export class GameEngine {
         const p = this.scores.get(player.userId)!;
         p.score = 0;
         p.streak = 0;
+        p.bestStreak = 0;
       }
     }
   }
@@ -95,6 +97,7 @@ export class GameEngine {
         userImage,
         score: 0,
         streak: 0,
+        bestStreak: 0,
       });
     }
   }
@@ -184,6 +187,9 @@ export class GameEngine {
 
     playerScore.score += points;
     playerScore.streak = newStreak;
+    if (newStreak > playerScore.bestStreak) {
+      playerScore.bestStreak = newStreak;
+    }
     this.scores.set(userId, playerScore);
 
     return { isCorrect, points, streak: newStreak };

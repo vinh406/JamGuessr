@@ -9,6 +9,7 @@ interface PlayerResult {
   userId: string | null;
   score: number;
   streak: number;
+  bestStreak: number;
   rank: number;
   displayName: string;
   image: string | null;
@@ -246,10 +247,12 @@ export default function GameDetailPage() {
                   image: p.image,
                   score: p.score,
                   streak: p.streak,
+                  bestStreak: p.bestStreak,
                 }))}
                 currentUserId={user?.id}
                 title=""
-                streakLabel="Best streak"
+                streakLabel="Streak"
+                bestStreakLabel="Best streak"
                 emptyMessage="No players recorded for this game."
               />
             </div>

@@ -21,5 +21,6 @@ export interface PlayerScore {
   username: string;
   userImage?: string;
   score: number;
-  streak: number; // consecutive correct answers
+  streak: number; // current consecutive correct answers
+  bestStreak: number; // max consecutive correct answers in the game
 }
