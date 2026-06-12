@@ -1,17 +1,15 @@
-import { drizzle } from "drizzle-orm/postgres-js";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { betterAuth } from "better-auth";
 import { openAPI } from "better-auth/plugins";
 import { betterAuthOptions } from "./options";
-import postgres from "postgres";
+import { getDb } from "../../db";
 import * as schema from "../../db/schema";
 
 /**
  * Better Auth Instance
  */
 export const auth = (env: Env) => {
-  const sql = postgres(env.HYPERDRIVE.connectionString);
-  const db = drizzle(sql);
+  const db = getDb(env.HYPERDRIVE.connectionString);
 
   return betterAuth({
     ...betterAuthOptions,
