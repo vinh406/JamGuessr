@@ -2,9 +2,8 @@ import type { Song } from "../../../shared/types";
 
 export const PARTNER_QUERY_HASH =
   "a65e12194ed5fc443a1cdebed5fabe33ca5b07b987185d63c72483867ad13cb4";
-export const BATCH_SIZE = 50;
-export const CONCURRENCY = 10;
-export const PAGES_PER_CHUNK = 45;
+export const BATCH_SIZE = 2000;
+export const CONCURRENCY = 1;
 
 export interface PartnerTrack {
   itemV2: {
@@ -172,42 +171,6 @@ export async function fetchPartnerAlbumPage(
         uri: `spotify:album:${albumId}`,
         offset,
         limit: BATCH_SIZE,
-      },
-      operationName: "queryAlbumTracks",
-      extensions: {
-        persistedQuery: {
-          version: 1,
-          sha256Hash: ALBUM_QUERY_HASH,
-        },
-      },
-    }),
-  });
-
-  if (!response.ok) return [];
-
-  const data: PartnerAlbumResponse = await response.json();
-  const tracksV2 = data.data?.albumUnion?.tracksV2;
-  return (tracksV2?.items ?? []).map(partnerAlbumTrackToSong);
-}
-
-export async function fetchPartnerAlbumAllTracks(
-  albumId: string,
-  accessToken: string,
-  fetchFn: typeof fetch = fetch,
-): Promise<Song[]> {
-  const response = await fetchFn("https://api-partner.spotify.com/pathfinder/v2/query", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json;charset=UTF-8",
-      Authorization: `Bearer ${accessToken}`,
-      "app-platform": "WebPlayer",
-      "User-Agent": "Mozilla/5.0",
-    },
-    body: JSON.stringify({
-      variables: {
-        uri: `spotify:album:${albumId}`,
-        offset: 0,
-        limit: 300,
       },
       operationName: "queryAlbumTracks",
       extensions: {

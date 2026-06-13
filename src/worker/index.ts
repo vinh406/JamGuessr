@@ -145,12 +145,13 @@ app.openapi(importPlaylistRoute, async (c) => {
     return c.json({ error: "Invalid Spotify playlist link" }, 400);
   }
 
-  const playlist = await getPlaylistMetadata(parsed.id);
+  const meta = await getPlaylistMetadata(parsed.id);
 
-  if (!playlist) {
+  if (!meta) {
     return c.json({ error: "Playlist not found or access denied" }, 404);
   }
 
+  const { accessToken: _, ...playlist } = meta;
   return c.json({ playlist }, 200);
 });
 

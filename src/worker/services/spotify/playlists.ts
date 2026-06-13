@@ -5,7 +5,7 @@ import {
   BATCH_SIZE,
   CONCURRENCY,
   fetchPartnerPage,
-  fetchPartnerAlbumAllTracks,
+  fetchPartnerAlbumPage,
   paginateFetch,
   type PartnerPlaylistResponse,
 } from "./partner-api";
@@ -191,7 +191,9 @@ export function parseSpotifyLink(link: string): ParsedSpotifyLink | null {
   return null;
 }
 
-export async function getPlaylistMetadata(playlistId: string): Promise<Playlist | null> {
+export type PlaylistMetadata = Playlist & { accessToken?: string };
+
+export async function getPlaylistMetadata(playlistId: string): Promise<PlaylistMetadata | null> {
   // 1. Try embed page for metadata + accurate track count via partner API
   try {
     const embed = await parseSpotifyEmbedPage(playlistId);
@@ -240,6 +242,7 @@ export async function getPlaylistMetadata(playlistId: string): Promise<Playlist 
         description: entity.description ?? undefined,
         trackCount,
         imageUrl: image?.url ?? undefined,
+        accessToken,
       };
     }
   } catch (error) {
@@ -479,17 +482,17 @@ export async function getAlbumMetadata(albumId: string): Promise<AlbumMetadata |
   }
 }
 
-/** Fetch all tracks from an album by its Spotify ID */
+/** Fetch tracks from an album by its Spotify ID */
 export async function getAlbumTracks(albumId: string, accessToken?: string): Promise<Song[]> {
   if (accessToken) {
-    return fetchPartnerAlbumAllTracks(albumId, accessToken);
+    return fetchPartnerAlbumPage(albumId, accessToken, 0);
   }
 
   try {
     // Try to get access token from embed page for partner API
     const token = await extractSpotifyEmbedToken("album", albumId);
     if (token) {
-      return fetchPartnerAlbumAllTracks(albumId, token);
+      return fetchPartnerAlbumPage(albumId, token, 0);
     }
   } catch {
     // Fall through to spotify-url-info

@@ -412,8 +412,8 @@ export function createLibraryHandlers() {
         emit("progress", {
           current,
           total,
-          phase: "saving",
-          label: `Saving track ${current} of ${total}...`,
+          phase: "importing",
+          label: `Importing track ${current} of ${total}...`,
         });
       });
 

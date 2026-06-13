@@ -10,7 +10,7 @@ import {
   getAlbumTracks,
   type SpotifyLinkType,
 } from "../spotify/playlists";
-import { PAGES_PER_CHUNK, BATCH_SIZE as PARTNER_BATCH_SIZE } from "../spotify/partner-api";
+
 import {
   libraryTracks,
   libraryTrackSources,
@@ -512,32 +512,92 @@ export function createLibraryService(
           // Fan out to DO instances for parallel fetching + DB writes
           const doNamespace = env?.PLAYLIST_IMPORT_DO;
           if (doNamespace && metadata.trackCount > 0) {
-            const CHUNK_SIZE = PAGES_PER_CHUNK * PARTNER_BATCH_SIZE;
+            const CHUNK_SIZE = 2000;
 
             const chunkOffsets: number[] = [];
             for (let o = 0; o < metadata.trackCount; o += CHUNK_SIZE) {
               chunkOffsets.push(o);
             }
 
+            let totalProcessed = 0;
+
             const results = await Promise.all(
               chunkOffsets.map(async (chunkOffset) => {
                 const chunkDoId = doNamespace.idFromName(`${parsed.id}-chunk-${chunkOffset}`);
                 const chunkDoStub = doNamespace.get(chunkDoId);
+                const chunkEnd = Math.min(chunkOffset + CHUNK_SIZE, metadata.trackCount);
                 const resp = await chunkDoStub.fetch("https://doimport/fetch", {
                   method: "POST",
                   body: JSON.stringify({
                     playlistId: parsed.id,
                     offset: chunkOffset,
-                    total: metadata.trackCount,
+                    endOffset: chunkEnd,
                     userId,
                     containerId: playlist.id,
+                    accessToken: metadata.accessToken,
                   }),
                 });
-                return resp.json() as Promise<{
-                  tracksAdded?: number;
-                  tracksSkipped?: number;
-                  error?: string;
-                }>;
+
+                if (!resp.ok) {
+                  const errBody = await resp.text();
+                  let errMsg: string;
+                  try {
+                    errMsg = JSON.parse(errBody).error ?? "Unknown error";
+                  } catch {
+                    errMsg = errBody || "Unknown error";
+                  }
+                  return { tracksAdded: 0, tracksSkipped: 0, error: errMsg };
+                }
+
+                const reader = resp.body?.getReader();
+                if (!reader) return { tracksAdded: 0, tracksSkipped: 0 };
+
+                const decoder = new TextDecoder();
+                let buffer = "";
+                let chunkPrev = 0;
+                let result: { tracksAdded: number; tracksSkipped: number; error?: string } = {
+                  tracksAdded: 0,
+                  tracksSkipped: 0,
+                };
+
+                while (true) {
+                  const { done, value } = await reader.read();
+                  if (done) break;
+                  buffer += decoder.decode(value, { stream: true });
+
+                  const lines = buffer.split("\n");
+                  buffer = lines.pop() ?? "";
+
+                  for (const line of lines) {
+                    if (!line.trim()) continue;
+                    try {
+                      const msg: {
+                        type: string;
+                        current?: number;
+                        tracksAdded?: number;
+                        tracksSkipped?: number;
+                        message?: string;
+                      } = JSON.parse(line);
+                      if (msg.type === "progress") {
+                        const delta = (msg.current ?? 0) - chunkPrev;
+                        chunkPrev = msg.current ?? 0;
+                        totalProcessed += delta;
+                        onProgress?.(totalProcessed, metadata.trackCount);
+                      } else if (msg.type === "done") {
+                        result = {
+                          tracksAdded: msg.tracksAdded ?? 0,
+                          tracksSkipped: msg.tracksSkipped ?? 0,
+                        };
+                      } else if (msg.type === "error") {
+                        throw new Error(msg.message ?? "Unknown error");
+                      }
+                    } catch (e) {
+                      if (e instanceof Error && e.message) throw e;
+                    }
+                  }
+                }
+
+                return result;
               }),
             );
 
