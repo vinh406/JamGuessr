@@ -123,8 +123,6 @@ export interface BlendResult {
   warnings: string[];
 }
 
-const MIN_TOTAL_TRACKS = 20;
-
 // ── Factory ──────────────────────────────────────────────────────────────────
 
 /**
@@ -1070,10 +1068,6 @@ export function createLibraryService(
 
       let combined = combineAllTracks(blendedLibraries, targetTrackCount);
       combined = shuffleArray(combined);
-
-      if (combined.length < MIN_TOTAL_TRACKS) {
-        warnings.push(`Only ${combined.length} tracks available (minimum: ${MIN_TOTAL_TRACKS})`);
-      }
 
       const songs: Song[] = combined.slice(0, targetTrackCount).map((track) => ({
         id: track.spotifyId,
