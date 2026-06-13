@@ -53,6 +53,11 @@ export default function LibraryItemPage() {
   } | null>(null);
   const [isDeletingTrack, setIsDeletingTrack] = useState(false);
 
+  const [removeTarget, setRemoveTarget] = useState<{
+    type: string;
+    id: string;
+    name: string;
+  } | null>(null);
   const [removeState, setRemoveState] = useState<
     "idle" | "connecting" | "streaming" | "complete" | "error"
   >("idle");
@@ -258,7 +263,11 @@ export default function LibraryItemPage() {
               </p>
             </div>
             {type !== "tracks" && item && removeState === "idle" && (
-              <Button variant="secondary" size="sm" onClick={handleRemoveItem}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setRemoveTarget({ type, id: item.id, name: item.name })}
+              >
                 Remove
               </Button>
             )}
@@ -368,6 +377,19 @@ export default function LibraryItemPage() {
           confirmLabel="Remove"
           onConfirm={handleDeleteTrack}
           onCancel={() => setDeleteTarget(null)}
+        />
+      )}
+
+      {removeTarget && (
+        <ConfirmDialog
+          title="Remove from Library"
+          message={`Remove "${removeTarget.name}" and all its tracks from your library? This cannot be undone.`}
+          confirmLabel="Remove"
+          onConfirm={() => {
+            setRemoveTarget(null);
+            handleRemoveItem();
+          }}
+          onCancel={() => setRemoveTarget(null)}
         />
       )}
     </PageLayout>
