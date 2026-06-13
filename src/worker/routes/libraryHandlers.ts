@@ -324,8 +324,7 @@ export function createLibraryHandlers() {
     }
     const spotifyId = c.req.param("spotifyId");
     const lib = createLibraryService(c.env.HYPERDRIVE.connectionString, c.env);
-    const playlists = await lib.getUserPlaylists(user.id);
-    const match = playlists.find((p) => p.spotifyId === spotifyId);
+    const match = await lib.getPlaylistBySpotifyId(user.id, spotifyId);
     if (match) {
       return c.json({
         inLibrary: true,

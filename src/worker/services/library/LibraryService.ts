@@ -278,6 +278,17 @@ export function createLibraryService(
       return playlist ?? null;
     },
 
+    /** Get a playlist by Spotify ID for a specific user */
+    async getPlaylistBySpotifyId(
+      userId: string,
+      spotifyId: string,
+    ): Promise<PlaylistRecord | null> {
+      const playlist = await db().query.libraryPlaylists.findFirst({
+        where: and(eq(libraryPlaylists.userId, userId), eq(libraryPlaylists.spotifyId, spotifyId)),
+      });
+      return playlist ?? null;
+    },
+
     /** Get user's albums */
     async getUserAlbums(userId: string): Promise<AlbumRecord[]> {
       return db().query.libraryAlbums.findMany({
