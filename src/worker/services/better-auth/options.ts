@@ -58,5 +58,8 @@ export const betterAuthOptions: BetterAuthOptions = {
     crossSubDomainCookies: {
       enabled: false,
     },
+    ipAddress: {
+      ipAddressHeaders: ["CF-Connecting-IP", "X-Forwarded-For"],
+    },
   },
 };
