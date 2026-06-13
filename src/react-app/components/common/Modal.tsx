@@ -1,5 +1,6 @@
 import { ReactNode, useState, type RefObject } from "react";
 import { Dialog } from "@base-ui/react/dialog";
+import { Close } from "../ui/icons";
 
 interface ModalProps {
   title: string;
@@ -45,14 +46,7 @@ export function Modal({
           <div className="flex items-center justify-between p-6 border-b border-gray-700/50">
             <Dialog.Title className="text-xl font-bold text-white m-0">{title}</Dialog.Title>
             <Dialog.Close className="text-gray-400 hover:text-white transition-colors cursor-pointer bg-transparent border-none p-0">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
+              <Close className="w-6 h-6" />
             </Dialog.Close>
           </div>
 

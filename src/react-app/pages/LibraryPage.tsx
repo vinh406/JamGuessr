@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router";
 import PageLayout from "../components/common/PageLayout";
 import { Button, Input } from "../components/ui";
+import { List, MusicNote, Library, Disc, CheckCircle, ChevronRight } from "../components/ui/icons";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import { useLibraryImport } from "../hooks/useLibraryImport";
 import { toast } from "sonner";
@@ -147,38 +148,11 @@ export default function LibraryPage() {
   const itemIcon = (type: string) => {
     switch (type) {
       case "playlist":
-        return (
-          <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M4 6h16M4 10h16M4 14h16M4 18h16"
-            />
-          </svg>
-        );
+        return <List className="w-6 h-6 text-white" />;
       case "album":
-        return (
-          <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"
-            />
-          </svg>
-        );
+        return <MusicNote className="w-6 h-6 text-white" />;
       default:
-        return (
-          <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"
-            />
-          </svg>
-        );
+        return <MusicNote className="w-6 h-6 text-white" />;
     }
   };
 
@@ -199,61 +173,23 @@ export default function LibraryPage() {
         <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-8">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 bg-gradient-to-br from-amber-400 to-orange-500 rounded-2xl flex items-center justify-center shrink-0">
-              <svg
-                className="w-6 h-6 text-white"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
-                />
-              </svg>
+              <Library className="w-6 h-6 text-white" />
             </div>
             <h1 className="text-3xl font-bold text-white">My Library</h1>
           </div>
           <div className="flex flex-wrap items-center gap-3 sm:ml-auto">
             <div className="bg-gray-800/50 rounded-xl px-4 py-2 border border-gray-700/30 flex items-center gap-2">
-              <svg
-                className="w-4 h-4 text-amber-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"
-                />
-              </svg>
+              <MusicNote className="w-4 h-4 text-amber-400" />
               <span className="text-white font-semibold text-sm">{stats?.totalSongs ?? 0}</span>
               <span className="text-amber-400/80 text-xs">tracks</span>
             </div>
             <div className="bg-gray-800/50 rounded-xl px-4 py-2 border border-gray-700/30 flex items-center gap-2">
-              <svg
-                className="w-4 h-4 text-amber-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 6h16M4 10h16M4 14h16M4 18h16"
-                />
-              </svg>
+              <List className="w-4 h-4 text-amber-400" />
               <span className="text-white font-semibold text-sm">{stats?.totalPlaylists ?? 0}</span>
               <span className="text-amber-400/80 text-xs">playlists</span>
             </div>
             <div className="bg-gray-800/50 rounded-xl px-4 py-2 border border-gray-700/30 flex items-center gap-2">
-              <svg className="w-4 h-4 text-amber-400" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 14.5c-2.49 0-4.5-2.01-4.5-4.5S9.51 7.5 12 7.5s4.5 2.01 4.5 4.5-2.01 4.5-4.5 4.5zm0-5.5c-.55 0-1 .45-1 1s.45 1 1 1 1-.45 1-1-.45-1-1-1z" />
-              </svg>
+              <Disc className="w-4 h-4 text-amber-400" />
               <span className="text-white font-semibold text-sm">{stats?.totalAlbums ?? 0}</span>
               <span className="text-amber-400/80 text-xs">albums</span>
             </div>
@@ -300,19 +236,7 @@ export default function LibraryPage() {
 
           {detectedType && (
             <div className="mt-3 flex items-center gap-2 text-sm text-gray-400">
-              <svg
-                className="w-4 h-4 text-amber-400"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                />
-              </svg>
+              <CheckCircle className="w-4 h-4 text-amber-400" />
               Detected as{" "}
               <span className="font-medium text-amber-400 capitalize">{detectedType}</span>
             </div>
@@ -374,19 +298,7 @@ export default function LibraryPage() {
                         {item.trackCount} track{item.trackCount !== 1 ? "s" : ""}
                       </div>
                     </div>
-                    <svg
-                      className="w-5 h-5 text-gray-500 flex-shrink-0"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9 5l7 7-7 7"
-                      />
-                    </svg>
+                    <ChevronRight className="w-5 h-5 text-gray-500 flex-shrink-0" />
                   </button>
                 );
               })}
@@ -403,19 +315,7 @@ export default function LibraryPage() {
         {!loading && !hasItems && (
           <div className="text-center py-16">
             <div className="w-20 h-20 bg-gray-800/50 rounded-full flex items-center justify-center mx-auto mb-6">
-              <svg
-                className="w-10 h-10 text-gray-600"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"
-                />
-              </svg>
+              <MusicNote className="w-10 h-10 text-gray-600" />
             </div>
             <h3 className="text-xl font-bold text-white mb-2">Your library is empty</h3>
             <p className="text-gray-400">

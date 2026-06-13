@@ -1,6 +1,7 @@
 import type { Playlist } from "../../../shared/types";
 import { Modal } from "../common/Modal";
 import { Input, Button } from "../ui";
+import { Users, MusicNote, Check } from "../ui/icons";
 
 interface PlaylistModalProps {
   selectedPlaylist: Playlist | null;
@@ -65,14 +66,7 @@ export function PlaylistModal({
         className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl hover:from-purple-600 hover:to-pink-600 transition-all mb-6"
         size="lg"
       >
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
-          />
-        </svg>
+        <Users className="w-5 h-5" />
         Create Blend from Players
       </Button>
 
@@ -129,19 +123,7 @@ export function PlaylistModal({
                   />
                 ) : (
                   <div className="w-14 h-14 rounded-lg bg-gray-600 flex items-center justify-center">
-                    <svg
-                      className="w-6 h-6 text-gray-400"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"
-                      />
-                    </svg>
+                    <MusicNote className="w-6 h-6 text-gray-400" />
                   </div>
                 )}
                 <div className="flex-1 min-w-0">
@@ -153,19 +135,7 @@ export function PlaylistModal({
                 </div>
                 {selectedPlaylist?.id === playlist.id && (
                   <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
-                    <svg
-                      className="w-4 h-4 text-white"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M5 13l4 4L19 7"
-                      />
-                    </svg>
+                    <Check className="w-4 h-4 text-white" />
                   </div>
                 )}
               </Button>

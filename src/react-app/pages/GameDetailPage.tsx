@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router";
 import PageLayout from "../components/common/PageLayout";
 import { useAuth } from "../hooks/useAuth";
+import { ChevronLeft, MusicNote } from "../components/ui/icons";
 import { Leaderboard } from "../components/common/Leaderboard";
 import type { LeaderboardEntry } from "../components/common/Leaderboard";
 
@@ -126,14 +127,7 @@ export default function GameDetailPage() {
           onClick={() => navigate("/history")}
           className="text-gray-400 hover:text-white transition-colors mb-6 flex items-center gap-2 cursor-pointer group"
         >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M15 19l-7-7 7-7"
-            />
-          </svg>
+          <ChevronLeft className="w-4 h-4" />
           Back to history
         </button>
 
@@ -147,19 +141,7 @@ export default function GameDetailPage() {
               />
             ) : (
               <div className="w-16 h-16 rounded-xl bg-gray-700/50 shrink-0 flex items-center justify-center">
-                <svg
-                  className="w-8 h-8 text-gray-500"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={1.5}
-                    d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"
-                  />
-                </svg>
+                <MusicNote className="w-8 h-8 text-gray-500" />
               </div>
             )}
             <div className="min-w-0">
@@ -212,19 +194,7 @@ export default function GameDetailPage() {
                       />
                     ) : (
                       <div className="w-10 h-10 rounded bg-gray-700/50 shrink-0 flex items-center justify-center">
-                        <svg
-                          className="w-5 h-5 text-gray-500"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={1.5}
-                            d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2z"
-                          />
-                        </svg>
+                        <MusicNote className="w-5 h-5 text-gray-500" />
                       </div>
                     )}
                     <div className="flex-1 min-w-0">

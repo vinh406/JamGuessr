@@ -1,5 +1,6 @@
 import { Popover } from "@base-ui/react/popover";
 import { DefaultAvatar } from "./DefaultAvatar";
+import { ArrowDown } from "./icons";
 
 export interface UserProfile {
   id: string;
@@ -24,9 +25,7 @@ export function ProfilePopup({
       <Popover.Positioner side="bottom" align="start" sideOffset={8} className="z-50">
         <Popover.Popup className="bg-gray-800 border border-gray-700/50 rounded-xl min-w-56 max-w-64 p-4 outline-none">
           <Popover.Arrow className="fill-gray-800 stroke-gray-700/50">
-            <svg viewBox="0 0 16 8" width="16" height="8">
-              <path d="M 0 0 L 8 8 L 16 0" />
-            </svg>
+            <ArrowDown />
           </Popover.Arrow>
           <div className="flex items-center gap-3">
             <DefaultAvatar

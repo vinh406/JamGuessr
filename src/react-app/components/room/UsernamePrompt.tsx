@@ -1,4 +1,4 @@
-import { AppIcon } from "../ui";
+import { App } from "../ui/icons";
 import { Input } from "../ui/Input";
 import { Button } from "../ui/Button";
 
@@ -13,7 +13,7 @@ export function UsernamePrompt({ roomName, onSubmit, onBack }: UsernamePromptPro
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center p-4">
       <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl shadow-xl p-8 w-full max-w-md border border-gray-700/50">
         <div className="text-center mb-8">
-          <AppIcon className="w-16 h-16 mx-auto mb-4" />
+          <App className="w-16 h-16 mx-auto mb-4" />
           <h1 className="text-3xl font-bold text-white mb-2">
             Join <span className="text-green-400">#{roomName}</span>
           </h1>

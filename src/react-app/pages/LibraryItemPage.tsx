@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate, useLocation } from "react-router";
 import PageLayout from "../components/common/PageLayout";
 import { Button } from "../components/ui";
+import { ChevronLeft, MusicNote, MusicNoteFilled, Close } from "../components/ui/icons";
 import ConfirmDialog from "../components/common/ConfirmDialog";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import { useSSE } from "../hooks/useSSE";
@@ -207,16 +208,7 @@ export default function LibraryItemPage() {
         ? "from-amber-600 to-amber-800"
         : "from-amber-400 to-amber-600";
 
-  const itemIcon = (
-    <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeWidth={2}
-        d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"
-      />
-    </svg>
-  );
+  const itemIcon = <MusicNote className="w-6 h-6 text-white" />;
 
   return (
     <PageLayout>
@@ -225,19 +217,7 @@ export default function LibraryItemPage() {
           onClick={() => navigate("/library")}
           className="text-gray-400 hover:text-white transition-colors mb-6 flex items-center gap-2 cursor-pointer group"
         >
-          <svg
-            className="w-4 h-4 transition-transform group-hover:-translate-x-0.5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M15 19l-7-7 7-7"
-            />
-          </svg>
+          <ChevronLeft className="w-4 h-4 transition-transform group-hover:-translate-x-0.5" />
           Back to library
         </button>
 
@@ -312,13 +292,7 @@ export default function LibraryItemPage() {
                       />
                     ) : (
                       <div className="w-full h-full bg-gray-700/50 flex items-center justify-center">
-                        <svg
-                          className="w-4 h-4 text-gray-400"
-                          fill="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
-                        </svg>
+                        <MusicNoteFilled className="w-4 h-4 text-gray-400" />
                       </div>
                     )}
                   </div>
@@ -343,19 +317,7 @@ export default function LibraryItemPage() {
                     {isDeletingTrack && deleteTarget?.id === track.id ? (
                       <LoadingSpinner size="sm" />
                     ) : (
-                      <svg
-                        className="w-3.5 h-3.5"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M6 18L18 6M6 6l12 12"
-                        />
-                      </svg>
+                      <Close className="w-3.5 h-3.5" />
                     )}
                   </button>
                 </div>

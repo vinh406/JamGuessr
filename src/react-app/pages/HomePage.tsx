@@ -4,6 +4,7 @@ import { useAuth } from "../hooks/useAuth";
 import PageLayout from "../components/common/PageLayout";
 
 import { Button, Input } from "../components/ui";
+import { Plus, Library } from "../components/ui/icons";
 import { generateRoomCode, ROOM_CODE_LENGTH } from "../../shared/constants";
 interface LibraryStats {
   totalSongs: number;
@@ -87,19 +88,7 @@ export default function HomePage() {
               className="bg-gradient-to-br from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500 rounded-2xl p-6 text-left transition-all hover:shadow-lg hover:shadow-green-500/20 group"
             >
               <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                <svg
-                  className="w-5 h-5 text-white"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 4v16m8-8H4"
-                  />
-                </svg>
+                <Plus className="w-5 h-5 text-white" />
               </div>
               <div className="text-white font-semibold">Create Room</div>
               <div className="text-white/70 text-sm">Start a new game</div>
@@ -110,19 +99,7 @@ export default function HomePage() {
               className="bg-gray-800/60 hover:bg-gray-800/80 rounded-2xl p-6 text-left border border-gray-700/30 hover:border-gray-600/50 transition-all group"
             >
               <div className="w-10 h-10 bg-amber-500/20 rounded-xl flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                <svg
-                  className="w-5 h-5 text-amber-400"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"
-                  />
-                </svg>
+                <Library className="w-5 h-5 text-amber-400" />
               </div>
               <div className="text-white font-semibold">Library</div>
               <div className="text-gray-400 text-sm">Manage your music</div>
