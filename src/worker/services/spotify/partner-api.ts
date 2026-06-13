@@ -54,6 +54,7 @@ export async function paginateFetch<T>(
   batchSize: number,
   concurrency: number,
   fetcher: (offset: number) => Promise<T[]>,
+  onProgress?: (current: number, total: number) => void,
 ): Promise<T[]> {
   const offsets: number[] = [];
   for (let o = startOffset; o < total; o += batchSize) {
@@ -67,6 +68,7 @@ export async function paginateFetch<T>(
     for (const page of results) {
       allResults.push(...page);
     }
+    onProgress?.(allResults.length, total);
   }
 
   return allResults;

@@ -104,9 +104,15 @@ async function fetchPartnerPlaylistTracks(
   startOffset: number,
   total: number,
   fetchFn: typeof fetch = fetch,
+  onFetchProgress?: (current: number, total: number) => void,
 ): Promise<Song[]> {
-  return paginateFetch(total, startOffset, BATCH_SIZE, CONCURRENCY, (o) =>
-    fetchPartnerPage(playlistId, accessToken, o, fetchFn),
+  return paginateFetch(
+    total,
+    startOffset,
+    BATCH_SIZE,
+    CONCURRENCY,
+    (o) => fetchPartnerPage(playlistId, accessToken, o, fetchFn),
+    onFetchProgress,
   );
 }
 
@@ -240,6 +246,7 @@ export async function getPlaylistTracks(
   playlistId: string,
   doNamespace?: DurableObjectNamespace,
   quick?: boolean,
+  onFetchProgress?: (current: number, total: number) => void,
 ): Promise<Song[]> {
   // 1. Try embed page + partner API pagination (gets full track list)
   try {
@@ -309,14 +316,63 @@ export async function getPlaylistTracks(
                   method: "POST",
                   body: JSON.stringify({ playlistId, accessToken, offset, total }),
                 });
-                const result = (await resp.json()) as { tracks: Song[]; nextOffset: number | null };
-                partnerTracks.push(...result.tracks);
-                if (result.nextOffset === null) break;
-                offset = result.nextOffset;
+
+                const reader = resp.body?.getReader();
+                if (!reader) break;
+
+                const decoder = new TextDecoder();
+                let buffer = "";
+
+                while (true) {
+                  const { done, value } = await reader.read();
+                  if (done) break;
+                  buffer += decoder.decode(value, { stream: true });
+
+                  const lines = buffer.split("\n");
+                  buffer = lines.pop() ?? "";
+
+                  for (const line of lines) {
+                    if (!line.trim()) continue;
+                    try {
+                      const msg: {
+                        type: string;
+                        current?: number;
+                        total?: number;
+                        tracks?: Song[];
+                        nextOffset?: number | null;
+                        message?: string;
+                      } = JSON.parse(line);
+                      if (msg.type === "progress") {
+                        onFetchProgress?.(msg.current ?? 0, msg.total ?? 0);
+                      } else if (msg.type === "done") {
+                        if (msg.tracks) partnerTracks.push(...msg.tracks);
+                        const nextOffset = msg.nextOffset ?? null;
+                        if (nextOffset === null) {
+                          offset = total;
+                        } else {
+                          offset = nextOffset;
+                        }
+                      } else if (msg.type === "error") {
+                        throw new Error(msg.message ?? "Unknown error");
+                      }
+                    } catch (e) {
+                      if (e instanceof Error && e.message) throw e;
+                    }
+                  }
+                }
+
+                if (offset >= total) break;
               }
             } else {
               // Fallback: direct partner API (may hit 50 subrequest limit on free plan)
-              partnerTracks = await fetchPartnerPlaylistTracks(playlistId, accessToken, 0, total);
+              partnerTracks = await fetchPartnerPlaylistTracks(
+                playlistId,
+                accessToken,
+                0,
+                total,
+                undefined,
+                onFetchProgress,
+              );
             }
 
             // Build a map of partner tracks by Spotify ID for album art merge

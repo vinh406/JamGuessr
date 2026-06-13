@@ -452,6 +452,7 @@ export function createLibraryService(
       userId: string,
       link: string,
       onProgress?: (current: number, total: number) => void,
+      onFetchProgress?: (current: number, total: number) => void,
     ): Promise<
       | { success: true; type: SpotifyLinkType; id: string; trackCount?: number }
       | { success: false; error: string }
@@ -499,7 +500,7 @@ export function createLibraryService(
 
           const [metadata, tracks] = await Promise.all([
             getPlaylistMetadata(parsed.id),
-            getPlaylistTracks(parsed.id, env?.PLAYLIST_IMPORT_DO),
+            getPlaylistTracks(parsed.id, env?.PLAYLIST_IMPORT_DO, undefined, onFetchProgress),
           ]);
 
           if (!metadata) {
