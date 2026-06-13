@@ -1,4 +1,4 @@
-import { relations } from "drizzle-orm";
+import { relations, sql } from "drizzle-orm";
 import { pgTable, text, timestamp, boolean, index, jsonb, integer } from "drizzle-orm/pg-core";
 import type { Song } from "../../shared/types";
 
@@ -98,7 +98,9 @@ export const accountRelations = relations(account, ({ one }) => ({
 export const libraryTracks = pgTable(
   "library_tracks",
   {
-    id: text("id").primaryKey(),
+    id: text("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
@@ -123,7 +125,9 @@ export const libraryTracks = pgTable(
 export const libraryTrackSources = pgTable(
   "library_track_sources",
   {
-    id: text("id").primaryKey(),
+    id: text("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
     trackId: text("track_id")
       .notNull()
       .references(() => libraryTracks.id, { onDelete: "cascade" }),
@@ -148,7 +152,9 @@ export const libraryTrackSources = pgTable(
 export const libraryPlaylists = pgTable(
   "library_playlists",
   {
-    id: text("id").primaryKey(),
+    id: text("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
@@ -165,7 +171,9 @@ export const libraryPlaylists = pgTable(
 export const libraryAlbums = pgTable(
   "library_albums",
   {
-    id: text("id").primaryKey(),
+    id: text("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),

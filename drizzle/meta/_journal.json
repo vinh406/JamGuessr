@@ -50,6 +50,13 @@
       "when": 1781275493293,
       "tag": "0006_nifty_miss_america",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1781357961228,
+      "tag": "0007_married_celestials",
+      "breakpoints": true
     }
   ]
 }

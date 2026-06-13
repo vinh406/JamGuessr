@@ -29,7 +29,7 @@ type LibraryTrackRecord = typeof libraryTracks.$inferSelect;
 type LibraryStatsRecord = typeof userLibraryStats.$inferSelect;
 
 export interface TrackData {
-  id: string;
+  id?: string;
   spotifyId: string;
   name: string;
   artists: { name: string; id?: string }[];
@@ -175,7 +175,6 @@ export function createLibraryService(
       const newTracksData = chunk
         .filter((t) => !existingBySpotifyId.has(t.spotifyId))
         .map((t) => ({
-          id: t.id,
           userId,
           spotifyId: t.spotifyId,
           name: t.name,
@@ -198,16 +197,22 @@ export function createLibraryService(
         );
       }
 
-      const sourceValues = chunk.map((trackData) => {
-        const existing = existingBySpotifyId.get(trackData.spotifyId);
-        return {
-          id: crypto.randomUUID(),
-          trackId: existing ? existing.id : trackData.id,
-          userId,
-          sourceType,
-          ...(sourceType === "playlist" ? { playlistId: containerId } : { albumId: containerId }),
-        };
-      });
+      const insertedBySpotifyId = new Map(insertedTracks.map((t) => [t.spotifyId, t]));
+
+      const sourceValues = chunk
+        .map((td) => {
+          const existing = existingBySpotifyId.get(td.spotifyId);
+          const inserted = insertedBySpotifyId.get(td.spotifyId);
+          const trackId = existing?.id ?? inserted?.id;
+          if (!trackId) return null;
+          return {
+            trackId,
+            userId,
+            sourceType,
+            ...(sourceType === "playlist" ? { playlistId: containerId } : { albumId: containerId }),
+          };
+        })
+        .filter((s): s is NonNullable<typeof s> => s !== null);
 
       const insertedSources: LibraryTrackSource[] = [];
       if (sourceValues.length > 0) {
@@ -217,11 +222,10 @@ export function createLibraryService(
       }
 
       const sourceByTrackId = new Map(insertedSources.map((s) => [s.trackId, s]));
-      const insertedBySpotifyId = new Map(insertedTracks.map((t) => [t.spotifyId, t]));
+      const allTracksBySpotifyId = new Map([...existingBySpotifyId, ...insertedBySpotifyId]);
 
-      for (const trackData of chunk) {
-        const existing = existingBySpotifyId.get(trackData.spotifyId);
-        const track = existing ?? insertedBySpotifyId.get(trackData.spotifyId);
+      for (const td of chunk) {
+        const track = allTracksBySpotifyId.get(td.spotifyId);
         const source = track ? sourceByTrackId.get(track.id) : undefined;
         if (!track || !source) continue;
         results.push({ track, source });
@@ -376,7 +380,6 @@ export function createLibraryService(
       const [track] = await db
         .insert(libraryTracks)
         .values({
-          id: trackData.id,
           userId,
           spotifyId: trackData.spotifyId,
           name: trackData.name,
@@ -392,7 +395,6 @@ export function createLibraryService(
       const [source] = await db
         .insert(libraryTrackSources)
         .values({
-          id: crypto.randomUUID(),
           trackId: track!.id,
           userId,
           sourceType: "direct",
@@ -416,10 +418,7 @@ export function createLibraryService(
         durationMs?: number;
       },
     ): Promise<{ success: true; trackId: string } | { success: false; error: string }> {
-      const result = await this.addTrack(userId, {
-        id: crypto.randomUUID(),
-        ...trackData,
-      });
+      const result = await this.addTrack(userId, trackData);
 
       if ("error" in result) {
         return { success: false, error: result.error };
@@ -509,7 +508,6 @@ export function createLibraryService(
 
           // Create the playlist record
           const { playlist } = await this.addPlaylist(userId, {
-            id: crypto.randomUUID(),
             spotifyId: parsed.id,
             name: metadata.name,
             imageUrl: metadata.imageUrl,
@@ -518,7 +516,6 @@ export function createLibraryService(
 
           // Add all tracks with playlist source
           const trackData = tracks.map((t) => ({
-            id: crypto.randomUUID(),
             spotifyId: t.id,
             name: t.title,
             artists: [{ name: t.artist }],
@@ -559,7 +556,6 @@ export function createLibraryService(
 
           // Create the album record
           const { album } = await this.addAlbum(userId, {
-            id: crypto.randomUUID(),
             spotifyId: parsed.id,
             name: metadata.name,
             artistName: metadata.artistName,
@@ -570,7 +566,6 @@ export function createLibraryService(
 
           // Add all tracks with album source
           const trackData = tracks.map((t) => ({
-            id: crypto.randomUUID(),
             spotifyId: t.id,
             name: t.title,
             artists: [{ name: t.artist }],
@@ -607,7 +602,6 @@ export function createLibraryService(
     async addPlaylist(
       userId: string,
       playlistData: {
-        id: string;
         spotifyId: string;
         name: string;
         imageUrl?: string;
@@ -617,7 +611,6 @@ export function createLibraryService(
       const [playlist] = await db
         .insert(libraryPlaylists)
         .values({
-          id: playlistData.id,
           userId,
           spotifyId: playlistData.spotifyId,
           name: playlistData.name,
@@ -650,7 +643,6 @@ export function createLibraryService(
     async addAlbum(
       userId: string,
       albumData: {
-        id: string;
         spotifyId: string;
         name: string;
         artistName?: string;
@@ -662,7 +654,6 @@ export function createLibraryService(
       const [album] = await db
         .insert(libraryAlbums)
         .values({
-          id: albumData.id,
           userId,
           spotifyId: albumData.spotifyId,
           name: albumData.name,
