@@ -4,6 +4,7 @@ import {
   PARTNER_QUERY_HASH,
   BATCH_SIZE,
   CONCURRENCY,
+  PAGES_PER_CHUNK,
   fetchPartnerPage,
   paginateFetch,
   type PartnerPlaylistResponse,
@@ -305,64 +306,73 @@ export async function getPlaylistTracks(
             let partnerTracks: Song[];
 
             if (doNamespace) {
-              // Use Durable Object to batch partner API calls across invocations
-              const doId = doNamespace.idFromName(playlistId);
-              const doStub = doNamespace.get(doId);
-              partnerTracks = [];
+              // Fan out across parallel DO instances, one per chunk
+              const CHUNK_SIZE = PAGES_PER_CHUNK * BATCH_SIZE;
 
-              let offset = 0;
-              while (offset < total) {
-                const resp = await doStub.fetch("https://doplaylistimport/fetch", {
-                  method: "POST",
-                  body: JSON.stringify({ playlistId, accessToken, offset, total }),
-                });
+              const chunkOffsets: number[] = [];
+              for (let o = 0; o < total; o += CHUNK_SIZE) {
+                chunkOffsets.push(o);
+              }
 
-                const reader = resp.body?.getReader();
-                if (!reader) break;
+              let totalFetchedOverall = 0;
 
-                const decoder = new TextDecoder();
-                let buffer = "";
+              const chunkResults = await Promise.all(
+                chunkOffsets.map(async (chunkOffset) => {
+                  const chunkDoId = doNamespace.idFromName(`${playlistId}-chunk-${chunkOffset}`);
+                  const chunkDoStub = doNamespace.get(chunkDoId);
 
-                while (true) {
-                  const { done, value } = await reader.read();
-                  if (done) break;
-                  buffer += decoder.decode(value, { stream: true });
+                  const resp = await chunkDoStub.fetch("https://doplaylistimport/fetch", {
+                    method: "POST",
+                    body: JSON.stringify({ playlistId, accessToken, offset: chunkOffset, total }),
+                  });
 
-                  const lines = buffer.split("\n");
-                  buffer = lines.pop() ?? "";
+                  const reader = resp.body?.getReader();
+                  if (!reader) return [] as Song[];
 
-                  for (const line of lines) {
-                    if (!line.trim()) continue;
-                    try {
-                      const msg: {
-                        type: string;
-                        current?: number;
-                        total?: number;
-                        tracks?: Song[];
-                        nextOffset?: number | null;
-                        message?: string;
-                      } = JSON.parse(line);
-                      if (msg.type === "progress") {
-                        onFetchProgress?.(msg.current ?? 0, msg.total ?? 0);
-                      } else if (msg.type === "done") {
-                        if (msg.tracks) partnerTracks.push(...msg.tracks);
-                        const nextOffset = msg.nextOffset ?? null;
-                        if (nextOffset === null) {
-                          offset = total;
-                        } else {
-                          offset = nextOffset;
+                  const decoder = new TextDecoder();
+                  let buffer = "";
+                  const tracks: Song[] = [];
+                  let chunkPrevCount = 0;
+
+                  while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    buffer += decoder.decode(value, { stream: true });
+
+                    const lines = buffer.split("\n");
+                    buffer = lines.pop() ?? "";
+
+                    for (const line of lines) {
+                      if (!line.trim()) continue;
+                      try {
+                        const msg: {
+                          type: string;
+                          current?: number;
+                          total?: number;
+                          tracks?: Song[];
+                          message?: string;
+                        } = JSON.parse(line);
+                        if (msg.type === "progress") {
+                          const chunkCount = (msg.current ?? 0) - chunkOffset;
+                          totalFetchedOverall += chunkCount - chunkPrevCount;
+                          chunkPrevCount = chunkCount;
+                          onFetchProgress?.(totalFetchedOverall, msg.total ?? 0);
+                        } else if (msg.type === "done") {
+                          if (msg.tracks) tracks.push(...msg.tracks);
+                        } else if (msg.type === "error") {
+                          throw new Error(msg.message ?? "Unknown error");
                         }
-                      } else if (msg.type === "error") {
-                        throw new Error(msg.message ?? "Unknown error");
+                      } catch (e) {
+                        if (e instanceof Error && e.message) throw e;
                       }
-                    } catch (e) {
-                      if (e instanceof Error && e.message) throw e;
                     }
                   }
-                }
 
-                if (offset >= total) break;
-              }
+                  return tracks;
+                }),
+              );
+
+              partnerTracks = chunkResults.flat();
             } else {
               // Fallback: direct partner API (may hit 50 subrequest limit on free plan)
               partnerTracks = await fetchPartnerPlaylistTracks(

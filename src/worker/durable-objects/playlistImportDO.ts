@@ -1,7 +1,10 @@
 import { DurableObject } from "cloudflare:workers";
-import { BATCH_SIZE, CONCURRENCY, fetchPartnerPage } from "../services/spotify/partner-api";
-
-const MAX_PAGES_PER_INVOCATION = 45;
+import {
+  BATCH_SIZE,
+  CONCURRENCY,
+  PAGES_PER_CHUNK,
+  fetchPartnerPage,
+} from "../services/spotify/partner-api";
 const ENCODER = new TextEncoder();
 
 export class PlaylistImportDO extends DurableObject {
@@ -13,7 +16,7 @@ export class PlaylistImportDO extends DurableObject {
       total: number;
     };
 
-    const endOffset = Math.min(offset + MAX_PAGES_PER_INVOCATION * BATCH_SIZE, total);
+    const endOffset = Math.min(offset + PAGES_PER_CHUNK * BATCH_SIZE, total);
 
     const { readable, writable } = new TransformStream();
     const writer = writable.getWriter();

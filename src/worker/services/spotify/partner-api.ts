@@ -4,6 +4,7 @@ export const PARTNER_QUERY_HASH =
   "a65e12194ed5fc443a1cdebed5fabe33ca5b07b987185d63c72483867ad13cb4";
 export const BATCH_SIZE = 50;
 export const CONCURRENCY = 10;
+export const PAGES_PER_CHUNK = 45;
 
 export interface PartnerTrack {
   itemV2: {
