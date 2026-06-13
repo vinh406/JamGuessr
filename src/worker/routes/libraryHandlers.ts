@@ -408,26 +408,14 @@ export function createLibraryHandlers() {
       // Create new db connection to avoid timeout
       const lib = createLibraryService(getDb(c.env.HYPERDRIVE.connectionString), c.env);
 
-      const result = await lib.addFromSpotifyLink(
-        user.id,
-        parsed.data.link,
-        (current, total) => {
-          emit("progress", {
-            current,
-            total,
-            phase: "saving",
-            label: `Saving track ${current} of ${total}...`,
-          });
-        },
-        (current, total) => {
-          emit("progress", {
-            current,
-            total,
-            phase: "fetching",
-            label: `Fetching playlist tracks from Spotify (${current}/${total})...`,
-          });
-        },
-      );
+      const result = await lib.addFromSpotifyLink(user.id, parsed.data.link, (current, total) => {
+        emit("progress", {
+          current,
+          total,
+          phase: "saving",
+          label: `Saving track ${current} of ${total}...`,
+        });
+      });
 
       if (!result.success) {
         throw new Error(result.error);

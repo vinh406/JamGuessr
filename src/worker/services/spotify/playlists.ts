@@ -4,7 +4,6 @@ import {
   PARTNER_QUERY_HASH,
   BATCH_SIZE,
   CONCURRENCY,
-  PAGES_PER_CHUNK,
   fetchPartnerPage,
   fetchPartnerAlbumAllTracks,
   paginateFetch,
@@ -100,7 +99,7 @@ async function parseSpotifyEmbedPage(
   return { entity, accessToken };
 }
 
-async function extractSpotifyEmbedToken(
+export async function extractSpotifyEmbedToken(
   type: "playlist" | "album",
   id: string,
 ): Promise<string | null> {
@@ -270,7 +269,6 @@ export async function getPlaylistMetadata(playlistId: string): Promise<Playlist 
 
 export async function getPlaylistTracks(
   playlistId: string,
-  doNamespace?: DurableObjectNamespace,
   quick?: boolean,
   onFetchProgress?: (current: number, total: number) => void,
 ): Promise<Song[]> {
@@ -282,7 +280,6 @@ export async function getPlaylistTracks(
       const tracks = entity.trackList.map(embedTrackToSong);
 
       if (quick) {
-        // Fetch partner pages for album art (up to 100 tracks, minimum pages needed)
         try {
           const numPages = Math.min(Math.ceil(tracks.length / BATCH_SIZE), 2);
           const limit = numPages * BATCH_SIZE;
@@ -328,94 +325,19 @@ export async function getPlaylistTracks(
           const total = countData.data?.playlistV2?.content?.totalCount;
 
           if (typeof total === "number" && total > 0) {
-            let partnerTracks: Song[];
+            const partnerTracks = await fetchPartnerPlaylistTracks(
+              playlistId,
+              accessToken,
+              0,
+              total,
+              undefined,
+              onFetchProgress,
+            );
 
-            if (doNamespace) {
-              // Fan out across parallel DO instances, one per chunk
-              const CHUNK_SIZE = PAGES_PER_CHUNK * BATCH_SIZE;
-
-              const chunkOffsets: number[] = [];
-              for (let o = 0; o < total; o += CHUNK_SIZE) {
-                chunkOffsets.push(o);
-              }
-
-              let totalFetchedOverall = 0;
-
-              const chunkResults = await Promise.all(
-                chunkOffsets.map(async (chunkOffset) => {
-                  const chunkDoId = doNamespace.idFromName(`${playlistId}-chunk-${chunkOffset}`);
-                  const chunkDoStub = doNamespace.get(chunkDoId);
-
-                  const resp = await chunkDoStub.fetch("https://doplaylistimport/fetch", {
-                    method: "POST",
-                    body: JSON.stringify({ playlistId, accessToken, offset: chunkOffset, total }),
-                  });
-
-                  const reader = resp.body?.getReader();
-                  if (!reader) return [] as Song[];
-
-                  const decoder = new TextDecoder();
-                  let buffer = "";
-                  const tracks: Song[] = [];
-                  let chunkPrevCount = 0;
-
-                  while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
-                    buffer += decoder.decode(value, { stream: true });
-
-                    const lines = buffer.split("\n");
-                    buffer = lines.pop() ?? "";
-
-                    for (const line of lines) {
-                      if (!line.trim()) continue;
-                      try {
-                        const msg: {
-                          type: string;
-                          current?: number;
-                          total?: number;
-                          tracks?: Song[];
-                          message?: string;
-                        } = JSON.parse(line);
-                        if (msg.type === "progress") {
-                          const chunkCount = (msg.current ?? 0) - chunkOffset;
-                          totalFetchedOverall += chunkCount - chunkPrevCount;
-                          chunkPrevCount = chunkCount;
-                          onFetchProgress?.(totalFetchedOverall, msg.total ?? 0);
-                        } else if (msg.type === "done") {
-                          if (msg.tracks) tracks.push(...msg.tracks);
-                        } else if (msg.type === "error") {
-                          throw new Error(msg.message ?? "Unknown error");
-                        }
-                      } catch (e) {
-                        if (e instanceof Error && e.message) throw e;
-                      }
-                    }
-                  }
-
-                  return tracks;
-                }),
-              );
-
-              partnerTracks = chunkResults.flat();
-            } else {
-              // Fallback: direct partner API (may hit 50 subrequest limit on free plan)
-              partnerTracks = await fetchPartnerPlaylistTracks(
-                playlistId,
-                accessToken,
-                0,
-                total,
-                undefined,
-                onFetchProgress,
-              );
-            }
-
-            // Build a map of partner tracks by Spotify ID for album art merge
             const partnerMap = new Map<string, Song>();
             for (const pt of partnerTracks) {
               partnerMap.set(pt.id, pt);
             }
-            // Merge album art (and album name) from partner API into embed tracks
             const merged = tracks.map((t) => {
               const partner = partnerMap.get(t.id);
               if (partner && partner.albumImageUrl) {
@@ -427,7 +349,6 @@ export async function getPlaylistTracks(
               }
               return t;
             });
-            // Add any partner tracks that weren't in the embed list
             const embedIds = new Set(tracks.map((t) => t.id));
             for (const pt of partnerTracks) {
               if (!embedIds.has(pt.id)) {

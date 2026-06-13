@@ -6,11 +6,11 @@ import {
   parseSpotifyLink,
   getTrackMetadata,
   getPlaylistMetadata,
-  getPlaylistTracks,
   getAlbumMetadata,
   getAlbumTracks,
   type SpotifyLinkType,
 } from "../spotify/playlists";
+import { PAGES_PER_CHUNK, BATCH_SIZE as PARTNER_BATCH_SIZE } from "../spotify/partner-api";
 import {
   libraryTracks,
   libraryTrackSources,
@@ -451,7 +451,6 @@ export function createLibraryService(
       userId: string,
       link: string,
       onProgress?: (current: number, total: number) => void,
-      onFetchProgress?: (current: number, total: number) => void,
     ): Promise<
       | { success: true; type: SpotifyLinkType; id: string; trackCount?: number }
       | { success: false; error: string }
@@ -497,16 +496,12 @@ export function createLibraryService(
             return { success: false, error: "Playlist already exists in your library" };
           }
 
-          const [metadata, tracks] = await Promise.all([
-            getPlaylistMetadata(parsed.id),
-            getPlaylistTracks(parsed.id, env?.PLAYLIST_IMPORT_DO, undefined, onFetchProgress),
-          ]);
-
+          const metadata = await getPlaylistMetadata(parsed.id);
           if (!metadata) {
             return { success: false, error: "Failed to fetch playlist metadata from Spotify" };
           }
 
-          // Create the playlist record
+          // Create the playlist record BEFORE fan-out (need containerId for DOs)
           const { playlist } = await this.addPlaylist(userId, {
             spotifyId: parsed.id,
             name: metadata.name,
@@ -514,18 +509,46 @@ export function createLibraryService(
             trackCount: metadata.trackCount,
           });
 
-          // Add all tracks with playlist source
-          const trackData = tracks.map((t) => ({
-            spotifyId: t.id,
-            name: t.title,
-            artists: [{ name: t.artist }],
-            albumName: t.album || undefined,
-            albumImageUrl: t.albumImageUrl || undefined,
-            previewUrl: t.previewUrl || undefined,
-            durationMs: t.duration || undefined,
-          }));
+          // Fan out to DO instances for parallel fetching + DB writes
+          const doNamespace = env?.PLAYLIST_IMPORT_DO;
+          if (doNamespace && metadata.trackCount > 0) {
+            const CHUNK_SIZE = PAGES_PER_CHUNK * PARTNER_BATCH_SIZE;
 
-          await this.addTracksFromPlaylist(userId, playlist.id, trackData, onProgress);
+            const chunkOffsets: number[] = [];
+            for (let o = 0; o < metadata.trackCount; o += CHUNK_SIZE) {
+              chunkOffsets.push(o);
+            }
+
+            const results = await Promise.all(
+              chunkOffsets.map(async (chunkOffset) => {
+                const chunkDoId = doNamespace.idFromName(`${parsed.id}-chunk-${chunkOffset}`);
+                const chunkDoStub = doNamespace.get(chunkDoId);
+                const resp = await chunkDoStub.fetch("https://doimport/fetch", {
+                  method: "POST",
+                  body: JSON.stringify({
+                    playlistId: parsed.id,
+                    offset: chunkOffset,
+                    total: metadata.trackCount,
+                    userId,
+                    containerId: playlist.id,
+                  }),
+                });
+                return resp.json() as Promise<{
+                  tracksAdded?: number;
+                  tracksSkipped?: number;
+                  error?: string;
+                }>;
+              }),
+            );
+
+            // Check for errors
+            for (const r of results) {
+              if (r.error) {
+                throw new Error(`Playlist import chunk failed: ${r.error}`);
+              }
+            }
+          }
+
           await this.updateUserLibraryStats(userId);
 
           return {
