@@ -92,15 +92,6 @@ export function useRoomActions({ state, dispatch }: UseRoomActionsParams) {
         user: { username: user.name?.trim() || "", userId: user.id || "" },
       });
       dispatch({ type: "SET_SHOW_USERNAME_PROMPT", show: false });
-    } else {
-      const storedUsername = sessionStorage.getItem("chat-username");
-      const storedUserId = sessionStorage.getItem("chat-userId");
-      if (storedUsername) {
-        const userId = storedUserId || `guest-${Math.random().toString(36).substr(2, 9)}`;
-        if (!storedUserId) sessionStorage.setItem("chat-userId", userId);
-        dispatch({ type: "SET_USER", user: { username: storedUsername, userId } });
-        dispatch({ type: "SET_SHOW_USERNAME_PROMPT", show: false });
-      }
     }
   }, [isLoading, isAuthenticated, user, dispatch]);
 
@@ -236,12 +227,7 @@ export function useRoomActions({ state, dispatch }: UseRoomActionsParams) {
 
   const handleJoinRoom = useCallback(
     (username: string) => {
-      sessionStorage.setItem("chat-username", username);
-      let userId = sessionStorage.getItem("chat-userId");
-      if (!userId) {
-        userId = `guest-${Math.random().toString(36).substr(2, 9)}`;
-        sessionStorage.setItem("chat-userId", userId);
-      }
+      const userId = `guest-${Math.random().toString(36).substr(2, 9)}`;
       dispatch({ type: "SET_USER", user: { username, userId } });
       dispatch({ type: "SET_SHOW_USERNAME_PROMPT", show: false });
 
@@ -257,7 +243,6 @@ export function useRoomActions({ state, dispatch }: UseRoomActionsParams) {
   }, [navigate]);
 
   const handleConfirmLeave = useCallback(() => {
-    sessionStorage.removeItem("chat-username");
     dispatch({ type: "SET_USER", user: null });
   }, [dispatch]);
 

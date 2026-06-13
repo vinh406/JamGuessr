@@ -29,13 +29,11 @@ export default function HomePage() {
 
   const handleCreateRoom = () => {
     const code = generateRoomCode();
-    sessionStorage.setItem("chat-username", user?.name || "Player");
     navigate(`/room/${code}`);
   };
 
   const handleJoinRoom = () => {
     if (roomCode.trim()) {
-      sessionStorage.setItem("chat-username", user?.name || "Player");
       navigate(`/room/${roomCode.trim()}`);
     }
   };
