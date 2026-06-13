@@ -1,6 +1,7 @@
 import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
 import { eq } from "drizzle-orm";
 import { getDb } from "../db";
+import type { DbInstance } from "../db";
 import { user } from "../db/schema";
 import { auth } from "../services/better-auth";
 
@@ -53,8 +54,8 @@ const UserIdParamSchema = z.object({
 function createUserSettingsHandlers() {
   const app = new OpenAPIHono<{ Bindings: Env }>();
 
-  const getAuthenticatedUser = async (c: { env: Env; req: { raw: Request } }) => {
-    const authInstance = auth(c.env);
+  const getAuthenticatedUser = async (c: { env: Env; req: { raw: Request } }, db: DbInstance) => {
+    const authInstance = auth(c.env, db);
     const session = await authInstance.api.getSession(c.req.raw);
     return session?.user;
   };
@@ -87,11 +88,11 @@ function createUserSettingsHandlers() {
     description: "Update the authenticated user's display name and bio",
   });
   app.openapi(updateProfileRoute, async (c) => {
-    const currentUser = await getAuthenticatedUser(c);
+    const db = getDb(c.env.HYPERDRIVE.connectionString);
+    const currentUser = await getAuthenticatedUser(c, db);
     if (!currentUser) return c.json({ error: "Unauthorized" }, 401);
 
     const { name, bio } = c.req.valid("json");
-    const db = getDb(c.env.HYPERDRIVE.connectionString);
 
     const [updated] = await db
       .update(user)
@@ -140,7 +141,7 @@ function createUserSettingsHandlers() {
     description: "Upload an avatar image (jpeg, png, gif, or webp, max 2MB)",
   });
   app.openapi(avatarUploadRoute, async (c) => {
-    const currentUser = await getAuthenticatedUser(c);
+    const currentUser = await getAuthenticatedUser(c, getDb(c.env.HYPERDRIVE.connectionString));
     if (!currentUser) return c.json({ error: "Unauthorized" }, 401);
 
     const body = await c.req.parseBody();

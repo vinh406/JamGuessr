@@ -1,6 +1,8 @@
 import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
 import { auth } from "../services/better-auth";
 import { createLibraryService } from "../services/library/LibraryService";
+import { getDb } from "../db";
+import type { DbInstance } from "../db";
 import { sseStream } from "../services/sse";
 import { parseSpotifyLink } from "../services/spotify/playlists";
 
@@ -170,8 +172,8 @@ export function createLibraryHandlers() {
   const app = new OpenAPIHono<{ Bindings: Env }>();
 
   // Helper to get authenticated user
-  const getAuthenticatedUser = async (c: { env: Env; req: { raw: Request } }) => {
-    const authInstance = auth(c.env);
+  const getAuthenticatedUser = async (c: { env: Env; req: { raw: Request } }, db: DbInstance) => {
+    const authInstance = auth(c.env, db);
     const session = await authInstance.api.getSession(c.req.raw);
     return session?.user;
   };
@@ -196,11 +198,12 @@ export function createLibraryHandlers() {
     description: "Paginated feed of top-level library items sorted by added date",
   });
   app.openapi(getItemsRoute, async (c) => {
-    const user = await getAuthenticatedUser(c);
+    const db = getDb(c.env.HYPERDRIVE.connectionString);
+    const user = await getAuthenticatedUser(c, db);
     if (!user) return c.json({ error: "Unauthorized" }, 401);
 
     const { cursor, limit } = c.req.valid("query");
-    const lib = createLibraryService(c.env.HYPERDRIVE.connectionString, c.env);
+    const lib = createLibraryService(db, c.env);
     const result = await lib.getItems(user.id, cursor, limit);
     return c.json(result, 200);
   });
@@ -229,11 +232,12 @@ export function createLibraryHandlers() {
     description: "Paginated list of tracks added directly (not from a playlist or album)",
   });
   app.openapi(getDirectTracksRoute, async (c) => {
-    const user = await getAuthenticatedUser(c);
+    const db = getDb(c.env.HYPERDRIVE.connectionString);
+    const user = await getAuthenticatedUser(c, db);
     if (!user) return c.json({ error: "Unauthorized" }, 401);
 
     const { cursor, limit } = c.req.valid("query");
-    const lib = createLibraryService(c.env.HYPERDRIVE.connectionString, c.env);
+    const lib = createLibraryService(db, c.env);
     const result = await lib.getDirectTracks(user.id, cursor, limit);
     return c.json(result, 200);
   });
@@ -268,12 +272,13 @@ export function createLibraryHandlers() {
     description: "Paginated list of tracks for a specific playlist",
   });
   app.openapi(getPlaylistTracksRoute, async (c) => {
-    const user = await getAuthenticatedUser(c);
+    const db = getDb(c.env.HYPERDRIVE.connectionString);
+    const user = await getAuthenticatedUser(c, db);
     if (!user) return c.json({ error: "Unauthorized" }, 401);
 
     const { spotifyId } = c.req.valid("param");
     const { cursor, limit } = c.req.valid("query");
-    const lib = createLibraryService(c.env.HYPERDRIVE.connectionString, c.env);
+    const lib = createLibraryService(db, c.env);
     const result = await lib.getPlaylistTracksPaginated(user.id, spotifyId, cursor, limit);
     return c.json(result, 200);
   });
@@ -307,23 +312,25 @@ export function createLibraryHandlers() {
     description: "Paginated list of tracks for a specific album",
   });
   app.openapi(getAlbumTracksRoute, async (c) => {
-    const user = await getAuthenticatedUser(c);
+    const db = getDb(c.env.HYPERDRIVE.connectionString);
+    const user = await getAuthenticatedUser(c, db);
     if (!user) return c.json({ error: "Unauthorized" }, 401);
 
     const { spotifyId } = c.req.valid("param");
     const { cursor, limit } = c.req.valid("query");
-    const lib = createLibraryService(c.env.HYPERDRIVE.connectionString, c.env);
+    const lib = createLibraryService(db, c.env);
     const result = await lib.getAlbumTracksPaginated(user.id, spotifyId, cursor, limit);
     return c.json(result, 200);
   });
 
   app.get("/playlist/:spotifyId", async (c) => {
-    const user = await getAuthenticatedUser(c);
+    const db = getDb(c.env.HYPERDRIVE.connectionString);
+    const user = await getAuthenticatedUser(c, db);
     if (!user) {
       return c.json({ error: "Unauthorized" }, 401);
     }
     const spotifyId = c.req.param("spotifyId");
-    const lib = createLibraryService(c.env.HYPERDRIVE.connectionString, c.env);
+    const lib = createLibraryService(db, c.env);
     const match = await lib.getPlaylistBySpotifyId(user.id, spotifyId);
     if (match) {
       return c.json({
@@ -370,7 +377,7 @@ export function createLibraryHandlers() {
       "Add a track, playlist, or album to the user's library. Paste any Spotify URL — the type is auto-detected.",
   });
   app.openapi(addFromLinkRoute, async (c) => {
-    const user = await getAuthenticatedUser(c);
+    const user = await getAuthenticatedUser(c, getDb(c.env.HYPERDRIVE.connectionString));
     if (!user) {
       return c.json({ error: "Unauthorized" }, 401);
     }
@@ -398,7 +405,8 @@ export function createLibraryHandlers() {
 
       if (signal.aborted) return;
 
-      const lib = createLibraryService(c.env.HYPERDRIVE.connectionString, c.env);
+      // Create new db connection to avoid timeout
+      const lib = createLibraryService(getDb(c.env.HYPERDRIVE.connectionString), c.env);
 
       const result = await lib.addFromSpotifyLink(user.id, parsed.data.link, (current, total) => {
         emit("progress", {
@@ -452,13 +460,14 @@ export function createLibraryHandlers() {
     description: "Remove a track from the authenticated user's library",
   });
   app.openapi(deleteTrackRoute, async (c) => {
-    const user = await getAuthenticatedUser(c);
+    const db = getDb(c.env.HYPERDRIVE.connectionString);
+    const user = await getAuthenticatedUser(c, db);
     if (!user) {
       return c.json({ error: "Unauthorized" }, 401);
     }
 
     const trackId = c.req.param("trackId");
-    const lib = createLibraryService(c.env.HYPERDRIVE.connectionString, c.env);
+    const lib = createLibraryService(db, c.env);
 
     // Verify track exists and belongs to user
     const track = await lib.getTrackById(trackId);
@@ -507,7 +516,8 @@ export function createLibraryHandlers() {
       "Remove a playlist or album and all its tracks from the user's library with progress feedback",
   });
   app.openapi(removeRoute, async (c) => {
-    const user = await getAuthenticatedUser(c);
+    const db = getDb(c.env.HYPERDRIVE.connectionString);
+    const user = await getAuthenticatedUser(c, db);
     if (!user) {
       return c.json({ error: "Unauthorized" }, 401);
     }
@@ -518,7 +528,7 @@ export function createLibraryHandlers() {
       return c.json({ error: "Invalid request" }, 400);
     }
 
-    const lib = createLibraryService(c.env.HYPERDRIVE.connectionString, c.env);
+    const lib = createLibraryService(db, c.env);
 
     // Verify ownership before starting SSE
     if (parsed.data.type === "playlist") {
@@ -573,12 +583,13 @@ export function createLibraryHandlers() {
       "Retrieve statistics about the user's library including total songs, playlists, and albums",
   });
   app.openapi(getStatsRoute, async (c) => {
-    const user = await getAuthenticatedUser(c);
+    const db = getDb(c.env.HYPERDRIVE.connectionString);
+    const user = await getAuthenticatedUser(c, db);
     if (!user) {
       return c.json({ error: "Unauthorized" }, 401);
     }
 
-    const lib = createLibraryService(c.env.HYPERDRIVE.connectionString, c.env);
+    const lib = createLibraryService(db, c.env);
     const stats = await lib.getUserLibraryStats(user.id);
 
     return c.json(
@@ -670,7 +681,8 @@ export function createLibraryHandlers() {
       "Generate a blended playlist combining multiple users' libraries. Provide comma-separated userIds.",
   });
   app.openapi(getBlendRoute, async (c) => {
-    const user = await getAuthenticatedUser(c);
+    const db = getDb(c.env.HYPERDRIVE.connectionString);
+    const user = await getAuthenticatedUser(c, db);
     if (!user) {
       return c.json({ error: "Unauthorized" }, 401);
     }
@@ -684,7 +696,7 @@ export function createLibraryHandlers() {
       return c.json({ error: "At least one userId is required" }, 400);
     }
 
-    const lib = createLibraryService(c.env.HYPERDRIVE.connectionString, c.env);
+    const lib = createLibraryService(db, c.env);
     const result = await lib.getRoomBlendedPlaylist(userIds, query.targetTrackCount, {
       minTracksPerUser: query.minTracksPerUser,
     });

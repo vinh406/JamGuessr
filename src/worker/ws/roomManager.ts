@@ -12,6 +12,8 @@ import { DEFAULT_ROOM_SETTINGS, SETTINGS_LIMITS, SCORING } from "../../shared/co
 import { clamp } from "../../shared/utils";
 import { SessionManager } from "./sessionManager";
 import { GameEngine } from "./game/GameEngine";
+import { getDb } from "../db";
+import type { DbInstance } from "../db";
 
 export class RoomManager {
   private sessionManager: SessionManager;
@@ -20,6 +22,7 @@ export class RoomManager {
   private roomPlaylist: Playlist | null;
   private roundTimer: ReturnType<typeof setTimeout> | null = null;
   private env: Env;
+  private _db: DbInstance | null = null;
 
   constructor(env: Env) {
     this.env = env;
@@ -28,6 +31,13 @@ export class RoomManager {
     this.roomSettings = { ...DEFAULT_ROOM_SETTINGS };
     this.roomPlaylist = null;
     this.gameEngine.setLastFmApiKey(env.LAST_FM_API_KEY);
+  }
+
+  getDb(): DbInstance {
+    if (!this._db) {
+      this._db = getDb(this.env.HYPERDRIVE.connectionString);
+    }
+    return this._db;
   }
 
   getDatabaseUrl(): string {

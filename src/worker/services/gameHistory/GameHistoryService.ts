@@ -1,16 +1,10 @@
 import { eq, and } from "drizzle-orm";
-import { getDb, type DbInstance } from "../../db";
+import type { DbInstance } from "../../db";
 import { gameResults, gamePlayers } from "../../db/schema";
 import type { GameResult, GamePlayerResult } from "../../../shared/types";
 import type { Song } from "../../../shared/types";
 
-export function createGameHistoryService(connectionString: string) {
-  let _db: DbInstance | null = null;
-  function db(): DbInstance {
-    if (!_db) _db = getDb(connectionString);
-    return _db;
-  }
-
+export function createGameHistoryService(db: DbInstance) {
   async function saveGame(params: {
     id: string;
     roomName: string;
@@ -40,7 +34,7 @@ export function createGameHistoryService(connectionString: string) {
       rank: i + 1,
     }));
 
-    await db().transaction(async (tx) => {
+    await db.transaction(async (tx) => {
       await tx.insert(gameResults).values({
         id: params.id,
         roomName: params.roomName,
@@ -59,7 +53,7 @@ export function createGameHistoryService(connectionString: string) {
     limit: number = 20,
     offset: number = 0,
   ): Promise<Array<GameResult & { playerCount: number }>> {
-    const participations = await db().query.gamePlayers.findMany({
+    const participations = await db.query.gamePlayers.findMany({
       where: eq(gamePlayers.userId, userId),
       columns: { gameId: true },
       limit,
@@ -70,7 +64,7 @@ export function createGameHistoryService(connectionString: string) {
 
     const gameIds = participations.map((p) => p.gameId);
 
-    const gamesWithPlayers = await db().query.gameResults.findMany({
+    const gamesWithPlayers = await db.query.gameResults.findMany({
       where: (gr, { inArray }) => inArray(gr.id, gameIds),
       with: {
         players: {
@@ -103,12 +97,12 @@ export function createGameHistoryService(connectionString: string) {
     | null
   > {
     // Verify participant
-    const participant = await db().query.gamePlayers.findFirst({
+    const participant = await db.query.gamePlayers.findFirst({
       where: and(eq(gamePlayers.gameId, gameId), eq(gamePlayers.userId, userId)),
     });
     if (!participant) return null;
 
-    const game = await db().query.gameResults.findFirst({
+    const game = await db.query.gameResults.findFirst({
       where: eq(gameResults.id, gameId),
       with: {
         players: {

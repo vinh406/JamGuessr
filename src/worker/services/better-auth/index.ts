@@ -3,13 +3,17 @@ import { betterAuth } from "better-auth";
 import { openAPI } from "better-auth/plugins";
 import { betterAuthOptions } from "./options";
 import { getDb } from "../../db";
+import type { DbInstance } from "../../db";
 import * as schema from "../../db/schema";
 
 /**
  * Better Auth Instance
+ *
+ * Accept an optional pre-created DbInstance to avoid creating
+ * a separate database connection (shared with other services).
  */
-export const auth = (env: Env) => {
-  const db = getDb(env.HYPERDRIVE.connectionString);
+export const auth = (env: Env, existingDb?: DbInstance) => {
+  const db = existingDb ?? getDb(env.HYPERDRIVE.connectionString);
 
   return betterAuth({
     ...betterAuthOptions,

@@ -1,5 +1,5 @@
 import { eq, and, inArray, count, exists, lt, desc } from "drizzle-orm";
-import { getDb, type DbInstance } from "../../db";
+import type { DbInstance } from "../../db";
 import { shuffleArray, formatDate } from "../../../shared/utils";
 import type { Song } from "../../../shared/types";
 import {
@@ -132,14 +132,9 @@ export interface BlendResult {
  * object exposes all library operations without needing a `db` parameter.
  */
 export function createLibraryService(
-  connectionString: string,
+  db: DbInstance,
   env?: { PLAYLIST_IMPORT_DO?: DurableObjectNamespace },
 ) {
-  let _db: DbInstance | null = null;
-  function db(): DbInstance {
-    if (!_db) _db = getDb(connectionString);
-    return _db;
-  }
   const BATCH_SIZE = 25;
 
   // ── Internal query helpers (not exported) ──────────────────────────────
@@ -148,7 +143,7 @@ export function createLibraryService(
     userId: string,
     spotifyId: string,
   ): Promise<LibraryTrack | undefined> {
-    return db().query.libraryTracks.findFirst({
+    return db.query.libraryTracks.findFirst({
       where: and(eq(libraryTracks.userId, userId), eq(libraryTracks.spotifyId, spotifyId)),
     });
   }
@@ -164,7 +159,7 @@ export function createLibraryService(
 
     const allSpotifyIds = tracks.map((t) => t.spotifyId);
 
-    const existingTracks = await db()
+    const existingTracks = await db
       .select()
       .from(libraryTracks)
       .where(
@@ -195,7 +190,7 @@ export function createLibraryService(
       const insertedTracks: LibraryTrack[] = [];
       if (newTracksData.length > 0) {
         insertedTracks.push(
-          ...(await db()
+          ...(await db
             .insert(libraryTracks)
             .values(newTracksData)
             .onConflictDoNothing()
@@ -217,7 +212,7 @@ export function createLibraryService(
       const insertedSources: LibraryTrackSource[] = [];
       if (sourceValues.length > 0) {
         insertedSources.push(
-          ...(await db().insert(libraryTrackSources).values(sourceValues).returning()),
+          ...(await db.insert(libraryTrackSources).values(sourceValues).returning()),
         );
       }
 
@@ -245,7 +240,7 @@ export function createLibraryService(
 
     /** Get all tracks in a user's library with their sources */
     async getUserLibrary(userId: string): Promise<TrackWithSources[]> {
-      const tracks = await db().query.libraryTracks.findMany({
+      const tracks = await db.query.libraryTracks.findMany({
         where: eq(libraryTracks.userId, userId),
         with: { sources: true },
       });
@@ -258,21 +253,21 @@ export function createLibraryService(
 
     /** Get a specific track by ID */
     async getTrackById(trackId: string): Promise<LibraryTrack | undefined> {
-      return db().query.libraryTracks.findFirst({
+      return db.query.libraryTracks.findFirst({
         where: eq(libraryTracks.id, trackId),
       });
     },
 
     /** Get user's playlists */
     async getUserPlaylists(userId: string): Promise<PlaylistRecord[]> {
-      return db().query.libraryPlaylists.findMany({
+      return db.query.libraryPlaylists.findMany({
         where: eq(libraryPlaylists.userId, userId),
       });
     },
 
     /** Get a playlist by ID */
     async getPlaylistById(playlistId: string): Promise<PlaylistRecord | null> {
-      const playlist = await db().query.libraryPlaylists.findFirst({
+      const playlist = await db.query.libraryPlaylists.findFirst({
         where: eq(libraryPlaylists.id, playlistId),
       });
       return playlist ?? null;
@@ -283,7 +278,7 @@ export function createLibraryService(
       userId: string,
       spotifyId: string,
     ): Promise<PlaylistRecord | null> {
-      const playlist = await db().query.libraryPlaylists.findFirst({
+      const playlist = await db.query.libraryPlaylists.findFirst({
         where: and(eq(libraryPlaylists.userId, userId), eq(libraryPlaylists.spotifyId, spotifyId)),
       });
       return playlist ?? null;
@@ -291,14 +286,14 @@ export function createLibraryService(
 
     /** Get user's albums */
     async getUserAlbums(userId: string): Promise<AlbumRecord[]> {
-      return db().query.libraryAlbums.findMany({
+      return db.query.libraryAlbums.findMany({
         where: eq(libraryAlbums.userId, userId),
       });
     },
 
     /** Get an album by ID */
     async getAlbumById(albumId: string): Promise<AlbumRecord | null> {
-      const album = await db().query.libraryAlbums.findFirst({
+      const album = await db.query.libraryAlbums.findFirst({
         where: eq(libraryAlbums.id, albumId),
       });
       return album ?? null;
@@ -306,19 +301,19 @@ export function createLibraryService(
 
     /** Get user library stats */
     async getUserLibraryStats(userId: string): Promise<LibraryStatsRecord | undefined> {
-      return db().query.userLibraryStats.findFirst({
+      return db.query.userLibraryStats.findFirst({
         where: eq(userLibraryStats.userId, userId),
       });
     },
 
     /** Get tracks for a playlist stored in the user's library, by Spotify playlist ID */
     async getLibraryPlaylistTracks(userId: string, spotifyId: string): Promise<Song[]> {
-      const playlist = await db().query.libraryPlaylists.findFirst({
+      const playlist = await db.query.libraryPlaylists.findFirst({
         where: and(eq(libraryPlaylists.userId, userId), eq(libraryPlaylists.spotifyId, spotifyId)),
       });
       if (!playlist) return [];
 
-      const sources = await db().query.libraryTrackSources.findMany({
+      const sources = await db.query.libraryTrackSources.findMany({
         where: and(
           eq(libraryTrackSources.userId, userId),
           eq(libraryTrackSources.playlistId, playlist.id),
@@ -342,14 +337,14 @@ export function createLibraryService(
 
     /** Get all tracks for multiple users (for blend algorithm) */
     async getTracksForUsers(userIds: string[]): Promise<Map<string, LibraryTrack[]>> {
-      const tracks = await db()
+      const tracks = await db
         .select()
         .from(libraryTracks)
         .where(
           and(
             inArray(libraryTracks.userId, userIds),
             exists(
-              db()
+              db
                 .select({ id: libraryTrackSources.id })
                 .from(libraryTrackSources)
                 .where(eq(libraryTrackSources.trackId, libraryTracks.id)),
@@ -378,7 +373,7 @@ export function createLibraryService(
         return { error: "Track already exists in library" };
       }
 
-      const [track] = await db()
+      const [track] = await db
         .insert(libraryTracks)
         .values({
           id: trackData.id,
@@ -394,7 +389,7 @@ export function createLibraryService(
         })
         .returning();
 
-      const [source] = await db()
+      const [source] = await db
         .insert(libraryTrackSources)
         .values({
           id: crypto.randomUUID(),
@@ -436,13 +431,13 @@ export function createLibraryService(
 
     /** Remove a track and all its source entries */
     async removeTrack(userId: string, trackId: string): Promise<void> {
-      await db()
+      await db
         .delete(libraryTrackSources)
         .where(
           and(eq(libraryTrackSources.userId, userId), eq(libraryTrackSources.trackId, trackId)),
         );
 
-      await db()
+      await db
         .delete(libraryTracks)
         .where(and(eq(libraryTracks.userId, userId), eq(libraryTracks.id, trackId)));
     },
@@ -492,7 +487,7 @@ export function createLibraryService(
 
         case "playlist": {
           // Check for duplicate before slow Spotify API calls
-          const existingPlaylist = await db().query.libraryPlaylists.findFirst({
+          const existingPlaylist = await db.query.libraryPlaylists.findFirst({
             where: and(
               eq(libraryPlaylists.userId, userId),
               eq(libraryPlaylists.spotifyId, parsed.id),
@@ -545,7 +540,7 @@ export function createLibraryService(
 
         case "album": {
           // Check for duplicate before slow Spotify API calls
-          const existingAlbum = await db().query.libraryAlbums.findFirst({
+          const existingAlbum = await db.query.libraryAlbums.findFirst({
             where: and(eq(libraryAlbums.userId, userId), eq(libraryAlbums.spotifyId, parsed.id)),
           });
           if (existingAlbum) {
@@ -618,7 +613,7 @@ export function createLibraryService(
         trackCount: number;
       },
     ): Promise<{ playlist: PlaylistRecord }> {
-      const [playlist] = await db()
+      const [playlist] = await db
         .insert(libraryPlaylists)
         .values({
           id: playlistData.id,
@@ -635,7 +630,7 @@ export function createLibraryService(
 
     /** Remove a playlist and its source entries (tracks are kept for other sources) */
     async removePlaylist(userId: string, playlistId: string): Promise<void> {
-      await db()
+      await db
         .delete(libraryTrackSources)
         .where(
           and(
@@ -645,7 +640,7 @@ export function createLibraryService(
           ),
         );
 
-      await db()
+      await db
         .delete(libraryPlaylists)
         .where(and(eq(libraryPlaylists.userId, userId), eq(libraryPlaylists.id, playlistId)));
     },
@@ -663,7 +658,7 @@ export function createLibraryService(
         totalTracks?: number;
       },
     ): Promise<{ album: AlbumRecord }> {
-      const [album] = await db()
+      const [album] = await db
         .insert(libraryAlbums)
         .values({
           id: albumData.id,
@@ -682,7 +677,7 @@ export function createLibraryService(
 
     /** Remove an album and its source entries (tracks are kept for other sources) */
     async removeAlbum(userId: string, albumId: string): Promise<void> {
-      await db()
+      await db
         .delete(libraryTrackSources)
         .where(
           and(
@@ -692,21 +687,21 @@ export function createLibraryService(
           ),
         );
 
-      await db()
+      await db
         .delete(libraryAlbums)
         .where(and(eq(libraryAlbums.userId, userId), eq(libraryAlbums.id, albumId)));
     },
 
     /** Update user library stats */
     async updateUserLibraryStats(userId: string): Promise<void> {
-      const [trackResult] = await db()
+      const [trackResult] = await db
         .select({ count: count() })
         .from(libraryTracks)
         .where(
           and(
             eq(libraryTracks.userId, userId),
             exists(
-              db()
+              db
                 .select({ id: libraryTrackSources.id })
                 .from(libraryTrackSources)
                 .where(eq(libraryTrackSources.trackId, libraryTracks.id)),
@@ -714,17 +709,17 @@ export function createLibraryService(
           ),
         );
 
-      const [playlistResult] = await db()
+      const [playlistResult] = await db
         .select({ count: count() })
         .from(libraryPlaylists)
         .where(eq(libraryPlaylists.userId, userId));
 
-      const [albumResult] = await db()
+      const [albumResult] = await db
         .select({ count: count() })
         .from(libraryAlbums)
         .where(eq(libraryAlbums.userId, userId));
 
-      await db()
+      await db
         .insert(userLibraryStats)
         .values({
           userId,
@@ -810,12 +805,12 @@ export function createLibraryService(
         : eq(libraryAlbums.userId, userId);
 
       const [playlists, albums] = await Promise.all([
-        db().query.libraryPlaylists.findMany({
+        db.query.libraryPlaylists.findMany({
           where: playlistWhere,
           orderBy: (t, { desc }) => [desc(t.addedAt)],
           limit: take,
         }),
-        db().query.libraryAlbums.findMany({
+        db.query.libraryAlbums.findMany({
           where: albumWhere,
           orderBy: (t, { desc }) => [desc(t.addedAt)],
           limit: take,
@@ -872,14 +867,14 @@ export function createLibraryService(
     },
 
     async getDirectTrackCount(userId: string): Promise<number> {
-      const [result] = await db()
+      const [result] = await db
         .select({ count: count() })
         .from(libraryTracks)
         .where(
           and(
             eq(libraryTracks.userId, userId),
             exists(
-              db()
+              db
                 .select({ id: libraryTrackSources.id })
                 .from(libraryTrackSources)
                 .where(
@@ -901,12 +896,12 @@ export function createLibraryService(
     ): Promise<PaginatedTracks> {
       const cursorDate = cursor ? new Date(cursor) : undefined;
 
-      const tracks = await db().query.libraryTracks.findMany({
+      const tracks = await db.query.libraryTracks.findMany({
         where: (t, { and: andOp, lt, eq, exists: existsOp }) => {
           const conditions = [
             eq(t.userId, userId),
             existsOp(
-              db()
+              db
                 .select({ id: libraryTrackSources.id })
                 .from(libraryTrackSources)
                 .where(
@@ -935,14 +930,14 @@ export function createLibraryService(
       cursor?: string,
       limit: number = 50,
     ): Promise<PaginatedTracks> {
-      const playlist = await db().query.libraryPlaylists.findFirst({
+      const playlist = await db.query.libraryPlaylists.findFirst({
         where: and(eq(libraryPlaylists.userId, userId), eq(libraryPlaylists.spotifyId, spotifyId)),
       });
       if (!playlist) return { tracks: [], nextCursor: null };
 
       const cursorDate = cursor ? new Date(cursor) : undefined;
 
-      const result = await db()
+      const result = await db
         .select()
         .from(libraryTrackSources)
         .innerJoin(libraryTracks, eq(libraryTrackSources.trackId, libraryTracks.id))
@@ -967,14 +962,14 @@ export function createLibraryService(
       cursor?: string,
       limit: number = 50,
     ): Promise<PaginatedTracks> {
-      const album = await db().query.libraryAlbums.findFirst({
+      const album = await db.query.libraryAlbums.findFirst({
         where: and(eq(libraryAlbums.userId, userId), eq(libraryAlbums.spotifyId, spotifyId)),
       });
       if (!album) return { tracks: [], nextCursor: null };
 
       const cursorDate = cursor ? new Date(cursor) : undefined;
 
-      const result = await db()
+      const result = await db
         .select()
         .from(libraryTrackSources)
         .innerJoin(libraryTracks, eq(libraryTrackSources.trackId, libraryTracks.id))

@@ -84,8 +84,7 @@ export class GameHandler {
     );
 
     let songs: Song[] = [];
-    const dbUrl = this.roomManager.getDatabaseUrl();
-    const lib = createLibraryService(dbUrl);
+    const lib = createLibraryService(this.roomManager.getDb());
     if (roomPlaylist?.id) {
       if (roomPlaylist.id === "blend") {
         const userIds = roomUsers.map((u) => u.userId);
@@ -197,8 +196,7 @@ export class GameHandler {
       const roomUsers = this.roomManager.getAllUsers();
       if (roomUsers.length >= 2) {
         try {
-          const dbUrl = this.roomManager.getDatabaseUrl();
-          const history = createGameHistoryService(dbUrl);
+          const history = createGameHistoryService(this.roomManager.getDb());
           const pSettings = this.roomManager.getRoomSettings();
           const playlist = this.roomManager.getRoomPlaylist();
           const songs = this.roomManager.getSongs();
@@ -328,8 +326,7 @@ export class GameHandler {
         };
       }
       const targetCount = Math.max(settings.rounds * 2, 20);
-      const dbUrl = this.roomManager.getDatabaseUrl();
-      const lib = createLibraryService(dbUrl);
+      const lib = createLibraryService(this.roomManager.getDb());
       const result = await lib.getRoomBlendedPlaylist(userIds, targetCount, {
         minTracksPerUser: 5,
         excludeSpotifyIds: playedSpotifyIds,

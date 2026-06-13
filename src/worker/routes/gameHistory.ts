@@ -1,6 +1,8 @@
 import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
 import { auth } from "../services/better-auth";
 import { createGameHistoryService } from "../services/gameHistory/GameHistoryService";
+import { getDb } from "../db";
+import type { DbInstance } from "../db";
 
 const ErrorSchema = z.object({
   error: z.string(),
@@ -56,8 +58,8 @@ const PaginatedGamesSchema = z.object({
 function createGameHistoryHandlers() {
   const app = new OpenAPIHono<{ Bindings: Env }>();
 
-  const getAuthenticatedUser = async (c: { env: Env; req: { raw: Request } }) => {
-    const authInstance = auth(c.env);
+  const getAuthenticatedUser = async (c: { env: Env; req: { raw: Request } }, db: DbInstance) => {
+    const authInstance = auth(c.env, db);
     const session = await authInstance.api.getSession(c.req.raw);
     return session?.user;
   };
@@ -87,11 +89,12 @@ function createGameHistoryHandlers() {
     description: "Returns paginated game history for the authenticated user",
   });
   app.openapi(listGamesRoute, async (c) => {
-    const user = await getAuthenticatedUser(c);
+    const db = getDb(c.env.HYPERDRIVE.connectionString);
+    const user = await getAuthenticatedUser(c, db);
     if (!user) return c.json({ error: "Unauthorized" }, 401);
 
     const { limit, offset } = c.req.valid("query");
-    const history = createGameHistoryService(c.env.HYPERDRIVE.connectionString);
+    const history = createGameHistoryService(db);
     const games = await history.getGamesListForUser(user.id, limit, offset);
     const hasMore = games.length === limit;
 
@@ -140,11 +143,12 @@ function createGameHistoryHandlers() {
     description: "Returns full details for a single game (must be a participant)",
   });
   app.openapi(getGameRoute, async (c) => {
-    const user = await getAuthenticatedUser(c);
+    const db = getDb(c.env.HYPERDRIVE.connectionString);
+    const user = await getAuthenticatedUser(c, db);
     if (!user) return c.json({ error: "Unauthorized" }, 401);
 
     const { id } = c.req.valid("param");
-    const history = createGameHistoryService(c.env.HYPERDRIVE.connectionString);
+    const history = createGameHistoryService(db);
     const game = await history.getGameById(id, user.id);
     if (!game) return c.json({ error: "Game not found" }, 404);
 
