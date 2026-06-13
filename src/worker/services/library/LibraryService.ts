@@ -1056,7 +1056,7 @@ export function createLibraryService(
         for (const ul of userLibraries) {
           if (ul.tracks.length < options.minTracksPerUser) {
             warnings.push(
-              `User ${ul.userId} has ${ul.tracks.length} tracks (minimum: ${options.minTracksPerUser})`,
+              `User ${options.userInfoMap?.[ul.userId]?.username ?? ul.userId} has ${ul.tracks.length} tracks (minimum: ${options.minTracksPerUser})`,
             );
           }
         }
