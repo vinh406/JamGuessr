@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useBlocker } from "react-router";
 import { useRoomState } from "../hooks/room/useRoomState";
 import { ChatBox } from "../components/room/ChatBox";
@@ -17,7 +17,7 @@ import { ChatBubble } from "../components/ui/icons";
 import Header from "../components/Header";
 
 export default function RoomPage() {
-  const { isLoading: authLoading } = useAuth();
+  const { isLoading: authLoading, login: authLogin } = useAuth();
   const { roomName } = useParams<{ roomName: string }>();
   const effectiveRoomName = roomName || "general";
   const [chatOpen, setChatOpen] = useState(true);
@@ -81,6 +81,10 @@ export default function RoomPage() {
     handleSkipLibraryImport,
   } = actions;
 
+  const handleLogin = useCallback(() => {
+    authLogin({ callbackURL: window.location.href });
+  }, [authLogin]);
+
   const { pendingLibraryImport, libraryImporting, playlistImportError } = state.ui;
 
   const isGameActive = gamePhase === "playing" || gamePhase === "roundEnd";
@@ -129,7 +133,7 @@ export default function RoomPage() {
       <UsernamePrompt
         roomName={effectiveRoomName}
         onSubmit={handleJoinRoom}
-        onBack={() => window.history.back()}
+        onLogin={handleLogin}
       />
     );
   }

@@ -10,7 +10,7 @@ export default function LoginPage() {
 
   const handleGoogleLogin = async () => {
     try {
-      await login("google");
+      await login({ provider: "google" });
     } catch (error) {
       console.error("Failed to login with Google:", error);
     }

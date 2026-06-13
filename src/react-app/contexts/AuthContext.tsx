@@ -24,10 +24,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const login = async (provider: "google" = "google") => {
+  const login = async (options?: { provider?: "google"; callbackURL?: string }) => {
     try {
       await authClient.signIn.social({
-        provider,
+        provider: options?.provider ?? "google",
+        ...(options?.callbackURL ? { callbackURL: options.callbackURL } : {}),
       });
     } catch (error) {
       console.error("Failed to login:", error);

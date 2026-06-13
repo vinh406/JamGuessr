@@ -1,14 +1,14 @@
-import { App } from "../ui/icons";
+import { App, Google } from "../ui/icons";
 import { Input } from "../ui/Input";
 import { Button } from "../ui/Button";
 
 interface UsernamePromptProps {
   roomName: string;
   onSubmit: (username: string) => void;
-  onBack: () => void;
+  onLogin: () => void;
 }
 
-export function UsernamePrompt({ roomName, onSubmit, onBack }: UsernamePromptProps) {
+export function UsernamePrompt({ roomName, onSubmit, onLogin }: UsernamePromptProps) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex items-center justify-center p-4">
       <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl shadow-xl p-8 w-full max-w-md border border-gray-700/50">
@@ -46,15 +46,29 @@ export function UsernamePrompt({ roomName, onSubmit, onBack }: UsernamePromptPro
             />
           </div>
 
-          <div className="flex gap-3">
-            <Button variant="secondary" onClick={onBack} className="flex-1">
-              Back to Home
-            </Button>
-            <Button type="submit" className="flex-1">
-              Join #{roomName}
-            </Button>
-          </div>
+          <Button type="submit" className="w-full">
+            Join as Guest
+          </Button>
         </form>
+
+        <div className="relative my-6">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-gray-700/50" />
+          </div>
+          <div className="relative flex justify-center text-sm">
+            <span className="px-3 bg-gray-800/50 text-gray-500">or</span>
+          </div>
+        </div>
+
+        <Button
+          onClick={onLogin}
+          variant="white"
+          className="w-full flex items-center justify-center gap-3"
+          size="lg"
+        >
+          <Google className="w-6 h-6" />
+          Sign in with Google
+        </Button>
       </div>
     </div>
   );

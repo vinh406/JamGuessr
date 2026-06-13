@@ -12,7 +12,7 @@ interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   isAuthenticated: boolean;
-  login: (provider?: "google") => Promise<void>;
+  login: (options?: { provider?: "google"; callbackURL?: string }) => Promise<void>;
   logout: () => Promise<void>;
   checkSession: () => Promise<void>;
   updateUser: (updates: Partial<User>) => void;
