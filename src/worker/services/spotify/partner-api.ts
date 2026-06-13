@@ -35,6 +35,30 @@ export interface PartnerPlaylistResponse {
   };
 }
 
+export const ALBUM_QUERY_HASH = "b9bfabef66ed756e5e13f68a942deb60bd4125ec1f1be8cc42769dc0259b4b10";
+
+export interface PartnerAlbumResponse {
+  data: {
+    albumUnion: {
+      __typename: string;
+      tracksV2: {
+        items: {
+          track: {
+            uri: string;
+            name: string;
+            artists: { items: { profile: { name: string }; uri: string }[] };
+            duration: { totalMilliseconds: number };
+            playability: { playable: boolean };
+            trackNumber: number;
+          };
+          uid: string;
+        }[];
+        totalCount: number;
+      };
+    };
+  };
+}
+
 export function partnerTrackToSong(track: PartnerTrack): Song {
   const data = track.itemV2.data;
   return {
@@ -112,4 +136,92 @@ export async function fetchPartnerPage(
   const items = data.data?.playlistV2?.content?.items ?? [];
 
   return items.filter((item) => item.itemV2?.data?.__typename === "Track").map(partnerTrackToSong);
+}
+
+export function partnerAlbumTrackToSong(
+  item: PartnerAlbumResponse["data"]["albumUnion"]["tracksV2"]["items"][number],
+): Song {
+  const t = item.track;
+  return {
+    id: t.uri.replace("spotify:track:", ""),
+    title: t.name,
+    artist: t.artists.items.map((a) => a.profile.name).join(", "),
+    album: "",
+    albumImageUrl: undefined,
+    previewUrl: undefined,
+    duration: t.duration.totalMilliseconds,
+  };
+}
+
+export async function fetchPartnerAlbumPage(
+  albumId: string,
+  accessToken: string,
+  offset: number,
+  fetchFn: typeof fetch = fetch,
+): Promise<Song[]> {
+  const response = await fetchFn("https://api-partner.spotify.com/pathfinder/v2/query", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json;charset=UTF-8",
+      Authorization: `Bearer ${accessToken}`,
+      "app-platform": "WebPlayer",
+      "User-Agent": "Mozilla/5.0",
+    },
+    body: JSON.stringify({
+      variables: {
+        uri: `spotify:album:${albumId}`,
+        offset,
+        limit: BATCH_SIZE,
+      },
+      operationName: "queryAlbumTracks",
+      extensions: {
+        persistedQuery: {
+          version: 1,
+          sha256Hash: ALBUM_QUERY_HASH,
+        },
+      },
+    }),
+  });
+
+  if (!response.ok) return [];
+
+  const data: PartnerAlbumResponse = await response.json();
+  const tracksV2 = data.data?.albumUnion?.tracksV2;
+  return (tracksV2?.items ?? []).map(partnerAlbumTrackToSong);
+}
+
+export async function fetchPartnerAlbumAllTracks(
+  albumId: string,
+  accessToken: string,
+  fetchFn: typeof fetch = fetch,
+): Promise<Song[]> {
+  const response = await fetchFn("https://api-partner.spotify.com/pathfinder/v2/query", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json;charset=UTF-8",
+      Authorization: `Bearer ${accessToken}`,
+      "app-platform": "WebPlayer",
+      "User-Agent": "Mozilla/5.0",
+    },
+    body: JSON.stringify({
+      variables: {
+        uri: `spotify:album:${albumId}`,
+        offset: 0,
+        limit: 300,
+      },
+      operationName: "queryAlbumTracks",
+      extensions: {
+        persistedQuery: {
+          version: 1,
+          sha256Hash: ALBUM_QUERY_HASH,
+        },
+      },
+    }),
+  });
+
+  if (!response.ok) return [];
+
+  const data: PartnerAlbumResponse = await response.json();
+  const tracksV2 = data.data?.albumUnion?.tracksV2;
+  return (tracksV2?.items ?? []).map(partnerAlbumTrackToSong);
 }

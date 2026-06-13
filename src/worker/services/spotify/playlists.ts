@@ -6,6 +6,7 @@ import {
   CONCURRENCY,
   PAGES_PER_CHUNK,
   fetchPartnerPage,
+  fetchPartnerAlbumAllTracks,
   paginateFetch,
   type PartnerPlaylistResponse,
 } from "./partner-api";
@@ -97,6 +98,30 @@ async function parseSpotifyEmbedPage(
   if (!entity || !accessToken) return null;
 
   return { entity, accessToken };
+}
+
+async function extractSpotifyEmbedToken(
+  type: "playlist" | "album",
+  id: string,
+): Promise<string | null> {
+  const url = `https://open.spotify.com/embed/${type}/${id}`;
+  const response = await fetch(url, {
+    headers: {
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+      Accept: "text/html,application/xhtml+xml",
+    },
+  });
+
+  if (!response.ok) return null;
+
+  const html = await response.text();
+  const match = html.match(/<script id="__NEXT_DATA__"[^>]*>(.*?)<\/script>/);
+  if (!match?.[1]) return null;
+
+  const parsed: {
+    props: { pageProps: { state: { settings: { session: { accessToken: string } } } } };
+  } = JSON.parse(match[1]);
+  return parsed.props?.pageProps?.state?.settings?.session?.accessToken ?? null;
 }
 
 async function fetchPartnerPlaylistTracks(
@@ -534,7 +559,21 @@ export async function getAlbumMetadata(albumId: string): Promise<AlbumMetadata |
 }
 
 /** Fetch all tracks from an album by its Spotify ID */
-export async function getAlbumTracks(albumId: string): Promise<Song[]> {
+export async function getAlbumTracks(albumId: string, accessToken?: string): Promise<Song[]> {
+  if (accessToken) {
+    return fetchPartnerAlbumAllTracks(albumId, accessToken);
+  }
+
+  try {
+    // Try to get access token from embed page for partner API
+    const token = await extractSpotifyEmbedToken("album", albumId);
+    if (token) {
+      return fetchPartnerAlbumAllTracks(albumId, token);
+    }
+  } catch {
+    // Fall through to spotify-url-info
+  }
+
   try {
     const spotifyUrlInfoModule = spotifyUrlInfo(fetch);
     const getTracksFromUrl = spotifyUrlInfoModule.getTracks;
