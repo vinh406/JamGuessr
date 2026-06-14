@@ -235,7 +235,7 @@ export function createLibraryHandlers() {
 
     const { cursor, limit } = c.req.valid("query");
     const lib = createLibraryService(db, c.env);
-    const result = await lib.getDirectTracks(user.id, cursor, limit);
+    const result = await lib.getTracksPaginated(user.id, "direct", undefined, cursor, limit);
     return c.json(result, 200);
   });
 
@@ -276,7 +276,7 @@ export function createLibraryHandlers() {
     const { spotifyId } = c.req.valid("param");
     const { cursor, limit } = c.req.valid("query");
     const lib = createLibraryService(db, c.env);
-    const result = await lib.getPlaylistTracksPaginated(user.id, spotifyId, cursor, limit);
+    const result = await lib.getTracksPaginated(user.id, "playlist", spotifyId, cursor, limit);
     return c.json(result, 200);
   });
 
@@ -316,7 +316,7 @@ export function createLibraryHandlers() {
     const { spotifyId } = c.req.valid("param");
     const { cursor, limit } = c.req.valid("query");
     const lib = createLibraryService(db, c.env);
-    const result = await lib.getAlbumTracksPaginated(user.id, spotifyId, cursor, limit);
+    const result = await lib.getTracksPaginated(user.id, "album", spotifyId, cursor, limit);
     return c.json(result, 200);
   });
 

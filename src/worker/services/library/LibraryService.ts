@@ -868,106 +868,56 @@ export function createLibraryService(
       return Number(result?.count ?? 0);
     },
 
-    async getDirectTracks(
+    async getTracksPaginated(
       userId: string,
+      sourceType: "direct" | "playlist" | "album",
+      spotifyId?: string,
       cursor?: string,
       limit: number = 50,
     ): Promise<PaginatedTracks> {
       const cursorDate = cursor ? new Date(cursor) : undefined;
 
-      const tracks = await db.query.libraryTracks.findMany({
-        where: (t, { and: andOp, lt, eq, exists: existsOp }) => {
-          const conditions = [
-            eq(t.userId, userId),
-            existsOp(
-              db
-                .select({ id: libraryTrackSources.id })
-                .from(libraryTrackSources)
-                .where(
-                  and(
-                    eq(libraryTrackSources.trackId, t.id),
-                    eq(libraryTrackSources.sourceType, "direct"),
-                  ),
+      const conditions = [
+        eq(libraryTrackSources.userId, userId),
+        eq(libraryTrackSources.sourceType, sourceType),
+      ];
+
+      if (sourceType !== "direct") {
+        const container =
+          sourceType === "playlist"
+            ? await db.query.libraryPlaylists.findFirst({
+                where: and(
+                  eq(libraryPlaylists.userId, userId),
+                  eq(libraryPlaylists.spotifyId, spotifyId!),
                 ),
-            ),
-          ];
-          if (cursorDate) {
-            conditions.push(lt(t.addedAt, cursorDate));
-          }
-          return andOp(...conditions);
-        },
-        orderBy: (t, { desc }) => [desc(t.addedAt)],
-        limit: limit + 1,
-      });
+              })
+            : await db.query.libraryAlbums.findFirst({
+                where: and(
+                  eq(libraryAlbums.userId, userId),
+                  eq(libraryAlbums.spotifyId, spotifyId!),
+                ),
+              });
+        if (!container) return { tracks: [], nextCursor: null };
+        conditions.push(
+          sourceType === "playlist"
+            ? eq(libraryTrackSources.playlistId, container.id)
+            : eq(libraryTrackSources.albumId, container.id),
+        );
+      }
 
-      return this.formatTrackPage(tracks, limit);
-    },
-
-    async getPlaylistTracksPaginated(
-      userId: string,
-      spotifyId: string,
-      cursor?: string,
-      limit: number = 50,
-    ): Promise<PaginatedTracks> {
-      const playlist = await db.query.libraryPlaylists.findFirst({
-        where: and(eq(libraryPlaylists.userId, userId), eq(libraryPlaylists.spotifyId, spotifyId)),
-      });
-      if (!playlist) return { tracks: [], nextCursor: null };
-
-      const cursorDate = cursor ? new Date(cursor) : undefined;
+      if (cursorDate) {
+        conditions.push(lt(libraryTracks.addedAt, cursorDate));
+      }
 
       const result = await db
         .select()
         .from(libraryTrackSources)
         .innerJoin(libraryTracks, eq(libraryTrackSources.trackId, libraryTracks.id))
-        .where(
-          and(
-            eq(libraryTrackSources.userId, userId),
-            eq(libraryTrackSources.sourceType, "playlist"),
-            eq(libraryTrackSources.playlistId, playlist.id),
-            cursorDate ? lt(libraryTracks.addedAt, cursorDate) : undefined,
-          ),
-        )
+        .where(and(...conditions))
         .orderBy(desc(libraryTracks.addedAt))
         .limit(limit + 1);
 
       const tracks = result.map((r) => r.library_tracks);
-      return this.formatTrackPage(tracks, limit);
-    },
-
-    async getAlbumTracksPaginated(
-      userId: string,
-      spotifyId: string,
-      cursor?: string,
-      limit: number = 50,
-    ): Promise<PaginatedTracks> {
-      const album = await db.query.libraryAlbums.findFirst({
-        where: and(eq(libraryAlbums.userId, userId), eq(libraryAlbums.spotifyId, spotifyId)),
-      });
-      if (!album) return { tracks: [], nextCursor: null };
-
-      const cursorDate = cursor ? new Date(cursor) : undefined;
-
-      const result = await db
-        .select()
-        .from(libraryTrackSources)
-        .innerJoin(libraryTracks, eq(libraryTrackSources.trackId, libraryTracks.id))
-        .where(
-          and(
-            eq(libraryTrackSources.userId, userId),
-            eq(libraryTrackSources.sourceType, "album"),
-            eq(libraryTrackSources.albumId, album.id),
-            cursorDate ? lt(libraryTracks.addedAt, cursorDate) : undefined,
-          ),
-        )
-        .orderBy(desc(libraryTracks.addedAt))
-        .limit(limit + 1);
-
-      const tracks = result.map((r) => r.library_tracks);
-      return this.formatTrackPage(tracks, limit);
-    },
-
-    formatTrackPage(tracks: LibraryTrack[], limit: number): PaginatedTracks {
       const hasMore = tracks.length > limit;
       const page = hasMore ? tracks.slice(0, limit) : tracks;
 
