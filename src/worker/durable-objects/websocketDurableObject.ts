@@ -1,26 +1,44 @@
 import { DurableObject } from "cloudflare:workers";
-import { MessageRouter } from "../ws";
-import { RoomManager } from "../ws";
-import { IncomingMessage, UserSession } from "../../shared/types";
+import type { IncomingMessage, UserSession, ChatMessage } from "../../shared/types";
+import { DEFAULT_ROOM_SETTINGS } from "../../shared/constants";
+import { GameEngine } from "../ws/game/GameEngine";
+import type { WsContext } from "../ws/utils";
+import {
+  handleJoinRoom,
+  handleLeave,
+  handleReady,
+  handleUpdateSettings,
+  handleUpdatePlaylist,
+} from "../ws/roomHandler";
+import { handleStartGame, handleAnswer, handleVote } from "../ws/gameHandler";
+import { handleChatMessage } from "../ws/chatHandler";
 
 export class WebSocketHibernationServer extends DurableObject {
-  private roomManager: RoomManager;
-  private messageRouter: MessageRouter;
+  private room: WsContext;
 
-  constructor(ctx: DurableObjectState, env: Env) {
-    super(ctx, env);
+  constructor(state: DurableObjectState, env: Env) {
+    super(state, env);
 
-    this.roomManager = new RoomManager(env);
-    this.messageRouter = new MessageRouter(this.roomManager);
+    const gameEngine = new GameEngine();
+    gameEngine.setLastFmApiKey(env.LAST_FM_API_KEY);
 
-    const existingSessions = new Map<WebSocket, UserSession>();
-    ctx.getWebSockets().forEach((webSocket) => {
+    const sessions = new Map<WebSocket, UserSession>();
+    state.getWebSockets().forEach((webSocket) => {
       const meta = webSocket.deserializeAttachment() as UserSession | null;
       if (meta) {
-        existingSessions.set(webSocket, { ...meta });
+        sessions.set(webSocket, { ...meta });
       }
     });
-    this.roomManager.setSessions(existingSessions);
+
+    this.room = {
+      sessions,
+      roomSettings: { ...DEFAULT_ROOM_SETTINGS },
+      roomPlaylist: null,
+      roundTimer: null,
+      voteTimer: null,
+      gameEngine,
+      env,
+    };
   }
 
   async fetch(): Promise<Response> {
@@ -48,25 +66,51 @@ export class WebSocketHibernationServer extends DurableObject {
       parsedMessage = JSON.parse(messageString);
     } catch {
       parsedMessage = {
-        type: "message",
+        type: "message" as const,
         content: messageString,
         timestamp: Date.now(),
       };
     }
 
-    await this.handleMessage(ws, parsedMessage);
+    switch (parsedMessage.type) {
+      case "join":
+        await handleJoinRoom(this.room, ws, parsedMessage);
+        break;
+      case "leave":
+        await handleLeave(this.room, ws);
+        break;
+      case "message":
+        handleChatMessage(this.room, ws, parsedMessage);
+        break;
+      case "ready":
+        await handleReady(this.room, ws);
+        break;
+      case "update_settings":
+        await handleUpdateSettings(this.room, ws, parsedMessage);
+        break;
+      case "update_playlist":
+        await handleUpdatePlaylist(this.room, ws, parsedMessage);
+        break;
+      case "start_game":
+        await handleStartGame(this.room, ws);
+        break;
+      case "answer":
+        await handleAnswer(this.room, ws, parsedMessage);
+        break;
+      case "vote_play_again":
+        await handleVote(this.room, ws, parsedMessage);
+        break;
+      default:
+        handleChatMessage(this.room, ws, parsedMessage as ChatMessage);
+    }
   }
 
   async webSocketClose(ws: WebSocket): Promise<void> {
-    await this.messageRouter.handleClose(ws);
+    await handleLeave(this.room, ws);
   }
 
   async webSocketError(ws: WebSocket, error: unknown): Promise<void> {
     console.error("WebSocket error:", error);
-    await this.messageRouter.handleClose(ws);
-  }
-
-  private async handleMessage(ws: WebSocket, message: IncomingMessage): Promise<void> {
-    await this.messageRouter.handleMessage(ws, message);
+    await handleLeave(this.room, ws);
   }
 }

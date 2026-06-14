@@ -378,19 +378,15 @@ gameResults: id, roomCode, totalRounds, playerCount, startedAt, completedAt,
 │   │   │   ├── spotify/             # Spotify API client
 │   │   │   └── sse.ts               # Server-Sent Events utility
 │   │   ├── ws/                      # All WebSocket concerns
-│   │   │   ├── chatHandler.ts
-│   │   │   ├── gameHandler.ts
-│   │   │   ├── roomHandler.ts
-│   │   │   ├── messageRouter.ts     # Incoming message dispatch
-│   │   │   ├── utils.ts             # Shared handler utilities
 │   │   │   ├── broadcast.ts
+│   │   │   ├── chatHandler.ts       # Chat message handler
+│   │   │   ├── game/                # Game logic modules
+│   │   │   │   ├── GameEngine.ts
+│   │   │   │   └── GameUtils.ts
+│   │   │   ├── gameHandler.ts       # Game lifecycle handler
 │   │   │   ├── messageBuilders.ts
-│   │   │   ├── roomManager.ts       # Room state management
-│   │   │   ├── sessionManager.ts    # WebSocket session mapping
-│   │   │   ├── index.ts             # Barrel exports
-│   │   │   └── game/                # Game logic modules
-│   │   │       ├── GameEngine.ts
-│   │   │       └── GameUtils.ts
+│   │   │   ├── roomHandler.ts       # Room join/leave/settings handler
+│   │   │   └── utils.ts             # WsContext + shared utilities
 │   │   ├── types/
 │   │   │   └── spotify-url-info.d.ts
 │   │   └── index.ts                # Hono app entry point

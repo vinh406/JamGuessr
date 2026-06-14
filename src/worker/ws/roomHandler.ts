@@ -1,201 +1,192 @@
-import { RoomManager } from ".";
-import { MessageBuilders, broadcastToRoom, sendToSocket } from ".";
 import type {
-  UserSession,
   JoinMessage,
   UpdateSettingsMessage,
   UpdatePlaylistMessage,
+  UserSession,
 } from "../../shared/types";
-import { MAX_USERNAME_LENGTH, ROOM_CODE_REGEX } from "../../shared/constants";
-import { getSessionOrError, validateHost } from "./utils";
+import { MAX_USERNAME_LENGTH, ROOM_CODE_REGEX, SETTINGS_LIMITS } from "../../shared/constants";
+import { clamp } from "../../shared/utils";
+import type { WsContext } from "./utils";
+import {
+  getSessionOrError,
+  validateHost,
+  getAllUsers,
+  findSessionByUserId,
+  getUnifiedRoomState,
+} from "./utils";
+import { MessageBuilders } from "./messageBuilders";
+import { broadcastToRoom, sendToSocket } from "./broadcast";
 
-export class RoomHandler {
-  constructor(private roomManager: RoomManager) {}
+export async function handleJoinRoom(
+  ctx: WsContext,
+  ws: WebSocket,
+  data: JoinMessage,
+): Promise<void> {
+  const { username, room, userId, userImage } = data;
 
-  async handleJoinRoom(ws: WebSocket, data: JoinMessage): Promise<void> {
-    const { username, room, userId, userImage } = data;
+  if (!username || !room || !userId) {
+    sendToSocket(ws, MessageBuilders.error("Missing required fields: username, room, or userId"));
+    return;
+  }
 
-    // Validate required fields
-    if (!username || !room || !userId) {
-      sendToSocket(ws, MessageBuilders.error("Missing required fields: username, room, or userId"));
-      return;
-    }
+  if (!ROOM_CODE_REGEX.test(room)) {
+    sendToSocket(ws, MessageBuilders.error("Invalid room code format"));
+    return;
+  }
 
-    // Validate room code format
-    if (!ROOM_CODE_REGEX.test(room)) {
-      sendToSocket(ws, MessageBuilders.error("Invalid room code format"));
-      return;
-    }
-
-    // Sanitize and validate username
-    const trimmedUsername = username.trim();
-    if (!trimmedUsername) {
-      sendToSocket(ws, MessageBuilders.error("Username cannot be empty"));
-      return;
-    }
-    if (trimmedUsername.length > MAX_USERNAME_LENGTH) {
-      sendToSocket(
-        ws,
-        MessageBuilders.error(`Username must be ${MAX_USERNAME_LENGTH} characters or less`),
-      );
-      return;
-    }
-
-    // Check if user is already in this room - allow reconnection
-    const existingWs = this.roomManager.findSessionByUserId(userId);
-    if (existingWs) {
-      // Remove existing session - user is reconnecting
-      this.roomManager.removeUserSession(existingWs);
-      try {
-        existingWs.close();
-      } catch {
-        // Ignore close errors
-      }
-    }
-
-    // Check if this is the first player (becomes host)
-    const existingPlayers = this.roomManager.getAllUsers();
-    const isFirstPlayer = existingPlayers.length === 0;
-
-    // Create user session
-    const session: UserSession = {
-      username: trimmedUsername,
-      room,
-      userId,
-      userImage: userImage || null,
-      isHost: isFirstPlayer,
-      isReady: false,
-      joinedAt: Date.now(),
-    };
-
-    // Store session
-    this.roomManager.setUserSession(ws, session);
-    ws.serializeAttachment(session);
-
-    // Get all users in room (including the new one)
-    const roomUsers = this.roomManager.getAllUsers();
-
-    // Notify all users in the room about the new player
-    const joinMessage = MessageBuilders.userJoined(
-      trimmedUsername,
-      userId,
-      room,
-      isFirstPlayer,
-      roomUsers,
+  const trimmedUsername = username.trim();
+  if (!trimmedUsername) {
+    sendToSocket(ws, MessageBuilders.error("Username cannot be empty"));
+    return;
+  }
+  if (trimmedUsername.length > MAX_USERNAME_LENGTH) {
+    sendToSocket(
+      ws,
+      MessageBuilders.error(`Username must be ${MAX_USERNAME_LENGTH} characters or less`),
     );
-    broadcastToRoom(this.roomManager.getSessions(), joinMessage);
-
-    // Add player to scores if game is already in progress
-    const gamePhase = this.roomManager.getCurrentGamePhase();
-    if (gamePhase !== "lobby") {
-      this.roomManager.addPlayerToScores(userId, trimmedUsername, userImage || undefined);
-    }
-
-    // Send unified room state to joining player
-    const unifiedState = this.roomManager.getUnifiedRoomState(room);
-    sendToSocket(ws, MessageBuilders.unifiedRoomState(unifiedState));
+    return;
   }
 
-  async handleLeaveRoom(ws: WebSocket, session: UserSession): Promise<void> {
-    const { username, room, userId, isHost } = session;
-
-    // Get remaining users BEFORE deletion (need to find new host from these)
-    const sessions = this.roomManager.getSessions();
-    const remainingUserEntries = Array.from(sessions.entries()).filter(([s]) => s !== ws);
-
-    // Remove user session FIRST
-    this.roomManager.removeUserSession(ws);
-
-    // Handle host transfer - find the WebSocket of the first remaining user
-    if (isHost && remainingUserEntries.length > 0) {
-      const [newHostWs, newHostSession] = remainingUserEntries[0]!;
-
-      // Update the session object in the Map with new host status
-      newHostSession.isHost = true;
-      this.roomManager.setUserSession(newHostWs, newHostSession);
-
-      // Update serialization for new host
-      newHostWs.serializeAttachment(newHostSession);
-
-      // Broadcast host change
-      const hostChangedMessage = MessageBuilders.gameEvent(
-        "host_changed",
-        "crown",
-        `${newHostSession.username} is now the host`,
-        { newHostId: newHostSession.userId, newHostName: newHostSession.username },
-      );
-      broadcastToRoom(this.roomManager.getSessions(), hostChangedMessage);
-    }
-
-    // Get remaining users in the room (after host transfer)
-    const roomUsers = this.roomManager.getAllUsers();
-
-    // Room is empty — no one to notify, game state persists for reconnection
-    if (roomUsers.length === 0) return;
-
-    // Notify remaining users with updated user list
-    const leaveMessage = MessageBuilders.userLeft(username, userId, room, roomUsers);
-    broadcastToRoom(this.roomManager.getSessions(), leaveMessage);
-  }
-
-  async handleReady(ws: WebSocket): Promise<void> {
-    const session = this.roomManager.getUserSession(ws);
-    if (!session) return;
-
-    // Toggle ready state
-    session.isReady = !session.isReady;
-    this.roomManager.setUserSession(ws, session);
-
-    // Broadcast updated user list (includes ready state)
-    const users = this.roomManager.getAllUsers();
-    const usersMessage = MessageBuilders.usersUpdated(users);
-    broadcastToRoom(this.roomManager.getSessions(), usersMessage);
-  }
-
-  async handleLeave(ws: WebSocket): Promise<void> {
-    const session = this.roomManager.getUserSession(ws);
-    if (session) {
-      await this.handleLeaveRoom(ws, session);
+  const existingWs = findSessionByUserId(ctx.sessions, userId);
+  if (existingWs) {
+    ctx.sessions.delete(existingWs);
+    try {
+      existingWs.close();
+    } catch {
+      /* ignore */
     }
   }
 
-  async handleUpdateSettings(ws: WebSocket, data: UpdateSettingsMessage): Promise<void> {
-    const session = getSessionOrError(this.roomManager, ws);
-    if (!session) return;
+  const existingPlayers = getAllUsers(ctx.sessions);
+  const isFirstPlayer = existingPlayers.length === 0;
 
-    if (!validateHost(ws, session)) return;
+  const session: UserSession = {
+    username: trimmedUsername,
+    room,
+    userId,
+    userImage: userImage || null,
+    isHost: isFirstPlayer,
+    isReady: false,
+    joinedAt: Date.now(),
+  };
 
-    if (this.roomManager.getCurrentGamePhase() !== "lobby") {
-      sendToSocket(ws, MessageBuilders.error("Cannot change settings while a game is in progress"));
-      return;
-    }
+  ctx.sessions.set(ws, session);
+  ws.serializeAttachment(session);
 
-    const { rounds, timePerRound, audioTime } = data.payload || {};
-    const updatedSettings = this.roomManager.updateSettings(rounds, timePerRound, audioTime);
+  const roomUsers = getAllUsers(ctx.sessions);
 
-    // Broadcast settings update
-    const settingsMessage = MessageBuilders.settingsUpdated(updatedSettings);
-    broadcastToRoom(this.roomManager.getSessions(), settingsMessage);
+  const joinMessage = MessageBuilders.userJoined(
+    trimmedUsername,
+    userId,
+    room,
+    isFirstPlayer,
+    roomUsers,
+  );
+  broadcastToRoom(ctx.sessions, joinMessage);
+
+  const gamePhase = ctx.gameEngine.getPhase();
+  if (gamePhase !== "lobby") {
+    ctx.gameEngine.addPlayer(userId, trimmedUsername, userImage || undefined);
   }
 
-  async handleUpdatePlaylist(ws: WebSocket, data: UpdatePlaylistMessage): Promise<void> {
-    const session = getSessionOrError(this.roomManager, ws);
-    if (!session) return;
+  const unifiedState = getUnifiedRoomState(ctx, room);
+  sendToSocket(ws, MessageBuilders.unifiedRoomState(unifiedState));
+}
 
-    if (!validateHost(ws, session)) return;
+export async function handleLeave(ctx: WsContext, ws: WebSocket): Promise<void> {
+  const session = ctx.sessions.get(ws);
+  if (!session) return;
 
-    if (this.roomManager.getCurrentGamePhase() !== "lobby") {
-      sendToSocket(ws, MessageBuilders.error("Cannot change playlist while a game is in progress"));
-      return;
-    }
+  const { username, room, userId, isHost } = session;
+  const remainingUserEntries = Array.from(ctx.sessions.entries()).filter(([s]) => s !== ws);
+  ctx.sessions.delete(ws);
 
-    const { playlist } = data.payload || {};
-    if (!playlist) return;
+  if (isHost && remainingUserEntries.length > 0) {
+    const [newHostWs, newHostSession] = remainingUserEntries[0]!;
+    newHostSession.isHost = true;
+    ctx.sessions.set(newHostWs, newHostSession);
+    newHostWs.serializeAttachment(newHostSession);
 
-    this.roomManager.setRoomPlaylist(playlist);
-
-    // Broadcast playlist update
-    const playlistMessage = MessageBuilders.playlistUpdated(playlist);
-    broadcastToRoom(this.roomManager.getSessions(), playlistMessage);
+    const hostChangedMessage = MessageBuilders.gameEvent(
+      "host_changed",
+      "crown",
+      `${newHostSession.username} is now the host`,
+      { newHostId: newHostSession.userId, newHostName: newHostSession.username },
+    );
+    broadcastToRoom(ctx.sessions, hostChangedMessage);
   }
+
+  const roomUsers = getAllUsers(ctx.sessions);
+  if (roomUsers.length === 0) return;
+
+  const leaveMessage = MessageBuilders.userLeft(username, userId, room, roomUsers);
+  broadcastToRoom(ctx.sessions, leaveMessage);
+}
+
+export async function handleReady(ctx: WsContext, ws: WebSocket): Promise<void> {
+  const session = ctx.sessions.get(ws);
+  if (!session) return;
+
+  session.isReady = !session.isReady;
+  ctx.sessions.set(ws, session);
+
+  const users = getAllUsers(ctx.sessions);
+  broadcastToRoom(ctx.sessions, MessageBuilders.usersUpdated(users));
+}
+
+export async function handleUpdateSettings(
+  ctx: WsContext,
+  ws: WebSocket,
+  data: UpdateSettingsMessage,
+): Promise<void> {
+  const session = getSessionOrError(ctx.sessions, ws);
+  if (!session) return;
+  if (!validateHost(ws, session)) return;
+  if (ctx.gameEngine.getPhase() !== "lobby") {
+    sendToSocket(ws, MessageBuilders.error("Cannot change settings while a game is in progress"));
+    return;
+  }
+
+  const { rounds, timePerRound, audioTime } = data.payload || {};
+  if (rounds !== undefined) {
+    ctx.roomSettings.rounds = clamp(rounds, SETTINGS_LIMITS.rounds.min, SETTINGS_LIMITS.rounds.max);
+  }
+  if (timePerRound !== undefined) {
+    ctx.roomSettings.timePerRound = clamp(
+      timePerRound,
+      SETTINGS_LIMITS.timePerRound.min,
+      SETTINGS_LIMITS.timePerRound.max,
+    );
+  }
+  if (audioTime !== undefined) {
+    ctx.roomSettings.audioTime = clamp(
+      audioTime,
+      SETTINGS_LIMITS.audioTime.min,
+      SETTINGS_LIMITS.audioTime.max,
+    );
+  }
+  if (ctx.roomSettings.audioTime > ctx.roomSettings.timePerRound) {
+    ctx.roomSettings.audioTime = ctx.roomSettings.timePerRound;
+  }
+
+  broadcastToRoom(ctx.sessions, MessageBuilders.settingsUpdated(ctx.roomSettings));
+}
+
+export async function handleUpdatePlaylist(
+  ctx: WsContext,
+  ws: WebSocket,
+  data: UpdatePlaylistMessage,
+): Promise<void> {
+  const session = getSessionOrError(ctx.sessions, ws);
+  if (!session) return;
+  if (!validateHost(ws, session)) return;
+  if (ctx.gameEngine.getPhase() !== "lobby") {
+    sendToSocket(ws, MessageBuilders.error("Cannot change playlist while a game is in progress"));
+    return;
+  }
+
+  const { playlist } = data.payload || {};
+  if (!playlist) return;
+  ctx.roomPlaylist = playlist;
+  broadcastToRoom(ctx.sessions, MessageBuilders.playlistUpdated(playlist));
 }

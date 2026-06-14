@@ -1,12 +1,21 @@
-import { RoomManager } from ".";
-import { MessageBuilders, broadcastToRoom, sendToSocket } from ".";
 import type { AnswerMessage, VotePlayAgainMessage, Song } from "../../shared/types";
 import { SCORING } from "../../shared/constants";
 import { getPlaylistTracks, getTrackPreviewUrl } from "../services/spotify/playlists";
 import { shuffleArray } from "../../shared/utils";
 import { createLibraryService } from "../services/library/LibraryService";
 import { createGameHistoryService } from "../services/gameHistory/GameHistoryService";
-import { getSessionOrError, validateHost } from "./utils";
+import type { WsContext } from "./utils";
+import {
+  getSessionOrError,
+  validateHost,
+  getAllUsers,
+  getUnifiedRoomState,
+  getHostUserId,
+  resetReadyStates,
+} from "./utils";
+import { MessageBuilders } from "./messageBuilders";
+import { broadcastToRoom, sendToSocket } from "./broadcast";
+import { getDb } from "../db";
 
 const PREVIEW_CONCURRENCY = 10;
 
@@ -50,267 +59,37 @@ async function ensurePreviewsForGame(songs: Song[], needed: number): Promise<Son
   return [...withPreview, ...newlyFetched, ...stillWithout];
 }
 
-export class GameHandler {
-  private voteTimer: ReturnType<typeof setTimeout> | null = null;
+export async function handleStartGame(ctx: WsContext, ws: WebSocket): Promise<void> {
+  const session = getSessionOrError(ctx.sessions, ws);
+  if (!session) return;
+  if (!validateHost(ws, session)) return;
 
-  constructor(private roomManager: RoomManager) {}
+  if (ctx.gameEngine.getPhase() !== "lobby") {
+    sendToSocket(ws, MessageBuilders.error("Game is already starting or in progress"));
+    return;
+  }
+  ctx.gameEngine.setPhase("starting");
 
-  async handleStartGame(ws: WebSocket): Promise<void> {
-    const session = getSessionOrError(this.roomManager, ws);
-    if (!session) return;
-
-    if (!validateHost(ws, session)) return;
-
-    if (!this.roomManager.tryStartGame()) {
-      sendToSocket(ws, MessageBuilders.error("Game is already starting or in progress"));
-      return;
-    }
-
-    const roomUsers = this.roomManager.getAllUsers();
-
-    if (roomUsers.length < 1) {
-      this.roomManager.cancelStartGame();
-      sendToSocket(ws, MessageBuilders.error("Need at least 1 player to start"));
-      return;
-    }
-
-    const settings = this.roomManager.getRoomSettings();
-    const roomPlaylist = this.roomManager.getRoomPlaylist();
-
-    // Broadcast game_started immediately so all clients see "Game starting..."
-    broadcastToRoom(
-      this.roomManager.getSessions(),
-      MessageBuilders.gameStarted(settings.rounds, settings.timePerRound, settings.audioTime),
-    );
-
-    let songs: Song[] = [];
-    const lib = createLibraryService(this.roomManager.getDb());
-    if (roomPlaylist?.id) {
-      if (roomPlaylist.id === "blend") {
-        const userIds = roomUsers.map((u) => u.userId);
-        const userInfoMap: Record<
-          string,
-          { userId: string; username: string; userImage?: string }
-        > = {};
-        for (const u of roomUsers) {
-          userInfoMap[u.userId] = {
-            userId: u.userId,
-            username: u.username,
-            userImage: u.userImage ?? undefined,
-          };
-        }
-        const targetCount = Math.max(settings.rounds * 2, 20);
-        const result = await lib.getRoomBlendedPlaylist(userIds, targetCount, {
-          minTracksPerUser: 5,
-          userInfoMap,
-        });
-        songs = result.songs;
-        if (result.warnings.length > 0) {
-          for (const warning of result.warnings) {
-            sendToSocket(ws, MessageBuilders.error(warning));
-          }
-        }
-      } else {
-        const libraryTracks = await lib.getLibraryPlaylistTracks(session.userId, roomPlaylist.id);
-        if (libraryTracks.length > 0) {
-          songs = libraryTracks;
-        } else {
-          songs = await getPlaylistTracks(roomPlaylist.id, true);
-        }
-      }
-    }
-
-    // Shuffle once, then ensure first `rounds` songs have previews
-    songs = shuffleArray(songs);
-    songs = await ensurePreviewsForGame(songs, settings.rounds);
-
-    const songsWithPreviews = songs.filter((s) => s.previewUrl);
-    if (songsWithPreviews.length < settings.rounds) {
-      this.roomManager.cancelStartGame();
-      sendToSocket(
-        ws,
-        MessageBuilders.error("Not enough songs available. Please set a larger Spotify playlist."),
-      );
-      broadcastToRoom(
-        this.roomManager.getSessions(),
-        MessageBuilders.unifiedRoomState(this.roomManager.getUnifiedRoomState(session.room)),
-      );
-      return;
-    }
-
-    this.roomManager.initGame(songs, settings.rounds);
-
-    this.handleStartRoundInternal(session.room);
+  const roomUsers = getAllUsers(ctx.sessions);
+  if (roomUsers.length < 1) {
+    ctx.gameEngine.setPhase("lobby");
+    sendToSocket(ws, MessageBuilders.error("Need at least 1 player to start"));
+    return;
   }
 
-  private async handleStartRoundInternal(room: string): Promise<void> {
-    const roundData = await this.roomManager.startRound(() => this.handleEndRoundInternal(room));
+  broadcastToRoom(
+    ctx.sessions,
+    MessageBuilders.gameStarted(
+      ctx.roomSettings.rounds,
+      ctx.roomSettings.timePerRound,
+      ctx.roomSettings.audioTime,
+    ),
+  );
 
-    const songData = {
-      previewUrl: roundData.song.previewUrl,
-      albumImageUrl: roundData.song.albumImageUrl,
-    };
-
-    const roundStartedMessage = MessageBuilders.roundStarted(
-      roundData.round,
-      roundData.totalRounds,
-      songData,
-      roundData.choices,
-      roundData.startTime,
-      roundData.endTime,
-      roundData.duration,
-    );
-    broadcastToRoom(this.roomManager.getSessions(), roundStartedMessage);
-  }
-
-  private async handleEndRoundInternal(room: string): Promise<void> {
-    const roundThatJustEnded = this.roomManager.getCurrentRound();
-    const { correctAnswer, scores } = this.roomManager.endRound();
-
-    const settings = this.roomManager.getRoomSettings();
-    const totalRounds = settings.rounds;
-    const currentRound = this.roomManager.getCurrentRound();
-
-    if (currentRound <= totalRounds) {
-      const nextRoundAt = Date.now() + SCORING.ROUND_END_DELAY;
-      const roundEndedMessage = MessageBuilders.roundEnded(
-        roundThatJustEnded,
-        correctAnswer,
-        scores,
-        nextRoundAt,
-      );
-      broadcastToRoom(this.roomManager.getSessions(), roundEndedMessage);
-
-      const leaderboardMessage = MessageBuilders.leaderboardUpdate(scores);
-      broadcastToRoom(this.roomManager.getSessions(), leaderboardMessage);
-
-      setTimeout(() => {
-        this.handleStartRoundInternal(room);
-      }, SCORING.ROUND_END_DELAY);
-    } else {
-      // Persist game history (skip solo games)
-      const roomUsers = this.roomManager.getAllUsers();
-      if (roomUsers.length >= 2) {
-        try {
-          const history = createGameHistoryService(this.roomManager.getDb());
-          const pSettings = this.roomManager.getRoomSettings();
-          const playlist = this.roomManager.getRoomPlaylist();
-          const songs = this.roomManager.getSongs();
-          const pScores = this.roomManager.getScores();
-          const hostUserId = this.roomManager.getHostUserId();
-
-          if (hostUserId) {
-            await history.saveGame({
-              id: crypto.randomUUID(),
-              roomName: room,
-              hostUserId,
-              playlist: playlist
-                ? {
-                    name: playlist.name,
-                    imageUrl: playlist.imageUrl,
-                    trackCount: playlist.trackCount,
-                  }
-                : null,
-              settings: {
-                rounds: pSettings.rounds,
-                timePerRound: pSettings.timePerRound,
-                audioTime: pSettings.audioTime,
-              },
-              songs: songs.slice(0, settings.rounds),
-              scores: pScores.map((s) => ({
-                userId: s.userId,
-                username: s.username,
-                score: s.score,
-                streak: s.streak,
-                bestStreak: s.bestStreak,
-              })),
-              playedAt: new Date(),
-            });
-          }
-        } catch (err) {
-          console.error("Failed to persist game history:", err);
-        }
-      }
-
-      // For the last round, transition to game end phase first to get final state
-      const { voteEndsAt } = this.roomManager.endGame(SCORING.VOTE_DURATION);
-
-      // Send a single merged message for both round and game end
-      const roundEndedMessage = MessageBuilders.roundEnded(
-        roundThatJustEnded,
-        correctAnswer,
-        scores,
-        undefined, // nextRoundAt
-        true, // isFinal
-        voteEndsAt,
-      );
-      broadcastToRoom(this.roomManager.getSessions(), roundEndedMessage);
-
-      const leaderboardMessage = MessageBuilders.leaderboardUpdate(scores);
-      broadcastToRoom(this.roomManager.getSessions(), leaderboardMessage);
-
-      // Setup the timer to return to lobby
-      if (this.voteTimer) clearTimeout(this.voteTimer);
-      this.voteTimer = setTimeout(() => {
-        if (this.roomManager.getVoteEndsAt()) {
-          this.returnToLobby(room);
-        }
-        this.voteTimer = null;
-      }, SCORING.VOTE_DURATION);
-    }
-  }
-
-  async handleVote(ws: WebSocket, data: VotePlayAgainMessage): Promise<void> {
-    const session = getSessionOrError(this.roomManager, ws);
-    if (!session) return;
-
-    if (!this.roomManager.getVoteEndsAt()) {
-      sendToSocket(ws, MessageBuilders.error("No active vote at this time"));
-      return;
-    }
-
-    this.roomManager.recordVote(session.userId, data.vote);
-
-    const votes = this.roomManager.getVotes();
-    const voteEndsAt = this.roomManager.getVoteEndsAt() || 0;
-    const voteUpdateMessage = MessageBuilders.voteUpdate(votes, voteEndsAt);
-    broadcastToRoom(this.roomManager.getSessions(), voteUpdateMessage);
-
-    if (!data.vote) {
-      // Someone voted NO, immediately return to lobby after a short delay
-      if (this.voteTimer) clearTimeout(this.voteTimer);
-      this.voteTimer = setTimeout(() => {
-        this.returnToLobby(session.room);
-        this.voteTimer = null;
-      }, 3000);
-      return;
-    }
-
-    if (this.roomManager.allPlayersVoted()) {
-      if (this.roomManager.didAllPlayersVoteYes()) {
-        if (this.voteTimer) clearTimeout(this.voteTimer);
-        this.voteTimer = null;
-        await this.handleContinueGame(session.room);
-      } else {
-        // Not everyone voted yes
-        if (this.voteTimer) clearTimeout(this.voteTimer);
-        this.voteTimer = setTimeout(() => {
-          this.returnToLobby(session.room);
-          this.voteTimer = null;
-        }, 3000);
-      }
-    }
-  }
-
-  private async handleContinueGame(room: string): Promise<void> {
-    const settings = this.roomManager.getRoomSettings();
-    const roomPlaylist = this.roomManager.getRoomPlaylist();
-
-    // For blend, regenerate fresh songs from the library each time
-    if (roomPlaylist?.id === "blend") {
-      const gameState = this.roomManager.getUnifiedRoomState(room).game;
-      const playedSpotifyIds = gameState.songs.map((s) => s.id);
-      const roomUsers = this.roomManager.getAllUsers();
+  let songs: Song[] = [];
+  const lib = createLibraryService(getDb(ctx.env.HYPERDRIVE.connectionString));
+  if (ctx.roomPlaylist?.id) {
+    if (ctx.roomPlaylist.id === "blend") {
       const userIds = roomUsers.map((u) => u.userId);
       const userInfoMap: Record<string, { userId: string; username: string; userImage?: string }> =
         {};
@@ -321,116 +100,352 @@ export class GameHandler {
           userImage: u.userImage ?? undefined,
         };
       }
-      const targetCount = Math.max(settings.rounds * 2, 20);
-      const lib = createLibraryService(this.roomManager.getDb());
+      const targetCount = Math.max(ctx.roomSettings.rounds * 2, 20);
       const result = await lib.getRoomBlendedPlaylist(userIds, targetCount, {
         minTracksPerUser: 5,
-        excludeSpotifyIds: playedSpotifyIds,
         userInfoMap,
       });
-      let songs = result.songs;
-
+      songs = result.songs;
       if (result.warnings.length > 0) {
         for (const warning of result.warnings) {
-          broadcastToRoom(this.roomManager.getSessions(), MessageBuilders.error(warning));
+          sendToSocket(ws, MessageBuilders.error(warning));
         }
       }
-
-      songs = shuffleArray(songs);
-      songs = await ensurePreviewsForGame(songs, settings.rounds);
-
-      const songsWithPreviews = songs.filter((s) => s.previewUrl);
-      if (songsWithPreviews.length < settings.rounds) {
-        broadcastToRoom(
-          this.roomManager.getSessions(),
-          MessageBuilders.error(
-            "Not enough songs available. Please set a larger Spotify playlist.",
-          ),
-        );
-        return;
+    } else {
+      const libraryTracks = await lib.getLibraryPlaylistTracks(session.userId, ctx.roomPlaylist.id);
+      if (libraryTracks.length > 0) {
+        songs = libraryTracks;
+      } else {
+        songs = await getPlaylistTracks(ctx.roomPlaylist.id, true);
       }
-
-      this.roomManager.initGame(songs, settings.rounds, false);
-
-      const gameStartedMessage = MessageBuilders.gameStarted(
-        settings.rounds,
-        settings.timePerRound,
-        settings.audioTime,
-      );
-      broadcastToRoom(this.roomManager.getSessions(), gameStartedMessage);
-
-      setTimeout(() => {
-        this.handleStartRoundInternal(room);
-      }, 2000);
-      return;
     }
+  }
 
-    const gameState = this.roomManager.getUnifiedRoomState(room).game;
-    const remaining = gameState.songs.slice(gameState.currentSongIndex);
+  songs = shuffleArray(songs);
+  songs = await ensurePreviewsForGame(songs, ctx.roomSettings.rounds);
 
-    if (remaining.length < settings.rounds) {
-      const errorMessage = MessageBuilders.error(
-        "Not enough songs available. Please set a larger Spotify playlist.",
-      );
-      broadcastToRoom(this.roomManager.getSessions(), errorMessage);
-      return;
-    }
-
-    const ensured = await ensurePreviewsForGame(remaining, settings.rounds);
-    const enoughWithPreviews = ensured.slice(0, settings.rounds).every((s) => s.previewUrl);
-    if (!enoughWithPreviews) {
-      const errorMessage = MessageBuilders.error(
-        "Not enough songs available. Please set a larger Spotify playlist.",
-      );
-      broadcastToRoom(this.roomManager.getSessions(), errorMessage);
-      return;
-    }
-
-    // Rebuild full song list: played songs + reordered remaining songs (previews at front)
-    const played = gameState.songs.slice(0, gameState.currentSongIndex);
-    const allSongs = [...played, ...ensured];
-
-    this.roomManager.initGame(allSongs, settings.rounds, true);
-
-    const gameStartedMessage = MessageBuilders.gameStarted(
-      settings.rounds,
-      settings.timePerRound,
-      settings.audioTime,
+  const songsWithPreviews = songs.filter((s) => s.previewUrl);
+  if (songsWithPreviews.length < ctx.roomSettings.rounds) {
+    ctx.gameEngine.setPhase("lobby");
+    sendToSocket(
+      ws,
+      MessageBuilders.error("Not enough songs available. Please set a larger Spotify playlist."),
     );
-    broadcastToRoom(this.roomManager.getSessions(), gameStartedMessage);
-
-    setTimeout(() => {
-      this.handleStartRoundInternal(room);
-    }, 2000);
+    broadcastToRoom(
+      ctx.sessions,
+      MessageBuilders.unifiedRoomState(getUnifiedRoomState(ctx, session.room!)),
+    );
+    return;
   }
 
-  async handleAnswer(ws: WebSocket, data: AnswerMessage): Promise<void> {
-    const session = getSessionOrError(this.roomManager, ws);
-    if (!session) return;
+  const players = getAllUsers(ctx.sessions).map((u) => ({
+    userId: u.userId,
+    username: u.username,
+    userImage: u.userImage ?? undefined,
+  }));
+  ctx.gameEngine.initGame(songs, ctx.roomSettings.rounds, players);
+  await handleStartRoundInternal(ctx, session.room!);
+}
 
-    if (this.roomManager.getCurrentGamePhase() !== "playing") {
-      sendToSocket(ws, MessageBuilders.error("Game is not currently playing"));
+async function handleStartRoundInternal(ctx: WsContext, room: string): Promise<void> {
+  const roundData = await ctx.gameEngine.startRound(ctx.roomSettings.timePerRound);
+
+  if (ctx.roundTimer) clearTimeout(ctx.roundTimer);
+  ctx.roundTimer = setTimeout(() => handleEndRoundInternal(ctx, room), roundData.duration);
+
+  broadcastToRoom(
+    ctx.sessions,
+    MessageBuilders.roundStarted(
+      roundData.round,
+      roundData.totalRounds,
+      { previewUrl: roundData.song.previewUrl, albumImageUrl: roundData.song.albumImageUrl },
+      roundData.choices,
+      roundData.startTime,
+      roundData.endTime,
+      roundData.duration,
+    ),
+  );
+}
+
+async function handleEndRoundInternal(ctx: WsContext, room: string): Promise<void> {
+  if (ctx.roundTimer) {
+    clearTimeout(ctx.roundTimer);
+    ctx.roundTimer = null;
+  }
+
+  const roundThatJustEnded = ctx.gameEngine.getGameState().currentRound;
+  const { correctAnswer, scores } = ctx.gameEngine.endRound();
+
+  const currentRound = ctx.gameEngine.getGameState().currentRound;
+
+  if (currentRound <= ctx.roomSettings.rounds) {
+    const nextRoundAt = Date.now() + SCORING.ROUND_END_DELAY;
+    broadcastToRoom(
+      ctx.sessions,
+      MessageBuilders.roundEnded(roundThatJustEnded, correctAnswer, scores, nextRoundAt),
+    );
+    broadcastToRoom(ctx.sessions, MessageBuilders.leaderboardUpdate(scores));
+
+    setTimeout(() => handleStartRoundInternal(ctx, room), SCORING.ROUND_END_DELAY);
+  } else {
+    const roomUsers = getAllUsers(ctx.sessions);
+    if (roomUsers.length >= 2) {
+      try {
+        const history = createGameHistoryService(getDb(ctx.env.HYPERDRIVE.connectionString));
+        const songs = ctx.gameEngine.getSongs();
+        const pScores = ctx.gameEngine.getScores();
+        const hostUserId = getHostUserId(ctx.sessions);
+
+        if (hostUserId) {
+          await history.saveGame({
+            id: crypto.randomUUID(),
+            roomName: room,
+            hostUserId,
+            playlist: ctx.roomPlaylist
+              ? {
+                  name: ctx.roomPlaylist.name,
+                  imageUrl: ctx.roomPlaylist.imageUrl,
+                  trackCount: ctx.roomPlaylist.trackCount,
+                }
+              : null,
+            settings: {
+              rounds: ctx.roomSettings.rounds,
+              timePerRound: ctx.roomSettings.timePerRound,
+              audioTime: ctx.roomSettings.audioTime,
+            },
+            songs: songs.slice(0, ctx.roomSettings.rounds),
+            scores: pScores.map((s) => ({
+              userId: s.userId,
+              username: s.username,
+              score: s.score,
+              streak: s.streak,
+              bestStreak: s.bestStreak,
+            })),
+            playedAt: new Date(),
+          });
+        }
+      } catch (err) {
+        console.error("Failed to persist game history:", err);
+      }
+    }
+
+    const { voteEndsAt } = ctx.gameEngine.endGame(SCORING.VOTE_DURATION);
+    broadcastToRoom(
+      ctx.sessions,
+      MessageBuilders.roundEnded(
+        roundThatJustEnded,
+        correctAnswer,
+        scores,
+        undefined,
+        true,
+        voteEndsAt,
+      ),
+    );
+    broadcastToRoom(ctx.sessions, MessageBuilders.leaderboardUpdate(scores));
+
+    if (ctx.voteTimer) clearTimeout(ctx.voteTimer);
+    ctx.voteTimer = setTimeout(() => {
+      if (ctx.gameEngine.getVoteEndsAt()) returnToLobby(ctx, room);
+      ctx.voteTimer = null;
+    }, SCORING.VOTE_DURATION);
+  }
+}
+
+export async function handleVote(
+  ctx: WsContext,
+  ws: WebSocket,
+  data: VotePlayAgainMessage,
+): Promise<void> {
+  const session = getSessionOrError(ctx.sessions, ws);
+  if (!session) return;
+
+  if (!ctx.gameEngine.getVoteEndsAt()) {
+    sendToSocket(ws, MessageBuilders.error("No active vote at this time"));
+    return;
+  }
+
+  ctx.gameEngine.recordVote(session.userId, data.vote);
+
+  const votes = ctx.gameEngine.getVotes();
+  const voteEndsAt = ctx.gameEngine.getVoteEndsAt() || 0;
+  broadcastToRoom(ctx.sessions, MessageBuilders.voteUpdate(votes, voteEndsAt));
+
+  if (!data.vote) {
+    if (ctx.voteTimer) clearTimeout(ctx.voteTimer);
+    ctx.voteTimer = setTimeout(() => {
+      returnToLobby(ctx, session.room!);
+      ctx.voteTimer = null;
+    }, 3000);
+    return;
+  }
+
+  const allUserIds = getAllUsers(ctx.sessions).map((u) => u.userId);
+  if (ctx.gameEngine.allPlayersVoted(allUserIds)) {
+    if (ctx.gameEngine.didAllPlayersVoteYes()) {
+      if (ctx.voteTimer) clearTimeout(ctx.voteTimer);
+      ctx.voteTimer = null;
+      await handleContinueGame(ctx, session.room!);
+    } else {
+      if (ctx.voteTimer) clearTimeout(ctx.voteTimer);
+      ctx.voteTimer = setTimeout(() => {
+        returnToLobby(ctx, session.room!);
+        ctx.voteTimer = null;
+      }, 3000);
+    }
+  }
+}
+
+export async function handleAnswer(
+  ctx: WsContext,
+  ws: WebSocket,
+  data: AnswerMessage,
+): Promise<void> {
+  const session = getSessionOrError(ctx.sessions, ws);
+  if (!session) return;
+
+  if (ctx.gameEngine.getPhase() !== "playing") {
+    sendToSocket(ws, MessageBuilders.error("Game is not currently playing"));
+    return;
+  }
+
+  const { isCorrect, points, streak } = ctx.gameEngine.recordAnswer(
+    session.userId,
+    data.choiceIndex,
+    ctx.roomSettings.timePerRound,
+  );
+
+  sendToSocket(ws, MessageBuilders.answerResult(isCorrect, points, streak));
+  broadcastToRoom(ctx.sessions, MessageBuilders.leaderboardUpdate(ctx.gameEngine.getScores()));
+
+  if (!session.room) return;
+  const playersInRoom = getAllUsers(ctx.sessions).map((u) => u.userId);
+  if (ctx.gameEngine.allPlayersAnswered(playersInRoom)) {
+    const state = ctx.gameEngine.getGameState();
+    const timeElapsed = Date.now() - state.roundStartTime;
+    const remainingTime = state.roundDuration - timeElapsed;
+    if (remainingTime > SCORING.EARLY_ROUND_END_DELAY) {
+      if (ctx.roundTimer) clearTimeout(ctx.roundTimer);
+      ctx.roundTimer = setTimeout(
+        () => handleEndRoundInternal(ctx, session.room!),
+        SCORING.EARLY_ROUND_END_DELAY,
+      );
+    }
+  }
+}
+
+async function handleContinueGame(ctx: WsContext, room: string): Promise<void> {
+  if (ctx.roomPlaylist?.id === "blend") {
+    const gameState = getUnifiedRoomState(ctx, room).game;
+    const playedSpotifyIds = gameState.songs.map((s) => s.id);
+    const roomUsers = getAllUsers(ctx.sessions);
+    const userIds = roomUsers.map((u) => u.userId);
+    const userInfoMap: Record<string, { userId: string; username: string; userImage?: string }> =
+      {};
+    for (const u of roomUsers) {
+      userInfoMap[u.userId] = {
+        userId: u.userId,
+        username: u.username,
+        userImage: u.userImage ?? undefined,
+      };
+    }
+    const targetCount = Math.max(ctx.roomSettings.rounds * 2, 20);
+    const lib = createLibraryService(getDb(ctx.env.HYPERDRIVE.connectionString));
+    const result = await lib.getRoomBlendedPlaylist(userIds, targetCount, {
+      minTracksPerUser: 5,
+      excludeSpotifyIds: playedSpotifyIds,
+      userInfoMap,
+    });
+    let songs = result.songs;
+
+    if (result.warnings.length > 0) {
+      for (const warning of result.warnings) {
+        broadcastToRoom(ctx.sessions, MessageBuilders.error(warning));
+      }
+    }
+
+    songs = shuffleArray(songs);
+    songs = await ensurePreviewsForGame(songs, ctx.roomSettings.rounds);
+
+    const songsWithPreviews = songs.filter((s) => s.previewUrl);
+    if (songsWithPreviews.length < ctx.roomSettings.rounds) {
+      broadcastToRoom(
+        ctx.sessions,
+        MessageBuilders.error("Not enough songs available. Please set a larger Spotify playlist."),
+      );
       return;
     }
 
-    const { isCorrect, points, streak } = this.roomManager.recordAnswer(
-      session.userId,
-      data.choiceIndex,
+    const players = getAllUsers(ctx.sessions).map((u) => ({
+      userId: u.userId,
+      username: u.username,
+      userImage: u.userImage ?? undefined,
+    }));
+    ctx.gameEngine.initGame(songs, ctx.roomSettings.rounds, players, false);
+
+    broadcastToRoom(
+      ctx.sessions,
+      MessageBuilders.gameStarted(
+        ctx.roomSettings.rounds,
+        ctx.roomSettings.timePerRound,
+        ctx.roomSettings.audioTime,
+      ),
     );
-
-    const answerResultMessage = MessageBuilders.answerResult(isCorrect, points, streak);
-    sendToSocket(ws, answerResultMessage);
-
-    const scores = this.roomManager.getScores();
-    const leaderboardMessage = MessageBuilders.leaderboardUpdate(scores);
-    broadcastToRoom(this.roomManager.getSessions(), leaderboardMessage);
-
-    this.roomManager.checkAndEndRoundEarly(() => this.handleEndRoundInternal(session.room));
+    setTimeout(() => handleStartRoundInternal(ctx, room), 2000);
+    return;
   }
 
-  private returnToLobby(room: string): void {
-    this.roomManager.resetGame();
-    const unifiedState = this.roomManager.getUnifiedRoomState(room);
-    broadcastToRoom(this.roomManager.getSessions(), MessageBuilders.unifiedRoomState(unifiedState));
+  const gameState = getUnifiedRoomState(ctx, room).game;
+  const remaining = gameState.songs.slice(gameState.currentSongIndex);
+
+  if (remaining.length < ctx.roomSettings.rounds) {
+    broadcastToRoom(
+      ctx.sessions,
+      MessageBuilders.error("Not enough songs available. Please set a larger Spotify playlist."),
+    );
+    return;
   }
+
+  const ensured = await ensurePreviewsForGame(remaining, ctx.roomSettings.rounds);
+  const enoughWithPreviews = ensured.slice(0, ctx.roomSettings.rounds).every((s) => s.previewUrl);
+  if (!enoughWithPreviews) {
+    broadcastToRoom(
+      ctx.sessions,
+      MessageBuilders.error("Not enough songs available. Please set a larger Spotify playlist."),
+    );
+    return;
+  }
+
+  const played = gameState.songs.slice(0, gameState.currentSongIndex);
+  const allSongs = [...played, ...ensured];
+
+  const players = getAllUsers(ctx.sessions).map((u) => ({
+    userId: u.userId,
+    username: u.username,
+    userImage: u.userImage ?? undefined,
+  }));
+  ctx.gameEngine.initGame(allSongs, ctx.roomSettings.rounds, players, true);
+
+  broadcastToRoom(
+    ctx.sessions,
+    MessageBuilders.gameStarted(
+      ctx.roomSettings.rounds,
+      ctx.roomSettings.timePerRound,
+      ctx.roomSettings.audioTime,
+    ),
+  );
+  setTimeout(() => handleStartRoundInternal(ctx, room), 2000);
+}
+
+function returnToLobby(ctx: WsContext, room: string): void {
+  if (ctx.roundTimer) {
+    clearTimeout(ctx.roundTimer);
+    ctx.roundTimer = null;
+  }
+  if (ctx.voteTimer) {
+    clearTimeout(ctx.voteTimer);
+    ctx.voteTimer = null;
+  }
+  resetReadyStates(ctx.sessions);
+  ctx.gameEngine.reset();
+  broadcastToRoom(ctx.sessions, MessageBuilders.unifiedRoomState(getUnifiedRoomState(ctx, room)));
 }

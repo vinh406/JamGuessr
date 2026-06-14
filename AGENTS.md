@@ -32,7 +32,7 @@ Run `cf-typegen` after changing wrangler.json bindings.
 - **Auth**: better-auth with Spotify OAuth
 - **Real-time**: WebSocket → Durable Object (`WebSocketHibernationServer`) at `/ws/:room?`. All room/game state ephemeral in DO memory, only final results persisted to DB
 - **Durable Objects**: `src/worker/durable-objects/` — `WebSocketHibernationServer` (game rooms), `PlaylistImportDO` (playlist import)
-- **WebSocket layer**: All WS code in `src/worker/ws/` — message routing, game engine, room/ session management
+- **WebSocket layer**: All WS code in `src/worker/ws/` — handler functions accepting `WsContext`, game engine, room/ session state via shared `sessions` Map
 - **Domain services**: `src/worker/services/` — Spotify, Last.fm, better-auth, library, SSE
 - **Route handlers**: `src/worker/routes/` — HTTP API route modules (e.g., library)
 
