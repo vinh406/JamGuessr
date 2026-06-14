@@ -15,7 +15,7 @@ export function useLibraryImport() {
       } else if (event.event === "progress") {
         const d = event.data as { current: number; total: number; label: string };
         if (importToastId.current) {
-          toast.loading(`${d.label} (${d.current}/${d.total})`, { id: importToastId.current });
+          toast.loading(d.label, { id: importToastId.current });
         }
       }
     },

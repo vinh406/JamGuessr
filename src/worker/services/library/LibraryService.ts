@@ -536,29 +536,25 @@ export function createLibraryService(
 
                   for (const line of lines) {
                     if (!line.trim()) continue;
-                    try {
-                      const msg: {
-                        type: string;
-                        current?: number;
-                        tracksAdded?: number;
-                        tracksSkipped?: number;
-                        message?: string;
-                      } = JSON.parse(line);
-                      if (msg.type === "progress") {
-                        const delta = (msg.current ?? 0) - chunkPrev;
-                        chunkPrev = msg.current ?? 0;
-                        totalProcessed += delta;
-                        onProgress?.(totalProcessed, metadata.trackCount);
-                      } else if (msg.type === "done") {
-                        result = {
-                          tracksAdded: msg.tracksAdded ?? 0,
-                          tracksSkipped: msg.tracksSkipped ?? 0,
-                        };
-                      } else if (msg.type === "error") {
-                        throw new Error(msg.message ?? "Unknown error");
-                      }
-                    } catch (e) {
-                      if (e instanceof Error && e.message) throw e;
+                    const msg: {
+                      type: string;
+                      current?: number;
+                      tracksAdded?: number;
+                      tracksSkipped?: number;
+                      message?: string;
+                    } = JSON.parse(line);
+                    if (msg.type === "progress") {
+                      const delta = (msg.current ?? 0) - chunkPrev;
+                      chunkPrev = msg.current ?? 0;
+                      totalProcessed += delta;
+                      onProgress?.(totalProcessed, metadata.trackCount);
+                    } else if (msg.type === "done") {
+                      result = {
+                        tracksAdded: msg.tracksAdded ?? 0,
+                        tracksSkipped: msg.tracksSkipped ?? 0,
+                      };
+                    } else if (msg.type === "error") {
+                      throw new Error(msg.message ?? "Unknown error");
                     }
                   }
                 }

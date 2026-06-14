@@ -5,7 +5,6 @@ import { createLibraryService } from "../services/library/LibraryService";
 import { getDb } from "../db";
 import type { DbInstance } from "../db";
 import { sseStream } from "../services/sse";
-import { parseSpotifyLink } from "../services/spotify/playlists";
 import { libraryPlaylists, libraryAlbums } from "../db/schema";
 
 // OpenAPI Schema Definitions
@@ -386,24 +385,9 @@ export function createLibraryHandlers() {
       return c.json({ error: "Invalid request — must provide a 'link' field" }, 400);
     }
 
-    return sseStream(async (emit, signal) => {
-      const parsedLink = parseSpotifyLink(parsed.data.link);
-      if (!parsedLink) {
-        emit("error", { message: "Could not parse Spotify link" });
-        return;
-      }
+    return sseStream(async (emit) => {
+      emit("phase", { phase: "fetching", label: "Fetching from Spotify..." });
 
-      if (parsedLink.type === "track") {
-        emit("phase", { phase: "fetching", label: "Fetching track metadata..." });
-      } else if (parsedLink.type === "playlist") {
-        emit("phase", { phase: "fetching", label: "Fetching playlist tracks from Spotify..." });
-      } else {
-        emit("phase", { phase: "fetching", label: "Fetching album tracks from Spotify..." });
-      }
-
-      if (signal.aborted) return;
-
-      // Create new db connection to avoid timeout
       const lib = createLibraryService(getDb(c.env.HYPERDRIVE.connectionString), c.env);
 
       const result = await lib.addFromSpotifyLink(user.id, parsed.data.link, (current, total) => {
