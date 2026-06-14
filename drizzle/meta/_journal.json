@@ -64,6 +64,13 @@
       "when": 1781406279137,
       "tag": "0008_many_sumo",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1781408576286,
+      "tag": "0009_lethal_leader",
+      "breakpoints": true
     }
   ]
 }

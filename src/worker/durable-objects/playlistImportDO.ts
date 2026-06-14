@@ -136,9 +136,11 @@ export class PlaylistImportDO extends DurableObject<Env> {
       }
 
       await writer.write(ENCODER.encode(JSON.stringify({ type: "done", tracksAdded }) + "\n"));
-    } catch (error) {
+    } catch {
       await writer.write(
-        ENCODER.encode(JSON.stringify({ type: "error", message: String(error) }) + "\n"),
+        ENCODER.encode(
+          JSON.stringify({ type: "error", message: "Failed to import playlist tracks" }) + "\n",
+        ),
       );
     } finally {
       await writer.close().catch(() => {});

@@ -121,33 +121,6 @@ export const libraryTracks = pgTable(
   ],
 );
 
-// Track sources join table - tracks which sources contributed each track
-export const libraryTrackSources = pgTable(
-  "library_track_sources",
-  {
-    id: text("id")
-      .primaryKey()
-      .default(sql`gen_random_uuid()`),
-    trackId: text("track_id")
-      .notNull()
-      .references(() => libraryTracks.id, { onDelete: "cascade" }),
-    userId: text("user_id")
-      .notNull()
-      .references(() => user.id, { onDelete: "cascade" }),
-    sourceType: text("source_type").notNull(), // 'direct' | 'playlist' | 'album'
-    playlistId: text("playlist_id"),
-    albumId: text("album_id"),
-    addedAt: timestamp("added_at").defaultNow().notNull(),
-  },
-  (table) => [
-    index("library_track_sources_track_id").on(table.trackId),
-    index("library_track_sources_user_id").on(table.userId),
-    index("library_track_sources_playlist_id").on(table.playlistId),
-    index("library_track_sources_album_id").on(table.albumId),
-    index("library_track_sources_user_source").on(table.userId, table.sourceType),
-  ],
-);
-
 // Playlists table - user-submitted playlists (static snapshot)
 export const libraryPlaylists = pgTable(
   "library_playlists",
@@ -186,6 +159,33 @@ export const libraryAlbums = pgTable(
     addedAt: timestamp("added_at").defaultNow().notNull(),
   },
   (table) => [index("library_albums_user_id").on(table.userId)],
+);
+
+// Track sources join table - tracks which sources contributed each track
+export const libraryTrackSources = pgTable(
+  "library_track_sources",
+  {
+    id: text("id")
+      .primaryKey()
+      .default(sql`gen_random_uuid()`),
+    trackId: text("track_id")
+      .notNull()
+      .references(() => libraryTracks.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    sourceType: text("source_type").notNull(), // 'direct' | 'playlist' | 'album'
+    playlistId: text("playlist_id").references(() => libraryPlaylists.id, { onDelete: "cascade" }),
+    albumId: text("album_id").references(() => libraryAlbums.id, { onDelete: "cascade" }),
+    addedAt: timestamp("added_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("library_track_sources_track_id").on(table.trackId),
+    index("library_track_sources_user_id").on(table.userId),
+    index("library_track_sources_playlist_id").on(table.playlistId),
+    index("library_track_sources_album_id").on(table.albumId),
+    index("library_track_sources_user_source").on(table.userId, table.sourceType),
+  ],
 );
 
 // Library relations
