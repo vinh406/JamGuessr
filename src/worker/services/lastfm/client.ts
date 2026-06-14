@@ -8,26 +8,6 @@ export interface LastFMSimilarTrack {
   imageUrl: string | null;
 }
 
-let lastFmClient: LastFMTrack | null = null;
-let lastFmArtistClient: LastFMArtist | null = null;
-let currentApiKey: string | null = null;
-
-function getLastFMClient(apiKey: string): LastFMTrack {
-  if (!lastFmClient || currentApiKey !== apiKey) {
-    lastFmClient = new LastFMTrack(apiKey);
-    currentApiKey = apiKey;
-  }
-  return lastFmClient;
-}
-
-function getLastFMArtistClient(apiKey: string): LastFMArtist {
-  if (!lastFmArtistClient || currentApiKey !== apiKey) {
-    lastFmArtistClient = new LastFMArtist(apiKey);
-    currentApiKey = apiKey;
-  }
-  return lastFmArtistClient;
-}
-
 export async function getSimilarTracks(
   artist: string,
   track: string,
@@ -35,7 +15,7 @@ export async function getSimilarTracks(
   limit: number = 10,
 ): Promise<LastFMSimilarTrack[]> {
   try {
-    const client = getLastFMClient(apiKey);
+    const client = new LastFMTrack(apiKey);
     const artistParts = artist.split(/[,;\u00A0]/);
     const firstArtist = artistParts[0]?.trim() ?? artist;
     const response = await client.getSimilar({
@@ -70,7 +50,7 @@ export async function getArtistTopTracks(
   limit: number = 10,
 ): Promise<LastFMSimilarTrack[]> {
   try {
-    const client = getLastFMArtistClient(apiKey);
+    const client = new LastFMArtist(apiKey);
     const artistParts = artist.split(/[,;\u00A0]/);
     const firstArtist = artistParts[0]?.trim() ?? artist;
     const response = await client.getTopTracks({

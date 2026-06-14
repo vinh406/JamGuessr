@@ -254,6 +254,7 @@ export class GameEngine {
     this.roundDuration = 0;
     this.votes.clear();
     this.voteEndsAt = null;
+    this.similarTracksCache = new Map();
   }
 
   getScores(): PlayerScore[] {

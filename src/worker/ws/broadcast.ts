@@ -11,7 +11,6 @@ export function broadcastToRoom(
   const broadcastMessage: BroadcastMessage = {
     ...message,
     connections: sessions.size,
-    totalConnections: sessions.size,
   };
 
   const messageString = JSON.stringify(broadcastMessage);

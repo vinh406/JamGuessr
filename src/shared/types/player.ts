@@ -6,13 +6,8 @@ export interface Player {
   isHost: boolean;
 }
 
-export interface UserSession {
-  username: string;
+export interface UserSession extends Player {
   room: string;
-  userId: string;
-  userImage: string | null;
-  isHost: boolean;
-  isReady: boolean;
   joinedAt: number;
 }
 
