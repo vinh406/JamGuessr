@@ -1,12 +1,12 @@
 import { DurableObject } from "cloudflare:workers";
 import type { Song } from "../../shared/types";
-import { BATCH_SIZE, CONCURRENCY, fetchPartnerPage } from "../services/spotify/partner-api";
+import { BATCH_SIZE, fetchPartnerPage } from "../services/spotify/partner-api";
 import { getDb } from "../db";
 import { libraryTracks, libraryTrackSources } from "../db/schema";
 import { eq, and, inArray } from "drizzle-orm";
 
 const ENCODER = new TextEncoder();
-const GROUP_SIZE = BATCH_SIZE * CONCURRENCY;
+const GROUP_SIZE = BATCH_SIZE;
 
 export class PlaylistImportDO extends DurableObject<Env> {
   async fetch(request: Request): Promise<Response> {

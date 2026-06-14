@@ -18,6 +18,7 @@ import { broadcastToRoom, sendToSocket } from "./broadcast";
 import { getDb } from "../db";
 
 const PREVIEW_CONCURRENCY = 10;
+const NOT_ENOUGH_SONGS_ERROR = "Not enough songs available. Please set a larger Spotify playlist.";
 
 async function ensurePreviewsForGame(songs: Song[], needed: number): Promise<Song[]> {
   const withPreview: Song[] = [];
@@ -127,10 +128,7 @@ export async function handleStartGame(ctx: WsContext, ws: WebSocket): Promise<vo
   const songsWithPreviews = songs.filter((s) => s.previewUrl);
   if (songsWithPreviews.length < ctx.roomSettings.rounds) {
     ctx.gameEngine.setPhase("lobby");
-    sendToSocket(
-      ws,
-      MessageBuilders.error("Not enough songs available. Please set a larger Spotify playlist."),
-    );
+    sendToSocket(ws, MessageBuilders.error(NOT_ENOUGH_SONGS_ERROR));
     broadcastToRoom(
       ctx.sessions,
       MessageBuilders.unifiedRoomState(getUnifiedRoomState(ctx, session.room!)),
@@ -368,10 +366,7 @@ async function handleContinueGame(ctx: WsContext, room: string): Promise<void> {
 
     const songsWithPreviews = songs.filter((s) => s.previewUrl);
     if (songsWithPreviews.length < ctx.roomSettings.rounds) {
-      broadcastToRoom(
-        ctx.sessions,
-        MessageBuilders.error("Not enough songs available. Please set a larger Spotify playlist."),
-      );
+      broadcastToRoom(ctx.sessions, MessageBuilders.error(NOT_ENOUGH_SONGS_ERROR));
       return;
     }
 
@@ -398,20 +393,14 @@ async function handleContinueGame(ctx: WsContext, room: string): Promise<void> {
   const remaining = gameState.songs.slice(gameState.currentSongIndex);
 
   if (remaining.length < ctx.roomSettings.rounds) {
-    broadcastToRoom(
-      ctx.sessions,
-      MessageBuilders.error("Not enough songs available. Please set a larger Spotify playlist."),
-    );
+    broadcastToRoom(ctx.sessions, MessageBuilders.error(NOT_ENOUGH_SONGS_ERROR));
     return;
   }
 
   const ensured = await ensurePreviewsForGame(remaining, ctx.roomSettings.rounds);
   const enoughWithPreviews = ensured.slice(0, ctx.roomSettings.rounds).every((s) => s.previewUrl);
   if (!enoughWithPreviews) {
-    broadcastToRoom(
-      ctx.sessions,
-      MessageBuilders.error("Not enough songs available. Please set a larger Spotify playlist."),
-    );
+    broadcastToRoom(ctx.sessions, MessageBuilders.error(NOT_ENOUGH_SONGS_ERROR));
     return;
   }
 

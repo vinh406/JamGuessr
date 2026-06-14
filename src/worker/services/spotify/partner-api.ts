@@ -3,7 +3,6 @@ import type { Song } from "../../../shared/types";
 export const PARTNER_QUERY_HASH =
   "a65e12194ed5fc443a1cdebed5fabe33ca5b07b987185d63c72483867ad13cb4";
 export const BATCH_SIZE = 2000;
-export const CONCURRENCY = 1;
 
 export interface PartnerTrack {
   itemV2: {
@@ -76,22 +75,13 @@ export async function paginateFetch<T>(
   total: number,
   startOffset: number,
   batchSize: number,
-  concurrency: number,
   fetcher: (offset: number) => Promise<T[]>,
   onProgress?: (current: number, total: number) => void,
 ): Promise<T[]> {
-  const offsets: number[] = [];
-  for (let o = startOffset; o < total; o += batchSize) {
-    offsets.push(o);
-  }
-
   const allResults: T[] = [];
-  for (let i = 0; i < offsets.length; i += concurrency) {
-    const batch = offsets.slice(i, i + concurrency);
-    const results = await Promise.all(batch.map((o) => fetcher(o)));
-    for (const page of results) {
-      allResults.push(...page);
-    }
+  for (let o = startOffset; o < total; o += batchSize) {
+    const page = await fetcher(o);
+    allResults.push(...page);
     onProgress?.(allResults.length, total);
   }
 

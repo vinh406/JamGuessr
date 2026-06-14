@@ -67,8 +67,3 @@ export interface GameResult {
   players: GamePlayerResult[];
   playedAt: string; // ISO string
 }
-
-// For the API response with resolved user info (auth user's name resolved from user table)
-export interface GameResultWithPlayers extends GameResult {
-  playerUsers: Array<GamePlayerResult & { displayName: string; image: string | null }>;
-}

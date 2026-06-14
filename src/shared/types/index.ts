@@ -7,6 +7,5 @@ export type {
   GameStateSnapshot,
   GameResult,
   GamePlayerResult,
-  GameResultWithPlayers,
 } from "./game";
 export * from "./messages";

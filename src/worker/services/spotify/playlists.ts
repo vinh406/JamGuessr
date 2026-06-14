@@ -3,7 +3,6 @@ import spotifyUrlInfo from "spotify-url-info";
 import {
   PARTNER_QUERY_HASH,
   BATCH_SIZE,
-  CONCURRENCY,
   fetchPartnerPage,
   fetchPartnerAlbumPage,
   paginateFetch,
@@ -135,7 +134,6 @@ async function fetchPartnerPlaylistTracks(
     total,
     startOffset,
     BATCH_SIZE,
-    CONCURRENCY,
     (o) => fetchPartnerPage(playlistId, accessToken, o, fetchFn),
     onFetchProgress,
   );
@@ -286,7 +284,7 @@ export async function getPlaylistTracks(
         try {
           const numPages = Math.min(Math.ceil(tracks.length / BATCH_SIZE), 2);
           const limit = numPages * BATCH_SIZE;
-          const partnerTracks = await paginateFetch(limit, 0, BATCH_SIZE, CONCURRENCY, (o) =>
+          const partnerTracks = await paginateFetch(limit, 0, BATCH_SIZE, (o) =>
             fetchPartnerPage(playlistId, accessToken, o),
           );
           const imageMap = new Map(partnerTracks.map((t) => [t.id, t.albumImageUrl]));

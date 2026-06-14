@@ -33,15 +33,10 @@ export const MessageBuilders = {
   },
 
   unifiedRoomState(state: UnifiedRoomState): UnifiedRoomStateMessage {
-    // Convert Map to Record for JSON serialization if they are Maps in the engine but Records in the type
     const serializedGame = {
       ...state.game,
-      answers: Object.fromEntries(
-        state.game.answers instanceof Map ? state.game.answers : Object.entries(state.game.answers),
-      ),
-      votes: Object.fromEntries(
-        state.game.votes instanceof Map ? state.game.votes : Object.entries(state.game.votes),
-      ),
+      answers: Object.fromEntries(Object.entries(state.game.answers)),
+      votes: Object.fromEntries(Object.entries(state.game.votes)),
     };
 
     return {

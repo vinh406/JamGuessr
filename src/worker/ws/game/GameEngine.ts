@@ -68,15 +68,6 @@ export class GameEngine {
     this.votes = new Map();
     this.voteEndsAt = null;
 
-    // Reset scores for everyone for the new game
-    for (const userId of this.scores.keys()) {
-      const p = this.scores.get(userId)!;
-      p.score = 0;
-      p.streak = 0;
-      p.bestStreak = 0;
-    }
-
-    // Add new players or ensure existing players have scores reset
     for (const player of initialPlayers) {
       if (!this.scores.has(player.userId)) {
         this.addPlayer(player.userId, player.username, player.userImage);
