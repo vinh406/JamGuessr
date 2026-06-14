@@ -16,7 +16,6 @@ import {
   libraryTrackSources,
   libraryPlaylists,
   libraryAlbums,
-  userLibraryStats,
 } from "../../db/schema";
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -26,7 +25,6 @@ type LibraryTrackSource = typeof libraryTrackSources.$inferSelect;
 type PlaylistRecord = typeof libraryPlaylists.$inferSelect;
 type AlbumRecord = typeof libraryAlbums.$inferSelect;
 type LibraryTrackRecord = typeof libraryTracks.$inferSelect;
-type LibraryStatsRecord = typeof userLibraryStats.$inferSelect;
 
 export interface TrackData {
   id?: string;
@@ -49,7 +47,6 @@ export interface LibraryStats {
   totalSongs: number;
   totalPlaylists: number;
   totalAlbums: number;
-  lastUpdated: Date;
 }
 
 export interface UserLibraryResponse {
@@ -303,13 +300,6 @@ export function createLibraryService(
       return album ?? null;
     },
 
-    /** Get user library stats */
-    async getUserLibraryStats(userId: string): Promise<LibraryStatsRecord | undefined> {
-      return db.query.userLibraryStats.findFirst({
-        where: eq(userLibraryStats.userId, userId),
-      });
-    },
-
     /** Get tracks for a playlist stored in the user's library, by Spotify playlist ID */
     async getLibraryPlaylistTracks(userId: string, spotifyId: string): Promise<Song[]> {
       const playlist = await db.query.libraryPlaylists.findFirst({
@@ -404,30 +394,6 @@ export function createLibraryService(
       return { track: track!, source: source! };
     },
 
-    /** Convenience: add track + update stats */
-    async addTrackToLibrary(
-      userId: string,
-      trackData: {
-        spotifyId: string;
-        name: string;
-        artists: { name: string; id?: string }[];
-        albumName?: string;
-        albumId?: string;
-        albumImageUrl?: string;
-        previewUrl?: string;
-        durationMs?: number;
-      },
-    ): Promise<{ success: true; trackId: string } | { success: false; error: string }> {
-      const result = await this.addTrack(userId, trackData);
-
-      if ("error" in result) {
-        return { success: false, error: result.error };
-      }
-
-      await this.updateUserLibraryStats(userId);
-      return { success: true, trackId: result.track.id };
-    },
-
     /** Remove a track and all its source entries */
     async removeTrack(userId: string, trackId: string): Promise<void> {
       await db
@@ -470,7 +436,7 @@ export function createLibraryService(
             return { success: false, error: "Failed to fetch track metadata from Spotify" };
           }
 
-          const result = await this.addTrackToLibrary(userId, {
+          const result = await this.addTrack(userId, {
             spotifyId: metadata.id,
             name: metadata.name,
             artists: [{ name: metadata.artist }],
@@ -480,8 +446,8 @@ export function createLibraryService(
             durationMs: metadata.durationMs || undefined,
           });
 
-          if (!result.success) return result;
-          return { success: true, type: "track", id: result.trackId };
+          if ("error" in result) return { success: false, error: result.error };
+          return { success: true, type: "track", id: result.track.id };
         }
 
         case "playlist": {
@@ -609,8 +575,6 @@ export function createLibraryService(
             }
           }
 
-          await this.updateUserLibraryStats(userId);
-
           return {
             success: true,
             type: "playlist",
@@ -660,24 +624,9 @@ export function createLibraryService(
           }));
 
           await this.addTracksFromAlbum(userId, album.id, trackData, onProgress);
-          await this.updateUserLibraryStats(userId);
 
           return { success: true, type: "album", id: album.id, trackCount: metadata.totalTracks };
         }
-      }
-    },
-
-    /** Convenience: remove track + update stats */
-    async removeTrackFromLibrary(
-      userId: string,
-      trackId: string,
-    ): Promise<{ success: boolean; error?: string }> {
-      try {
-        await this.removeTrack(userId, trackId);
-        await this.updateUserLibraryStats(userId);
-        return { success: true };
-      } catch {
-        return { success: false, error: "Failed to remove track" };
       }
     },
 
@@ -767,61 +716,15 @@ export function createLibraryService(
         .where(and(eq(libraryAlbums.userId, userId), eq(libraryAlbums.id, albumId)));
     },
 
-    /** Update user library stats */
-    async updateUserLibraryStats(userId: string): Promise<void> {
-      const [trackResult] = await db
-        .select({ count: count() })
-        .from(libraryTracks)
-        .where(
-          and(
-            eq(libraryTracks.userId, userId),
-            exists(
-              db
-                .select({ id: libraryTrackSources.id })
-                .from(libraryTrackSources)
-                .where(eq(libraryTrackSources.trackId, libraryTracks.id)),
-            ),
-          ),
-        );
-
-      const [playlistResult] = await db
-        .select({ count: count() })
-        .from(libraryPlaylists)
-        .where(eq(libraryPlaylists.userId, userId));
-
-      const [albumResult] = await db
-        .select({ count: count() })
-        .from(libraryAlbums)
-        .where(eq(libraryAlbums.userId, userId));
-
-      await db
-        .insert(userLibraryStats)
-        .values({
-          userId,
-          totalSongs: Number(trackResult?.count ?? 0),
-          totalPlaylists: Number(playlistResult?.count ?? 0),
-          totalAlbums: Number(albumResult?.count ?? 0),
-        })
-        .onConflictDoUpdate({
-          target: userLibraryStats.userId,
-          set: {
-            totalSongs: Number(trackResult?.count ?? 0),
-            totalPlaylists: Number(playlistResult?.count ?? 0),
-            totalAlbums: Number(albumResult?.count ?? 0),
-            lastUpdated: new Date(),
-          },
-        });
-    },
-
     // ── Composite reads ────────────────────────────────────────────────
 
     /** Get user's full library with stats */
     async getUserLibraryData(userId: string): Promise<UserLibraryResponse> {
-      const [tracks, playlists, albums, stats] = await Promise.all([
+      const [tracks, playlists, albums, trackCount] = await Promise.all([
         this.getUserLibrary(userId),
         this.getUserPlaylists(userId),
         this.getUserAlbums(userId),
-        this.getUserLibraryStats(userId),
+        this.getTrackCount(userId),
       ]);
 
       return {
@@ -854,14 +757,11 @@ export function createLibraryService(
           totalTracks: a.totalTracks,
           addedAt: a.addedAt,
         })),
-        stats: stats
-          ? {
-              totalSongs: stats.totalSongs,
-              totalPlaylists: stats.totalPlaylists,
-              totalAlbums: stats.totalAlbums,
-              lastUpdated: stats.lastUpdated,
-            }
-          : { totalSongs: 0, totalPlaylists: 0, totalAlbums: 0, lastUpdated: new Date() },
+        stats: {
+          totalSongs: trackCount,
+          totalPlaylists: playlists.length,
+          totalAlbums: albums.length,
+        },
       };
     },
 
@@ -939,6 +839,24 @@ export function createLibraryService(
       const nextCursor = hasMore ? items[limit]!.addedAt : null;
 
       return { items: pageItems, nextCursor };
+    },
+
+    async getTrackCount(userId: string): Promise<number> {
+      const [result] = await db
+        .select({ count: count() })
+        .from(libraryTracks)
+        .where(
+          and(
+            eq(libraryTracks.userId, userId),
+            exists(
+              db
+                .select({ id: libraryTrackSources.id })
+                .from(libraryTrackSources)
+                .where(eq(libraryTrackSources.trackId, libraryTracks.id)),
+            ),
+          ),
+        );
+      return Number(result?.count ?? 0);
     },
 
     async getDirectTrackCount(userId: string): Promise<number> {

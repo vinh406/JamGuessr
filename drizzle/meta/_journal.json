@@ -57,6 +57,13 @@
       "when": 1781357961228,
       "tag": "0007_married_celestials",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1781406279137,
+      "tag": "0008_many_sumo",
+      "breakpoints": true
     }
   ]
 }

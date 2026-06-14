@@ -188,17 +188,6 @@ export const libraryAlbums = pgTable(
   (table) => [index("library_albums_user_id").on(table.userId)],
 );
 
-// User library summary (cached) - updated in app code
-export const userLibraryStats = pgTable("user_library_stats", {
-  userId: text("user_id")
-    .primaryKey()
-    .references(() => user.id, { onDelete: "cascade" }),
-  totalSongs: integer("total_songs").notNull().default(0),
-  totalPlaylists: integer("total_playlists").notNull().default(0),
-  totalAlbums: integer("total_albums").notNull().default(0),
-  lastUpdated: timestamp("last_updated").defaultNow().notNull(),
-});
-
 // Library relations
 export const libraryTracksRelations = relations(libraryTracks, ({ one, many }) => ({
   user: one(user, {
@@ -241,13 +230,6 @@ export const libraryAlbumsRelations = relations(libraryAlbums, ({ one, many }) =
     references: [user.id],
   }),
   sources: many(libraryTrackSources),
-}));
-
-export const userLibraryStatsRelations = relations(userLibraryStats, ({ one }) => ({
-  user: one(user, {
-    fields: [userLibraryStats.userId],
-    references: [user.id],
-  }),
 }));
 
 // Game results tables

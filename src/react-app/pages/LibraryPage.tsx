@@ -11,7 +11,6 @@ interface LibraryStats {
   totalSongs: number;
   totalPlaylists: number;
   totalAlbums: number;
-  lastUpdated: string;
 }
 
 interface LibraryItem {

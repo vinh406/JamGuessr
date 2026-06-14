@@ -1,0 +1,1 @@
+DROP TABLE "user_library_stats" CASCADE;

@@ -1,10 +1,12 @@
 import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
+import { eq, count } from "drizzle-orm";
 import { auth } from "../services/better-auth";
 import { createLibraryService } from "../services/library/LibraryService";
 import { getDb } from "../db";
 import type { DbInstance } from "../db";
 import { sseStream } from "../services/sse";
 import { parseSpotifyLink } from "../services/spotify/playlists";
+import { libraryPlaylists, libraryAlbums } from "../db/schema";
 
 // OpenAPI Schema Definitions
 
@@ -60,10 +62,6 @@ const LibraryStatsSchema = z
     totalSongs: z.number().openapi({ description: "Total number of tracks", example: 150 }),
     totalPlaylists: z.number().openapi({ description: "Total number of playlists", example: 5 }),
     totalAlbums: z.number().openapi({ description: "Total number of albums", example: 10 }),
-    lastUpdated: z.string().openapi({
-      description: "ISO timestamp of last stats update",
-      example: "2024-01-15T10:30:00Z",
-    }),
   })
   .openapi("LibraryStats");
 
@@ -475,10 +473,10 @@ export function createLibraryHandlers() {
       return c.json({ error: "Track not found" }, 404);
     }
 
-    const result = await lib.removeTrackFromLibrary(user.id, trackId);
-
-    if (!result.success) {
-      return c.json({ error: result.error ?? "Unknown error" }, 500);
+    try {
+      await lib.removeTrack(user.id, trackId);
+    } catch {
+      return c.json({ error: "Failed to remove track" }, 500);
     }
 
     return c.json({ success: true }, 200);
@@ -556,9 +554,6 @@ export function createLibraryHandlers() {
 
       if (signal.aborted) return;
 
-      emit("phase", { phase: "updating_stats", label: "Finalizing..." });
-      await lib.updateUserLibraryStats(user.id);
-
       return { success: true, type: parsed.data.type, id: parsed.data.id };
     });
   });
@@ -590,24 +585,21 @@ export function createLibraryHandlers() {
     }
 
     const lib = createLibraryService(db, c.env);
-    const stats = await lib.getUserLibraryStats(user.id);
+    const [totalSongs, totalPlaylists, totalAlbums] = await Promise.all([
+      lib.getTrackCount(user.id),
+      db
+        .select({ count: count() })
+        .from(libraryPlaylists)
+        .where(eq(libraryPlaylists.userId, user.id))
+        .then((r) => Number(r[0]?.count ?? 0)),
+      db
+        .select({ count: count() })
+        .from(libraryAlbums)
+        .where(eq(libraryAlbums.userId, user.id))
+        .then((r) => Number(r[0]?.count ?? 0)),
+    ]);
 
-    return c.json(
-      stats
-        ? {
-            totalSongs: stats.totalSongs,
-            totalPlaylists: stats.totalPlaylists,
-            totalAlbums: stats.totalAlbums,
-            lastUpdated: stats.lastUpdated.toISOString(),
-          }
-        : {
-            totalSongs: 0,
-            totalPlaylists: 0,
-            totalAlbums: 0,
-            lastUpdated: new Date().toISOString(),
-          },
-      200,
-    );
+    return c.json({ totalSongs, totalPlaylists, totalAlbums }, 200);
   });
 
   // Song schema for blend response
