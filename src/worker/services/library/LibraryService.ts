@@ -132,8 +132,6 @@ export function createLibraryService(
   db: DbInstance,
   env?: { PLAYLIST_IMPORT_DO?: DurableObjectNamespace },
 ) {
-  const BATCH_SIZE = 25;
-
   // ── Internal query helpers (not exported) ──────────────────────────────
 
   async function trackExistsBySpotifyId(
@@ -164,72 +162,64 @@ export function createLibraryService(
       );
 
     const existingBySpotifyId = new Map(existingTracks.map((t) => [t.spotifyId, t]));
-    const results: { track: LibraryTrack; source: LibraryTrackSource }[] = [];
 
-    for (let i = 0; i < tracks.length; i += BATCH_SIZE) {
-      const chunk = tracks.slice(i, i + BATCH_SIZE);
+    const newTracksData = tracks
+      .filter((t) => !existingBySpotifyId.has(t.spotifyId))
+      .map((t) => ({
+        userId,
+        spotifyId: t.spotifyId,
+        name: t.name,
+        artists: t.artists,
+        albumName: t.albumName || "",
+        albumId: t.albumId,
+        albumImageUrl: t.albumImageUrl,
+        previewUrl: t.previewUrl,
+        durationMs: t.durationMs || 0,
+      }));
 
-      const newTracksData = chunk
-        .filter((t) => !existingBySpotifyId.has(t.spotifyId))
-        .map((t) => ({
-          userId,
-          spotifyId: t.spotifyId,
-          name: t.name,
-          artists: t.artists,
-          albumName: t.albumName || "",
-          albumId: t.albumId,
-          albumImageUrl: t.albumImageUrl,
-          previewUrl: t.previewUrl,
-          durationMs: t.durationMs || 0,
-        }));
-
-      const insertedTracks: LibraryTrack[] = [];
-      if (newTracksData.length > 0) {
-        insertedTracks.push(
-          ...(await db
-            .insert(libraryTracks)
-            .values(newTracksData)
-            .onConflictDoNothing()
-            .returning()),
-        );
-      }
-
-      const insertedBySpotifyId = new Map(insertedTracks.map((t) => [t.spotifyId, t]));
-
-      const sourceValues = chunk
-        .map((td) => {
-          const existing = existingBySpotifyId.get(td.spotifyId);
-          const inserted = insertedBySpotifyId.get(td.spotifyId);
-          const trackId = existing?.id ?? inserted?.id;
-          if (!trackId) return null;
-          return {
-            trackId,
-            userId,
-            sourceType,
-            ...(sourceType === "playlist" ? { playlistId: containerId } : { albumId: containerId }),
-          };
-        })
-        .filter((s): s is NonNullable<typeof s> => s !== null);
-
-      const insertedSources: LibraryTrackSource[] = [];
-      if (sourceValues.length > 0) {
-        insertedSources.push(
-          ...(await db.insert(libraryTrackSources).values(sourceValues).returning()),
-        );
-      }
-
-      const sourceByTrackId = new Map(insertedSources.map((s) => [s.trackId, s]));
-      const allTracksBySpotifyId = new Map([...existingBySpotifyId, ...insertedBySpotifyId]);
-
-      for (const td of chunk) {
-        const track = allTracksBySpotifyId.get(td.spotifyId);
-        const source = track ? sourceByTrackId.get(track.id) : undefined;
-        if (!track || !source) continue;
-        results.push({ track, source });
-      }
-
-      onProgress?.(i + chunk.length, tracks.length);
+    const insertedTracks: LibraryTrack[] = [];
+    if (newTracksData.length > 0) {
+      insertedTracks.push(
+        ...(await db.insert(libraryTracks).values(newTracksData).onConflictDoNothing().returning()),
+      );
     }
+
+    const insertedBySpotifyId = new Map(insertedTracks.map((t) => [t.spotifyId, t]));
+
+    const sourceValues = tracks
+      .map((td) => {
+        const existing = existingBySpotifyId.get(td.spotifyId);
+        const inserted = insertedBySpotifyId.get(td.spotifyId);
+        const trackId = existing?.id ?? inserted?.id;
+        if (!trackId) return null;
+        return {
+          trackId,
+          userId,
+          sourceType,
+          ...(sourceType === "playlist" ? { playlistId: containerId } : { albumId: containerId }),
+        };
+      })
+      .filter((s): s is NonNullable<typeof s> => s !== null);
+
+    const insertedSources: LibraryTrackSource[] = [];
+    if (sourceValues.length > 0) {
+      insertedSources.push(
+        ...(await db.insert(libraryTrackSources).values(sourceValues).returning()),
+      );
+    }
+
+    const sourceByTrackId = new Map(insertedSources.map((s) => [s.trackId, s]));
+    const allTracksBySpotifyId = new Map([...existingBySpotifyId, ...insertedBySpotifyId]);
+
+    const results: { track: LibraryTrack; source: LibraryTrackSource }[] = [];
+    for (const td of tracks) {
+      const track = allTracksBySpotifyId.get(td.spotifyId);
+      const source = track ? sourceByTrackId.get(track.id) : undefined;
+      if (!track || !source) continue;
+      results.push({ track, source });
+    }
+
+    onProgress?.(tracks.length, tracks.length);
 
     return results;
   }
@@ -998,16 +988,6 @@ export function createLibraryService(
     },
 
     // ── Batch operations (Phase 2+) ────────────────────────────────────
-
-    /** Add tracks with a playlist source */
-    async addTracksFromPlaylist(
-      userId: string,
-      playlistId: string,
-      tracks: TrackData[],
-      onProgress?: (current: number, total: number) => void,
-    ): Promise<{ track: LibraryTrack; source: LibraryTrackSource }[]> {
-      return batchInsertTracks(userId, tracks, "playlist", playlistId, onProgress);
-    },
 
     /** Add tracks with an album source */
     async addTracksFromAlbum(
